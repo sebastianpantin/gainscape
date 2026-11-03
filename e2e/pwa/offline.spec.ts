@@ -89,7 +89,9 @@ test('an installed shell cold-starts offline and syncs later', async ({ context,
   await expect(cold.getByRole('button', { name: /^Back Squat\b/ })).toContainText('Legs · Core');
   await logExercise(cold, 'squat', 'Back Squat', [{ weightKg: 80, reps: 5 }]);
   await cold.getByRole('button', { name: 'Finish workout' }).click();
-  await expect(cold.getByText(/Couldn't reach the server/)).toBeVisible({ timeout: 60_000 });
+  await expect(cold.getByText(/^You're offline\. This workout is saved on this device/)).toBeVisible({
+    timeout: 60_000,
+  });
 
   await markOnline();
   await context.setOffline(false);

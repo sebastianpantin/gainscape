@@ -21,3 +21,13 @@ export async function failRequests(page: Page, url: RegExp, method?: 'GET' | 'PO
       : route.fallback(),
   );
 }
+
+export async function holdRequests(page: Page, url: RegExp): Promise<() => void> {
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route(url, async (route) => {
+    await held;
+    await route.fallback();
+  });
+  return release;
+}

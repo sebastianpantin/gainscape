@@ -85,7 +85,10 @@ test('the workout page is titled by its date, undoing edits offers an undo and d
   await page.getByRole('button', { name: 'Undo my changes' }).click();
   await expect(reps).toHaveValue('5');
   await expect(page.locator('body')).not.toBeFocused();
-  await page.getByRole('status').getByRole('button', { name: 'Undo', exact: true }).click();
+  await page
+    .getByRole('status')
+    .getByRole('button', { name: /^Undo: / })
+    .click();
   await expect(reps).toHaveValue('8');
   await page.getByRole('button', { name: 'Undo my changes' }).click();
 
@@ -187,7 +190,7 @@ test('Back from an older workout keeps every loaded page of History and its scro
   expect(scrolledTo).toBeGreaterThan(0);
   await olderWorkout.click();
   await expect(page).toHaveURL(/\/collection\/history\/[0-9a-f-]+$/);
-  await expect(page.getByRole('link', { name: '‹ History' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '‹ Back', exact: true })).toBeVisible();
 
   await page.goBack();
 
@@ -290,6 +293,9 @@ test('re-finishing a workout that was already saved shows the summary and says t
 
   await page.getByRole('link', { name: 'Open this workout' }).click();
   await expect(page).toHaveURL(new RegExp(`/collection/history/${sessionId}$`));
+  await page.getByRole('button', { name: '‹ Back', exact: true }).click();
+  await expect(page).not.toHaveURL(/\/reveal$/);
+  await expect(page.getByRole('heading', { name: 'Workout complete!' })).toHaveCount(0);
 });
 
 test('a save that races an edit from another device keeps both changes after review', async ({ page }) => {
@@ -401,7 +407,7 @@ test('leaving an edited workout asks first, and leaving after a save does not', 
   const confirmation = page.getByRole('dialog', { name: 'Discard changes?', exact: true });
   await reps.fill('8');
 
-  await page.getByRole('link', { name: '‹ History' }).click();
+  await page.getByRole('button', { name: '‹ Back', exact: true }).click();
   await confirmation.getByRole('button', { name: 'Keep editing' }).click();
   await expect(confirmation).toHaveCount(0);
   await expect(reps).toHaveValue('8');
@@ -414,7 +420,7 @@ test('leaving an edited workout asks first, and leaving after a save does not', 
   await setRow(page, 1).getByRole('spinbutton', { name: 'Reps, set 1', exact: true }).fill('9');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('Changes saved.')).toBeVisible();
-  await page.getByRole('link', { name: '‹ History' }).click();
+  await page.getByRole('button', { name: '‹ Back', exact: true }).click();
   await expect(page).toHaveURL(/\/collection\/history$/);
   await expect(confirmation).toHaveCount(0);
 });

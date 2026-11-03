@@ -39,6 +39,7 @@ import { PrivateTag } from './PrivateTag.tsx';
 import { Choice } from './settings/Choice.tsx';
 import { ProfileBadge } from './ProfileCard.tsx';
 import { useProfile } from './use-profile.ts';
+import { BackLink } from '../../components/BackLink.tsx';
 
 interface EditProfileScreenProps {
   userId: string;
@@ -349,9 +350,7 @@ export function EditProfileScreen({ userId }: EditProfileScreenProps) {
   return (
     <main className="screen stack">
       <div className="stack" style={{ gap: 'var(--space-1)' }}>
-        <Link className="back-link" to="/profile">
-          ‹ Profile
-        </Link>
+        <BackLink parent="/profile" />
         <h1 className="title">Edit profile</h1>
       </div>
       {state.status === 'loading' && <ListSkeleton panels={4} />}

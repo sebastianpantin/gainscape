@@ -1,5 +1,6 @@
 import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
+import { GLOSSARY } from '../web/src/lib/ui/glossary.ts';
 import { definitionOf, logBench, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
 import { regularLootTotals, setDryRolls } from './support/db.ts';
 
@@ -138,7 +139,7 @@ test('recent records list a new best, offline too, and the full timeline by mont
   await expect(page).toHaveURL(/\/collection\/history\/[0-9a-f-]+$/);
   await expect(page.getByRole('status', { name: 'Workout XP' })).toBeVisible();
   await page.goBack();
-  await page.getByRole('main').getByRole('link', { name: '‹ Stats', exact: true }).click();
+  await page.getByRole('main').getByRole('button', { name: '‹ Back', exact: true }).click();
   await expect(page).toHaveURL(/\/collection\/stats$/);
 
   await context.setOffline(true);
@@ -194,6 +195,7 @@ test('relative strength charts e1RM per bodyweight and DOTS asks for the sex, th
   await expect(relative.getByRole('option', { name: 'Barbell Bench Press' })).toBeAttached();
   await expect(relative.getByRole('img', { name: /^Barbell Bench Press e1RM per bodyweight\./ })).toBeVisible();
   await expect(relative.getByText('Now 1.23 × bodyweight', { exact: true })).toBeVisible();
+  await expect(relative.getByRole('button', { name: GLOSSARY.e1rm.question, exact: true })).toBeVisible();
   await expect(relative.getByText('Set your sex in Edit profile to see your DOTS score.')).toBeVisible();
   await expectNoAxeViolations(page, 'stats relative strength');
 
@@ -217,7 +219,7 @@ test('relative strength charts e1RM per bodyweight and DOTS asks for the sex, th
       .getByRole('region', { name: 'Current level' })
       .getByText('Log a squat and a deadlift to see your DOTS score.', { exact: true }),
   ).toBeVisible();
-  await page.getByRole('main').getByRole('link', { name: '‹ Stats', exact: true }).click();
+  await page.getByRole('main').getByRole('button', { name: '‹ Back', exact: true }).click();
   await expect(page).toHaveURL(/\/collection\/stats$/);
 });
 

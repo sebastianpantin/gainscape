@@ -1,10 +1,11 @@
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { type ComponentType, createContext, lazy, type ReactNode, Suspense, use, useEffect, useState } from 'react';
-import { createBrowserRouter, Link, Navigate, Route, RouterProvider, Routes, useLocation } from 'react-router-dom';
+import { createBrowserRouter, Link, Route, RouterProvider, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Icon, type IconName } from './components/Icon.tsx';
 import { ScreenErrorBoundary, ScreenLoadProblem } from './components/ScreenErrorBoundary.tsx';
 import { ScreenSkeleton } from './components/ScreenSkeleton.tsx';
 import { ToastProvider } from './components/ToastProvider.tsx';
+import { useToast } from './lib/ui/toast.ts';
 import { PreferencesProvider } from './components/PreferencesProvider.tsx';
 import { AuthCallbackScreen } from './features/auth/AuthCallbackScreen.tsx';
 import { AuthScreen } from './features/auth/AuthScreen.tsx';
@@ -156,6 +157,16 @@ function LaunchRouting() {
   return null;
 }
 
+function UnknownPath() {
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+  useEffect(() => {
+    showToast("That page doesn't exist, so here is Train.");
+    void navigate('/', { replace: true });
+  }, [showToast, navigate]);
+  return null;
+}
+
 function RouteView({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   return (
@@ -182,12 +193,7 @@ function Screens() {
   const [callback, setCallback] = useState(() => parseAuthCallback(window.location.href));
 
   if (callback) return <AuthCallbackScreen callback={callback} onDone={() => setCallback(null)} />;
-  if (auth.status === 'loading')
-    return (
-      <main className="screen">
-        <p>Loading…</p>
-      </main>
-    );
+  if (auth.status === 'loading') return <ScreenSkeleton panels={1} />;
   if (auth.status === 'signed-out') return <AuthScreen />;
 
   const userId = auth.session.user.id;
@@ -251,7 +257,7 @@ function SignedInShell() {
               <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
               <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
               {DesignScreen && <Route path="/design" element={<DesignScreen />} />}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<UnknownPath />} />
             </Routes>
           </RouteView>
         </Suspense>

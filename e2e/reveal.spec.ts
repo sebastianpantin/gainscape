@@ -12,7 +12,7 @@ async function recordGainBarLabels(page: Page): Promise<void> {
     const log = window as unknown as GainBarLog;
     log.gainBarLabels = [];
     const record = () => {
-      const label = document.querySelector('[aria-label="XP gained"] [role="img"]')?.getAttribute('aria-label');
+      const label = document.querySelector('.reveal-list [role="img"]')?.getAttribute('aria-label');
       if (label && log.gainBarLabels.at(-1) !== label) log.gainBarLabels.push(label);
     };
     new MutationObserver(record).observe(document.body, {
@@ -73,6 +73,21 @@ test('skipping jumps the reveal to its end without the level-up cue, and a playe
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Level up!' })).toBeVisible();
   await expect.poll(() => vibrations(page)).toEqual([LEVEL_UP_VIBRATION]);
+  await expect(skipButton(page)).toHaveCount(0);
+});
+
+test('starting a scroll keeps the reveal playing, a tap skips it, and its lists have headings', async ({ page }) => {
+  await page.clock.install();
+  await register(page, uniqueUsername('rv_scroll'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 100, reps: 5 }]);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(skipButton(page)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'XP gained', exact: true })).toBeVisible();
+
+  await page.evaluate(() => document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  await expect(skipButton(page)).toBeVisible();
+  await page.evaluate(() => document.body.dispatchEvent(new MouseEvent('click', { bubbles: true })));
   await expect(skipButton(page)).toHaveCount(0);
 });
 

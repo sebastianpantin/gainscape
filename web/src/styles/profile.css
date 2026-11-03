@@ -159,10 +159,12 @@ button.back-link {
   stroke: var(--color-accent);
 }
 
-.line-chart-series.series-0 circle,
-.line-chart-swatch.series-0 {
+.line-chart-series.series-0 circle {
   fill: var(--color-accent);
-  background: var(--color-accent);
+}
+
+.line-chart-swatch.series-0 {
+  border-top-color: var(--color-accent);
 }
 
 .line-chart-series.series-1 path {
@@ -170,10 +172,12 @@ button.back-link {
   stroke-dasharray: 4 3;
 }
 
-.line-chart-series.series-1 circle,
-.line-chart-swatch.series-1 {
+.line-chart-series.series-1 circle {
   fill: var(--color-rare);
-  background: var(--color-rare);
+}
+
+.line-chart-swatch.series-1 {
+  border-top: 3px dashed var(--color-rare);
 }
 
 .bar-chart-bar {
@@ -198,9 +202,9 @@ button.back-link {
 
 .line-chart-swatch {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-  border: var(--border-width) solid var(--color-outline);
+  width: 20px;
+  height: 0;
+  border-top: 3px solid;
 }
 
 .rep-max-table,

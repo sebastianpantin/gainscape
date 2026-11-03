@@ -12,6 +12,7 @@ import {
   amrapBadgeOf,
   dayChoices,
   dayStartFrom,
+  hasProgramDayToStart,
   pickedDay,
   secondDayChoices,
   positionLabel,
@@ -364,5 +365,27 @@ describe('dayStartFrom', () => {
     });
     expect(start.exercises.length).toBeGreaterThan(0);
     expect(start.exercises.every((slot) => slot.kind === 'exercise')).toBe(true);
+  });
+});
+
+describe('hasProgramDayToStart', () => {
+  it('is true for a followed program with a day to start, so its start button is the main action', () => {
+    const enrollment = madcowEnrollment();
+    const state = programStateAt(MADCOW_5X5, enrollment, []);
+    expect(
+      hasProgramDayToStart({
+        kind: 'ready',
+        name: 'Madcow 5x5',
+        templateKey: 'madcow_5x5',
+        definition: MADCOW_5X5,
+        enrollment,
+        state,
+      }),
+    ).toBe(true);
+  });
+
+  it('is false without a startable program day, so freestyle is the main action', () => {
+    expect(hasProgramDayToStart({ kind: 'none' })).toBe(false);
+    expect(hasProgramDayToStart({ kind: 'needs_update', name: 'Old', message: 'Update the app.' })).toBe(false);
   });
 });

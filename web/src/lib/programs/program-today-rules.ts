@@ -208,3 +208,7 @@ export function dayStartFrom(program: ReadyProgram, position: Position, lastLogg
     exercises: slots.filter((slot): slot is PrescribedExercise => slot.kind === 'exercise'),
   };
 }
+
+export function hasProgramDayToStart(program: ActiveProgram): boolean {
+  return program.kind === 'ready' && dayChoices(program.definition, program.state).length > 0;
+}

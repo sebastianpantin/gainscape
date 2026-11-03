@@ -249,6 +249,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   if (draft.finishedAt) {
     return (
       <SavingWorkoutView
+        offline={offline}
         deviceNotices={deviceNotices}
         finishStatus={finishStatus}
         holding={holding}

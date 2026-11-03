@@ -7,6 +7,7 @@ import { TimezoneSection } from './settings/TimezoneSection.tsx';
 import { TrainingSection } from './settings/TrainingSection.tsx';
 import { WeeklyGoalSection } from './settings/WeeklyGoalSection.tsx';
 import { useProfile } from './use-profile.ts';
+import { BackLink } from '../../components/BackLink.tsx';
 
 interface SettingsScreenProps {
   userId: string;
@@ -19,9 +20,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
   return (
     <main className="screen stack">
       <div className="stack" style={{ gap: 'var(--space-1)' }}>
-        <Link className="back-link" to="/profile">
-          ‹ Profile
-        </Link>
+        <BackLink parent="/profile" />
         <h1 className="title">Settings</h1>
       </div>
       {state.status === 'loading' && <ListSkeleton />}

@@ -1,7 +1,7 @@
 import { roundTo } from '@domain/math.ts';
 import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
 import type { UnitPref } from '../../lib/profile/profile-rules.ts';
-import { shownWeight } from '../../lib/units.ts';
+import { formatWeight, shownWeight } from '../../lib/units.ts';
 import type { DraftSet } from '../../offline/draft-format.ts';
 import type { LastLoggedSet } from '../../offline/draft-edits.ts';
 
@@ -95,4 +95,21 @@ export function lastSetDelta(
     text: `${direction === 'up' ? '▲' : '▼'} ${texts.join(' ')}`,
     label: `${labels.join(' and ')} than last time`,
   };
+}
+
+const IMPLAUSIBLE_WEIGHT_RATIO = 1.5;
+const IMPLAUSIBLE_REPS_RATIO = 2;
+const IMPLAUSIBLE_EXTRA_REPS = 5;
+
+export function implausibleChangeText(
+  set: Pick<DraftSet, 'weightKg' | 'reps'>,
+  last: LastLoggedSet,
+  loadType: LoadType,
+  unit: UnitPref,
+): string | null {
+  if (countsLoad(last, loadType) && set.weightKg > last.weightKg * IMPLAUSIBLE_WEIGHT_RATIO)
+    return `Much heavier than last time (${formatWeight(last.weightKg, unit)}). Check the weight?`;
+  if (set.reps >= last.reps * IMPLAUSIBLE_REPS_RATIO && set.reps - last.reps >= IMPLAUSIBLE_EXTRA_REPS)
+    return `Many more reps than last time (${last.reps}). Check the reps?`;
+  return null;
 }

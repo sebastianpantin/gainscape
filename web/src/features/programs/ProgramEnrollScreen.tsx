@@ -372,6 +372,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
           title={`Replace ${replacing}?`}
           confirmLabel="Replace"
           busy={busy}
+          busyLabel="Replacing…"
           onConfirm={() => void enroll(confirmingReplace)}
           onCancel={() => setConfirmingReplace(null)}
         >

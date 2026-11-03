@@ -1,60 +1,93 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type ToastAction, ToastContext } from '../lib/ui/toast.ts';
-import { toastDurationMs } from '../lib/ui/toast-rules.ts';
+import { useLocation } from 'react-router-dom';
+import { addToast, type ShownToast, toastDurationMs, toastsAfterLeaving } from '../lib/ui/toast-rules.ts';
+import { useLastInputWasKeyboard } from '../lib/ui/use-last-input-was-keyboard.ts';
 
-interface ShownToast {
-  id: number;
-  text: string;
-  action: ToastAction | null;
+interface ToastItemProps {
+  toast: ShownToast;
+  onClose: (id: number) => void;
+}
+
+function ToastItem({ toast, onClose }: ToastItemProps) {
+  const [held, setHeld] = useState(false);
+  const { id, text, action, raisedFromKeyboard } = toast;
+  const duration = toastDurationMs(text, action !== null, raisedFromKeyboard);
+
+  useEffect(() => {
+    if (held || duration === null) return;
+    const hide = setTimeout(() => onClose(id), duration);
+    return () => clearTimeout(hide);
+  }, [id, duration, held, onClose]);
+
+  return (
+    <p
+      className={action ? 'toast with-action' : 'toast'}
+      onFocus={() => setHeld(true)}
+      onBlur={() => setHeld(false)}
+      onPointerEnter={() => setHeld(true)}
+      onPointerLeave={() => setHeld(false)}
+    >
+      {text}
+      {action && (
+        <button
+          className="button link"
+          type="button"
+          aria-label={`${action.label}: ${text}`}
+          onClick={() => {
+            action.onAct();
+            onClose(id);
+          }}
+        >
+          {action.label}
+        </button>
+      )}
+      {duration === null && (
+        <button className="button link" type="button" aria-label={`Dismiss: ${text}`} onClick={() => onClose(id)}>
+          Dismiss
+        </button>
+      )}
+    </p>
+  );
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<ShownToast | null>(null);
-  const [held, setHeld] = useState(false);
+  const [shown, setShown] = useState<ShownToast[]>([]);
   const lastId = useRef(0);
+  const lastInputWasKeyboard = useLastInputWasKeyboard();
 
-  const showToast = useCallback((text: string, action?: ToastAction) => {
-    lastId.current += 1;
-    setToast({ id: lastId.current, text, action: action ?? null });
-  }, []);
-  const dismissToast = useCallback(() => setToast(null), []);
+  const showToast = useCallback(
+    (text: string, action?: ToastAction) => {
+      lastId.current += 1;
+      const next = {
+        id: lastId.current,
+        text,
+        action: action ?? null,
+        raisedFromKeyboard: lastInputWasKeyboard.current,
+      };
+      setShown((current) => addToast(current, next));
+    },
+    [lastInputWasKeyboard],
+  );
+  const dismissToast = useCallback(() => setShown([]), []);
+  const closeToast = useCallback((id: number) => setShown((current) => current.filter((toast) => toast.id !== id)), []);
   const toasts = useMemo(() => ({ showToast, dismissToast }), [showToast, dismissToast]);
+  const { pathname } = useLocation();
+  const shownOn = useRef(pathname);
 
   useEffect(() => {
-    if (toast === null || held) return;
-    const hide = setTimeout(() => setToast(null), toastDurationMs(toast.text, toast.action !== null));
-    return () => clearTimeout(hide);
-  }, [toast, held]);
+    if (shownOn.current === pathname) return;
+    shownOn.current = pathname;
+    setShown(toastsAfterLeaving);
+  }, [pathname]);
 
   return (
     <ToastContext.Provider value={toasts}>
       {children}
       <div className="toast-region" role="status" aria-live="polite">
-        {toast && (
-          <p
-            key={toast.id}
-            className={toast.action ? 'toast with-action' : 'toast'}
-            onFocus={() => setHeld(true)}
-            onBlur={() => setHeld(false)}
-            onPointerEnter={() => setHeld(true)}
-            onPointerLeave={() => setHeld(false)}
-          >
-            {toast.text}
-            {toast.action && (
-              <button
-                className="button link"
-                type="button"
-                onClick={() => {
-                  toast.action?.onAct();
-                  setHeld(false);
-                  setToast(null);
-                }}
-              >
-                {toast.action.label}
-              </button>
-            )}
-          </p>
-        )}
+        {shown.map((toast) => (
+          <ToastItem key={toast.id} toast={toast} onClose={closeToast} />
+        ))}
       </div>
     </ToastContext.Provider>
   );

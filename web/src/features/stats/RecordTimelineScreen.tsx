@@ -1,6 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { messageOf } from '../../lib/error-text.ts';
@@ -11,6 +10,7 @@ import { NO_RECORDS_TEXT, recordTimelineMonths, showMoreRecordsButton } from '..
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_STATS_NOTICE } from '../../offline/stats-cache.ts';
 import { RecordTimelineList } from './RecordTimelineList.tsx';
+import { BackLink } from '../../components/BackLink.tsx';
 
 export function RecordTimelineScreen({ userId }: { userId: string }) {
   const timeline = useInfiniteQuery(recordTimelineQuery(userId));
@@ -41,9 +41,7 @@ export function RecordTimelineScreen({ userId }: { userId: string }) {
 
   return (
     <main className="screen stack">
-      <Link className="back-link" to="/collection/stats">
-        ‹ Stats
-      </Link>
+      <BackLink parent="/collection/stats" />
       <h1 className="title">Records timeline</h1>
       <p className="muted">Every personal record you have set, newest first.</p>
       {notice && (

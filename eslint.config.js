@@ -46,6 +46,11 @@ const NO_BARE_LOADING_TEXT = [
   { selector: 'Literal[value=/^Loading(…|\\.\\.\\.)$/]', message: BARE_LOADING_TEXT_MESSAGE },
 ];
 
+const NO_LINK_BACK_LINK = {
+  selector: "JSXOpeningElement[name.name='Link'] > JSXAttribute[name.name='className'][value.value='back-link']",
+  message: 'Use the shared BackLink, so Back returns to where the user came from (docs/design-system.md).',
+};
+
 export default tseslint.config(
   {
     ignores: ['node_modules/', 'web/dist/', 'test-results/', 'playwright-report/', 'supabase/.temp/', '.wrangler/'],
@@ -110,9 +115,15 @@ export default tseslint.config(
     },
   },
   {
+    files: ['web/src/App.tsx'],
+    rules: {
+      'no-restricted-syntax': ['error', ...NO_TEST_IDS, ...NO_BARE_LOADING_TEXT],
+    },
+  },
+  {
     files: ['web/src/features/**/*.tsx'],
     rules: {
-      'no-restricted-syntax': ['error', ...NO_TEST_IDS, NO_NUMERIC_STYLE, ...NO_BARE_LOADING_TEXT],
+      'no-restricted-syntax': ['error', ...NO_TEST_IDS, NO_NUMERIC_STYLE, ...NO_BARE_LOADING_TEXT, NO_LINK_BACK_LINK],
     },
   },
   {

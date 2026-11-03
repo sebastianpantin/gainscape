@@ -6,7 +6,7 @@ import { dismissFollowCard, isFollowCardDismissed } from '../../lib/programs/fol
 import { featuredPrograms, showsFollowProgramCard } from '../../lib/programs/program-discovery-rules.ts';
 import { templateListEntries } from '../../lib/programs/program-enroll-rules.ts';
 import { type ProgramLoadStatus } from '../../lib/programs/program-status-rules.ts';
-import { type ActiveProgram } from '../../lib/programs/program-today-rules.ts';
+import { type ActiveProgram, hasProgramDayToStart } from '../../lib/programs/program-today-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
 import { profileQuery, programTemplatesQuery, trainingDaysQuery } from '../../lib/query/queries.ts';
@@ -112,7 +112,7 @@ export function TodayView({
       />
       <button
         ref={startButton}
-        className="button primary big"
+        className={hasProgramDayToStart(program) ? 'button big' : 'button primary big'}
         type="button"
         disabled={start.startingDay}
         onClick={start.startFreestyle}

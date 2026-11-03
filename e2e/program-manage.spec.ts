@@ -1,4 +1,5 @@
 import { expect, test } from './support/fixtures.ts';
+import { holdRequests, rpc } from './support/network.ts';
 import { nativeDialogsOf, openTab, readSession, register, uniqueUsername } from './support/app.ts';
 import { activeEnrollmentOf } from './support/db.ts';
 import {
@@ -125,7 +126,7 @@ test('stop following a program through an in-app confirmation dialog', async ({ 
   const nativeDialogs = nativeDialogsOf(page);
   await followProgram(page, '5/3/1', FIVE_THREE_ONE_ONE_RMS_KG);
   await openManageProgram(page, '5/3/1');
-  await expect(page.getByRole('main').getByRole('link', { name: '‹ Train', exact: true })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('main').getByRole('button', { name: '‹ Back', exact: true })).toBeVisible();
 
   const stopFollowing = page.getByRole('button', { name: 'Stop following', exact: true });
   await expect(stopFollowing).toBeVisible();
@@ -136,8 +137,11 @@ test('stop following a program through an in-app confirmation dialog', async ({ 
   await expect(dialog).toHaveCount(0);
   await expect.poll(() => activeEnrollmentOf(username)).not.toBeNull();
 
+  const release = await holdRequests(page, rpc('end_enrollment'));
   await stopFollowing.click();
   await dialog.getByRole('button', { name: 'Stop following', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: 'Stopping…', exact: true })).toBeDisabled();
+  release();
   await expect(dialog).toHaveCount(0);
   await expect.poll(() => activeEnrollmentOf(username)).toBeNull();
   await openTab(page, 'Train');

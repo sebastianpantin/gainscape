@@ -1,5 +1,6 @@
 import { type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
+import { holdRequests } from './support/network.ts';
 import {
   definitionOf,
   emailOf,
@@ -64,6 +65,36 @@ test('the sign-up form states the password rule, lowercases the username and foc
   await expect(page.getByRole('heading', { name: 'Check your email' })).toBeFocused();
 });
 
+test('switching between sign in, sign up and reset moves focus to the new form heading', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New here? Create an account' }).click();
+  await expect(page.getByRole('heading', { name: 'Create account' })).toBeFocused();
+  await expect(page.getByLabel('Username')).toHaveAccessibleName('Username');
+  await expect(page.getByLabel('Username')).toHaveAccessibleDescription(
+    '3–20 characters: a–z, 0–9 and _. Friends find you by it.',
+  );
+  await page.getByRole('button', { name: 'Already have an account? Sign in' }).click();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeFocused();
+  await page.getByRole('button', { name: 'Forgot password?' }).click();
+  await expect(page.getByRole('heading', { name: 'Reset password' })).toBeFocused();
+});
+
+test('signing in shows that it is working and clears the last problem', async ({ page }) => {
+  const username = uniqueUsername('au_busy');
+  await register(page, username);
+  await signOut(page);
+  await submitSignIn(page, emailOf(username), 'not-the-password');
+  await expect(page.getByText('Wrong email or password.')).toBeVisible();
+
+  const release = await holdRequests(page, /\/auth\/v1\/token/);
+  await page.getByLabel('Password').fill(TEST_PASSWORD);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Signing in…', exact: true })).toBeDisabled();
+  await expect(page.getByText('Wrong email or password.')).toHaveCount(0);
+  release();
+  await expect(page.getByRole('link', { name: 'Train', exact: true })).toBeVisible();
+});
+
 test('an unconfirmed sign-in offers to resend the link', async ({ page }) => {
   const username = uniqueUsername('au_rs');
   await submitRegistration(page, username);
@@ -98,10 +129,14 @@ test('forgot password sends a reset link that sets a new password', async ({ pag
   await page.goto(await linkTo(email, RECOVERY_SUBJECT, since));
   await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeVisible();
   const newPassword = page.getByLabel('New password', { exact: true });
+  await expect(newPassword).toHaveAccessibleDescription('At least 12 characters.');
   await newPassword.fill('short');
+  await expect(newPassword).not.toHaveAttribute('aria-invalid', 'true');
+  await newPassword.press('Tab');
   await expect(newPassword).toHaveAttribute('aria-invalid', 'true');
   await expect(newPassword).toHaveAccessibleDescription('Use at least 12 characters.');
   await page.getByLabel('Repeat new password').fill('different');
+  await page.getByLabel('Repeat new password').press('Tab');
   await expect(page.getByLabel('Repeat new password')).toHaveAccessibleDescription("The passwords don't match.");
   await expect(page.getByRole('status').getByText('Use at least 12 characters.', { exact: true })).toBeVisible();
   await choosePassword(page, 'a-reset-password');

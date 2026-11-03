@@ -205,6 +205,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
           confirmLabel="Delete"
           danger
           busy={busy}
+          busyLabel="Deleting…"
           onConfirm={() => void remove(pendingDelete)}
           onCancel={() => setPendingDelete(null)}
         >

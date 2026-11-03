@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import type { Skill } from '../../lib/exercises/catalog-rules.ts';
@@ -14,6 +13,7 @@ import { LoadoutPanel } from './LoadoutPanel.tsx';
 import { ProfileWithTopSkills } from './ProfileWithTopSkills.tsx';
 import { PrivacySection } from './settings/PrivacySection.tsx';
 import { type ProfileUpdate, useProfile } from './use-profile.ts';
+import { BackLink } from '../../components/BackLink.tsx';
 
 interface FriendPreviewScreenProps {
   userId: string;
@@ -61,9 +61,7 @@ export function FriendPreviewScreen({ userId }: FriendPreviewScreenProps) {
   return (
     <main className="screen stack">
       <div className="stack" style={{ gap: 'var(--space-1)' }}>
-        <Link className="back-link" to="/profile">
-          ‹ Profile
-        </Link>
+        <BackLink parent="/profile" />
         <h1 className="title">What friends see</h1>
       </div>
       {(state.status === 'loading' || (state.status === 'ready' && view.status === 'loading')) && <ListSkeleton />}

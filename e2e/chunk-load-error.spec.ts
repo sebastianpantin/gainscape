@@ -9,7 +9,12 @@ test('a screen whose code fails to load offers a reload instead of a blank page'
 
   await openTab(page, 'Skills');
   await expect(page.getByRole('alert')).toHaveText("Couldn't load this screen");
+  await expect(page.getByRole('heading', { level: 1, name: 'Something went wrong' })).toBeVisible();
   const reload = page.getByRole('button', { name: 'Reload' });
+  await expect(reload).toBeVisible();
+  await page.getByRole('main').getByRole('link', { name: 'Go to Train', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  await openTab(page, 'Skills');
   await expect(reload).toBeVisible();
 
   await openTab(page, 'Friends');

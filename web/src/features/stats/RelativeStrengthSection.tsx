@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { LineChart } from '../../components/LineChart.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
+import { TermHelp } from '../../components/TermHelp.tsx';
 import { type Profile } from '../../lib/profile/profile-rules.ts';
 import { trendDayText } from '../../lib/progress/bodyweight-trend-rules.ts';
 import { collectionQuery, profileQuery, relativeStrengthQuery } from '../../lib/query/queries.ts';
@@ -111,7 +112,10 @@ export function RelativeStrengthSection({ userId }: { userId: string }) {
 
   return (
     <section className="panel stack" aria-labelledby="stats-relative-strength">
-      <h2 id="stats-relative-strength">Relative strength</h2>
+      <div className="row">
+        <h2 id="stats-relative-strength">Relative strength</h2>
+        <TermHelp glossaryKey="e1rm" />
+      </div>
       {loaded.status === 'loading' && <ListSkeleton panels={1} />}
       {loaded.status === 'failed' && <ProblemWithRetry problem={loaded.problem} onRetry={retry} />}
       {loaded.status === 'ready' && (

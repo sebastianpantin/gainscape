@@ -10,6 +10,7 @@ interface SavingWorkoutViewProps {
   deviceNotices: ReactNode;
   finishStatus: FinishStatus;
   holding: boolean;
+  offline: boolean;
   unit: UnitPref;
   onSaveNow: () => void;
   onRetryNow: () => void;
@@ -22,6 +23,7 @@ export function SavingWorkoutView({
   deviceNotices,
   finishStatus,
   holding,
+  offline,
   unit,
   onSaveNow,
   onRetryNow,
@@ -49,12 +51,17 @@ export function SavingWorkoutView({
         <div className="panel stack" role="status">
           <p>
             {finishStatus.lastProblem
-              ? syncProblemText(finishStatus.lastProblem, finishStatus.waitMs)
+              ? syncProblemText(finishStatus.lastProblem, finishStatus.waitMs, offline)
               : 'Sending your workout…'}
           </p>
           {finishStatus.lastProblem && finishStatus.lastProblem !== RATE_LIMITED_CODE && (
             <button className="button" type="button" onClick={onRetryNow}>
               Retry now
+            </button>
+          )}
+          {finishStatus.lastProblem && (
+            <button className="button" type="button" onClick={onBackToEditing}>
+              Back to editing
             </button>
           )}
         </div>

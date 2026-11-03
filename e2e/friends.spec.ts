@@ -19,6 +19,18 @@ async function logRun(page: Page, minutes: number, distance: number) {
   await logWorkout(page, () => logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]));
 }
 
+test('Friends shows your own username to share, and copies it', async ({ page, context }) => {
+  const username = uniqueUsername('fr_own');
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await register(page, username);
+  await openTab(page, 'Friends');
+
+  await expect(page.getByText(`Friends add you by your username: ${username}`)).toBeVisible();
+  await page.getByRole('button', { name: 'Copy your username', exact: true }).click();
+  await expect(page.getByRole('status').getByText('Username copied.')).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(username);
+});
+
 test('Hiscores without friends says so and leads to adding one', async ({ page }) => {
   await register(page, uniqueUsername('fr_hi_empty'));
   await page.goto('/friends/hiscores');
