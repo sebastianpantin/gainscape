@@ -6,31 +6,28 @@ import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { wrote } from '../../lib/query/writes.ts';
-import { characterCount, nameProblem, trimmedName } from '../../lib/names.ts';
+import { characterCount, parsedName } from '../../lib/names.ts';
+import { type Parsed, parsedValues, problemOf } from '../../lib/parsed.ts';
 import {
   BADGE_COLORS,
   type BadgeColor,
   BIO_MAX_LENGTH,
-  bioProblem,
-  birthYearProblem,
-  bodyweightInUnitProblem,
-  bodyweightKgFromInput,
   DISPLAY_NAME_MAX_LENGTH,
-  feetAndInchesProblem,
-  heightInCm,
   type HeightInput,
-  heightProblem,
   initialHeight,
   initialsFor,
   latestBirthYear,
-  optionalNumber,
+  parsedBio,
+  parsedBirthYear,
+  parsedBodyweightKg,
+  parsedHeightCm,
+  parsedTrainingSince,
   type Profile,
   sameHeightInput,
   type Sex,
   saveProblemText,
   TRAINING_FOCUS_LABELS,
   type TrainingFocus,
-  trainingSinceProblem,
   updatePrivateProfile,
   updatePublicProfile,
 } from '../../lib/profile/profile.ts';
@@ -87,18 +84,16 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
   const [submitted, setSubmitted] = useState(false);
   const problemIdPrefix = useId();
 
-  const heightCm = sameHeightInput(height, initialHeightInput, unitPref)
-    ? profile.heightCm
-    : heightInCm(height, unitPref);
-  const issues: Record<CheckedField, string | null> = {
-    displayName: nameProblem(displayName, DISPLAY_NAME_MAX_LENGTH),
-    bio: bioProblem(bio),
-    trainingSince: trainingSinceProblem(trainingSince),
-    bodyweight: bodyweightInUnitProblem(bodyweight, unitPref),
-    height: feetAndInchesProblem(height, unitPref) ?? (heightCm === null ? null : heightProblem(String(heightCm))),
-    birthYear: birthYearProblem(birthYear),
-  };
-  const shownIssue = (field: CheckedField) => (submitted || touched.has(field) ? issues[field] : null);
+  const heightUnchanged = sameHeightInput(height, initialHeightInput, unitPref);
+  const fields = {
+    displayName: parsedName(displayName, DISPLAY_NAME_MAX_LENGTH),
+    bio: parsedBio(bio),
+    trainingSince: parsedTrainingSince(trainingSince),
+    bodyweight: parsedBodyweightKg(bodyweight, unitPref),
+    height: heightUnchanged ? { kind: 'ok', value: profile.heightCm } : parsedHeightCm(height, unitPref),
+    birthYear: parsedBirthYear(birthYear),
+  } satisfies Record<CheckedField, Parsed<unknown>>;
+  const shownIssue = (field: CheckedField) => (submitted || touched.has(field) ? problemOf(fields[field]) : null);
   const problemId = (field: CheckedField) => `${problemIdPrefix}-${field}`;
   const checkedInput = (field: CheckedField) => ({
     name: field,
@@ -114,7 +109,7 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
       trainingSince !== (profile.trainingSince?.toString() ?? '') ||
       badgeColor !== profile.badgeColor ||
       bodyweight !== initialBodyweight ||
-      !sameHeightInput(height, initialHeightInput, unitPref) ||
+      !heightUnchanged ||
       birthYear !== (profile.birthYear?.toString() ?? '') ||
       sex !== (profile.sex ?? 'unset'),
   );
@@ -122,33 +117,32 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitted(true);
-    const firstInvalid = CHECKED_FIELDS.find((field) => issues[field]);
-    if (firstInvalid) {
+    const values = parsedValues(fields);
+    if (!values) {
+      const firstInvalid = CHECKED_FIELDS.find((field) => fields[field].kind === 'problem');
       event.currentTarget.querySelector<HTMLInputElement>(`input[name="${firstInvalid}"]`)?.focus();
       return;
     }
     setSaving(true);
     setProblem(null);
     try {
-      const trimmedBio = bio.trim();
       await updatePublicProfile(userId, {
-        displayName: trimmedName(displayName),
-        bio: trimmedBio === '' ? null : trimmedBio,
+        displayName: values.displayName,
+        bio: values.bio,
         trainingFocus: trainingFocus === '' ? null : trainingFocus,
-        trainingSince: optionalNumber(trainingSince),
+        trainingSince: values.trainingSince,
         badgeColor,
       });
       await updatePrivateProfile(userId, {
-        heightCm,
-        birthYear: optionalNumber(birthYear),
+        heightCm: values.height,
+        birthYear: values.birthYear,
         sex: sex === 'unset' ? null : sex,
       });
-      const typedKg = bodyweightKgFromInput(bodyweight, unitPref);
-      if (typedKg !== null) {
+      if (values.bodyweight !== null) {
         const unchanged =
           profile.bodyweightKg !== null &&
-          shownWeight(profile.bodyweightKg, unitPref) === shownWeight(typedKg, unitPref);
-        if (!unchanged) await updatePrivateProfile(userId, { bodyweightKg: typedKg });
+          shownWeight(profile.bodyweightKg, unitPref) === shownWeight(values.bodyweight, unitPref);
+        if (!unchanged) await updatePrivateProfile(userId, { bodyweightKg: values.bodyweight });
       }
       void wrote(queryClient, { change: 'profile-saved' });
       await onSaved();

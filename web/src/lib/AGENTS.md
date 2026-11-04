@@ -24,7 +24,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `stats/`: the Stats screen's aggregate RPC reads (cache-first via `../offline/stats-cache.ts`) and their rules, one pair per section of `../features/stats/AGENTS.md`.
 - `quests/`: the quest log (cache-first), `start-quest` and `quest-rules.ts` (board, step and requirement text, start errors).
 - `ui/`: pure helpers behind shared components (number field, count-up, charts, toast, term help, week and month keys) and `glossary.ts`.
-- The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`.
+- The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`, `parsed.ts`.
 - Start here: `platform/supabase.ts` (the one client), `platform/use-auth-session.ts` (auth boot), `platform/function-client.ts` (`invokeAsOwner`) and `query/` (the server data cache and its invalidation).
 - `*-rules.ts` files are pure, and so are a few small modules without the suffix (`units.ts`, `format.ts`, `error-text.ts`, `names.ts`, the caches); `tests/web/` covers them without a stack.
 - A `<feature>.ts` beside a `<feature>-rules.ts` is the I/O half.
@@ -55,6 +55,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Call Edge Functions with `invokeAsOwner`, not `supabase.functions.invoke`. It binds the token to one user id, refreshes once on a 401, and returns an outcome instead of throwing. It returns `needs_sign_in` only when the auth server rejects the session (a 4xx other than 429). A 429, a 5xx or a network failure is `retryable`.
 - `platform/supabase.ts` wraps `fetch` so auth calls time out after `REQUEST_TIMEOUT_MS`. Refresh-token grants are excluded from the timeout.
 - 429 handling is shared in `platform/rate-limit.ts`. A database `PT429` from a client write goes through `withFriendlyRateLimit` or `rateLimitedMessage`.
+- A form field has one `parsed*` function returning `Parsed<T>` (`parsed.ts`); the error shown and the save both read it, so they cannot disagree. Never pair a `*Problem` check with a separate parse.
 - Users never see a raw error code or database text. Every failure maps to a sentence, with a generic fallback (`programErrorText`, `pinProblemText`, the account export and delete messages).
 - `emailChangeProblem` does not use `authErrorMessage` on purpose: `authErrorMessage` would call a 403 an invalid link.
 - A password change re-checks the current password against the email `getUser()` returns now, not a cached one. Only `invalid_credentials` means the password was wrong.
@@ -63,7 +64,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 ### Must stay in sync with SQL
 
 - `MINIMUM_PASSWORD_LENGTH` (12) is also set in `supabase/config.toml`. Import it from `platform/auth-links.ts`.
-- `nameProblem` rejects blank names, control characters and bidi controls (U+202A to U+202E, U+2066 to U+2069). It counts length in code points, like `char_length`. The display name check in migration 036 restates the same rules.
+- `parsedName` rejects blank names, control characters and bidi controls (U+202A to U+202E, U+2066 to U+2069), counting code points like `char_length`. Migration 036's display name check restates it.
 - `trimNote` trims JS whitespace plus U+0085. That is the same set `save_exercise_note` trims since migration 038.
 - The row types in `programs/program-facts-rules.ts` match migration 023.
 - `followStatus` mirrors `private.compiled_program_definition`:

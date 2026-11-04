@@ -9,7 +9,6 @@ import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/progr
 import { BackLink } from '../../components/BackLink.tsx';
 import { useGoBack } from '../../lib/ui/use-go-back.ts';
 import { FieldProblem } from '../../components/FieldProblem.tsx';
-import { nameProblem } from '../../lib/names.ts';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
@@ -30,6 +29,7 @@ import {
   changePlannedExercise,
   changeProgression,
   DAY_NAME_MAX_LENGTH,
+  dayNameProblem,
   docFor,
   exerciseIssue,
   hasUnsavedChanges,
@@ -43,6 +43,7 @@ import {
   newProgramDoc,
   pairedIncrement,
   PROGRAM_NAME_MAX_LENGTH,
+  programNameProblem,
   progressionIssue,
   removeDay,
   removePlannedExercise,
@@ -185,12 +186,12 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
 
   const programNameId = `${fieldId}-program`;
   const dayNameId = (dayId: string) => `${fieldId}-day-${dayId}`;
-  const programNameProblem = namesChecked ? nameProblem(doc.name, PROGRAM_NAME_MAX_LENGTH) : null;
+  const shownProgramNameProblem = namesChecked ? programNameProblem(doc.name) : null;
   const refuse = (text: string) => {
     setProblem({ text, shownFor: doc });
     const firstBadName = [
-      { id: programNameId, problem: nameProblem(doc.name, PROGRAM_NAME_MAX_LENGTH) },
-      ...doc.days.map((day) => ({ id: dayNameId(day.id), problem: nameProblem(day.name, DAY_NAME_MAX_LENGTH) })),
+      { id: programNameId, problem: programNameProblem(doc.name) },
+      ...doc.days.map((day) => ({ id: dayNameId(day.id), problem: dayNameProblem(day.name) })),
     ].find(({ problem }) => problem !== null);
     if (!firstBadName) return;
     setNamesChecked(true);
@@ -257,14 +258,14 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
           value={doc.name}
           maxLength={PROGRAM_NAME_MAX_LENGTH}
           onChange={(event) => setDoc({ ...doc, name: event.target.value })}
-          aria-invalid={programNameProblem !== null || undefined}
-          aria-describedby={programNameProblem ? `${programNameId}-problem` : undefined}
+          aria-invalid={shownProgramNameProblem !== null || undefined}
+          aria-describedby={shownProgramNameProblem ? `${programNameId}-problem` : undefined}
         />
       </label>
-      <FieldProblem id={`${programNameId}-problem`} problem={programNameProblem} />
+      <FieldProblem id={`${programNameId}-problem`} problem={shownProgramNameProblem} />
       {doc.days.map((day, dayIndex) => {
         const dayLabel = day.name.trim() || `Day ${dayIndex + 1}`;
-        const dayProblem = namesChecked ? nameProblem(day.name, DAY_NAME_MAX_LENGTH) : null;
+        const dayProblem = namesChecked ? dayNameProblem(day.name) : null;
         return (
           <section className="panel stack" key={day.id} aria-label={`Day ${dayIndex + 1}`}>
             <div className="row spread">

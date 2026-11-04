@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   inputKindLabel,
   pctLabel,
-  referenceValueProblem,
+  parsedReferenceValue,
   shownReference,
 } from '../../web/src/lib/programs/program-enroll-rules.ts';
+import { problemOf } from '../../web/src/lib/parsed.ts';
+
+const referenceValueProblem = (label: string, raw: string | undefined, unit: 'kg' | 'lb') =>
+  problemOf(parsedReferenceValue(label, raw, unit));
 
 const LABEL = 'Squat 1RM (kg)';
 const OUT_OF_RANGE = 'Squat 1RM (kg) must be above 0 and at most 1000';
@@ -31,6 +35,10 @@ describe('reference value problems at the boundaries', () => {
     ['2205.01', 'Squat 1RM (lb) must be above 0 and at most 2205'],
   ])('caps an lb value at 2205, the 1000 kg cap in pounds: %j reads as %j', (raw, expected) => {
     expect(referenceValueProblem('Squat 1RM (lb)', raw, 'lb')).toBe(expected);
+  });
+
+  it('gives the value it checked, so the save reads the same number', () => {
+    expect(parsedReferenceValue(LABEL, ' 102,5 ', 'kg')).toEqual({ kind: 'ok', value: 102.5 });
   });
 
   it('asks for a value that was never typed', () => {

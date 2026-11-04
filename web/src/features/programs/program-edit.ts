@@ -1,5 +1,6 @@
 import { type LoadType } from '../../lib/exercises/catalog-rules.ts';
-import { nameProblem, trimmedName } from '../../lib/names.ts';
+import { parsedName, trimmedName } from '../../lib/names.ts';
+import { problemOf } from '../../lib/parsed.ts';
 import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import type { Program, ProgramDoc } from '../../lib/programs/programs.ts';
 import { insertedAt, moved } from '../../lib/reorder.ts';
@@ -166,10 +167,18 @@ export function addPlannedExercise(doc: ProgramDoc, dayIndex: number, exerciseId
   }));
 }
 
+export function programNameProblem(name: string): string | null {
+  return problemOf(parsedName(name, PROGRAM_NAME_MAX_LENGTH));
+}
+
+export function dayNameProblem(name: string): string | null {
+  return problemOf(parsedName(name, DAY_NAME_MAX_LENGTH));
+}
+
 export function nameIssue(doc: ProgramDoc): string | null {
   return (
-    nameProblem(doc.name, PROGRAM_NAME_MAX_LENGTH) ??
-    doc.days.map((day) => nameProblem(day.name, DAY_NAME_MAX_LENGTH)).find((issue) => issue !== null) ??
+    programNameProblem(doc.name) ??
+    doc.days.map((day) => dayNameProblem(day.name)).find((issue) => issue !== null) ??
     null
   );
 }

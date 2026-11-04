@@ -1,68 +1,74 @@
 import { describe, expect, it } from 'vitest';
 import {
   ageFrom,
-  bodyweightInUnitProblem,
-  bodyweightKgFromInput,
   bodyweightRangeInUnit,
-  feetAndInchesProblem,
-  heightInCm,
-  initialHeight,
-  nudgedBodyweightKg,
-  optionalNumber,
-  previousValues,
-  sameHeightInput,
-  saveProblemText,
-  bioProblem,
-  birthYearProblem,
   cooldownStartFor,
   formatDay,
-  heightProblem,
+  initialHeight,
   initialsFor,
   latestBirthYear,
   nextTimezoneChangeAt,
-  trainingSinceProblem,
+  nudgedBodyweightKg,
+  optionalNumber,
+  parsedBio,
+  parsedBirthYear,
+  parsedBodyweightKg,
+  parsedHeightCm,
+  parsedTrainingSince,
+  previousValues,
+  sameHeightInput,
+  saveProblemText,
 } from '../../web/src/lib/profile/profile-rules.ts';
 
 const now = new Date('2026-09-30T12:00:00Z');
 
+const ok = <T>(value: T) => ({ kind: 'ok', value });
+const problem = (text: string) => ({ kind: 'problem', problem: text });
+
 describe('profile validation', () => {
-  it('accepts blanks for optional fields', () => {
-    expect(bioProblem('')).toBeNull();
-    expect(heightProblem('')).toBeNull();
-    expect(birthYearProblem('', now)).toBeNull();
-    expect(trainingSinceProblem('', now)).toBeNull();
+  it('reads blanks of optional fields as none', () => {
+    expect(parsedBio('')).toEqual(ok(null));
+    expect(parsedHeightCm({ cm: '', feet: '', inches: '' }, 'kg')).toEqual(ok(null));
+    expect(parsedBirthYear('', now)).toEqual(ok(null));
+    expect(parsedTrainingSince(' ', now)).toEqual(ok(null));
   });
 
   it('bounds height to 100–250 cm', () => {
-    expect(heightProblem('99')).toBe('Height must be between 100 and 250 cm.');
-    expect(heightProblem('181.5')).toBeNull();
-    expect(heightProblem('251')).toBe('Height must be between 100 and 250 cm.');
+    const cm = (typed: string) => parsedHeightCm({ cm: typed, feet: '', inches: '' }, 'kg');
+    expect(cm('99')).toEqual(problem('Height must be between 100 and 250 cm.'));
+    expect(cm('181.5')).toEqual(ok(181.5));
+    expect(cm('251')).toEqual(problem('Height must be between 100 and 250 cm.'));
   });
 
   it('requires people to be at least 13', () => {
     expect(latestBirthYear(now)).toBe(2013);
-    expect(birthYearProblem('2013', now)).toBeNull();
-    expect(birthYearProblem('2014', now)).toBe('Birth year must be between 1900 and 2013.');
-    expect(birthYearProblem('1899', now)).toBe('Birth year must be between 1900 and 2013.');
-    expect(birthYearProblem('1990.5', now)).toBe('Enter a year like 1990.');
+    expect(parsedBirthYear('2013', now)).toEqual(ok(2013));
+    expect(parsedBirthYear('2014', now)).toEqual(problem('Birth year must be between 1900 and 2013.'));
+    expect(parsedBirthYear('1899', now)).toEqual(problem('Birth year must be between 1900 and 2013.'));
+    expect(parsedBirthYear('1990.5', now)).toEqual(problem('Enter a year like 1990.'));
   });
 
   it('does not allow training to start in the future', () => {
-    expect(trainingSinceProblem('2026', now)).toBeNull();
-    expect(trainingSinceProblem('2027', now)).toBe('Training since must be between 1950 and 2026.');
-    expect(trainingSinceProblem('1949', now)).toBe('Training since must be between 1950 and 2026.');
-    expect(trainingSinceProblem('2019.5', now)).toBe('Enter a year like 2019.');
+    expect(parsedTrainingSince('2026', now)).toEqual(ok(2026));
+    expect(parsedTrainingSince('2027', now)).toEqual(problem('Training since must be between 1950 and 2026.'));
+    expect(parsedTrainingSince('1949', now)).toEqual(problem('Training since must be between 1950 and 2026.'));
+    expect(parsedTrainingSince('2019.5', now)).toEqual(problem('Enter a year like 2019.'));
   });
 
   it('limits bios to 80 characters on one line without control characters', () => {
-    expect(bioProblem('x'.repeat(80))).toBeNull();
-    expect(bioProblem('x'.repeat(81))).toBe('Bio can be at most 80 characters.');
-    expect(bioProblem('two\nlines')).toBe("Bio can't contain line breaks or control characters.");
+    expect(parsedBio('x'.repeat(80))).toEqual(ok('x'.repeat(80)));
+    expect(parsedBio('x'.repeat(81))).toEqual(problem('Bio can be at most 80 characters.'));
+    expect(parsedBio('two\nlines')).toEqual(problem("Bio can't contain line breaks or control characters."));
+  });
+
+  it('checks the trimmed bio the save sends', () => {
+    expect(parsedBio(` ${'x'.repeat(80)} `)).toEqual(ok('x'.repeat(80)));
+    expect(parsedBio('lifts\n')).toEqual(ok('lifts'));
   });
 
   it('counts bio length in characters like the server, so an emoji is one character', () => {
-    expect(bioProblem('\u{1F3CB}'.repeat(80))).toBeNull();
-    expect(bioProblem('\u{1F3CB}'.repeat(81))).toBe('Bio can be at most 80 characters.');
+    expect(parsedBio('\u{1F3CB}'.repeat(80)).kind).toBe('ok');
+    expect(parsedBio('\u{1F3CB}'.repeat(81))).toEqual(problem('Bio can be at most 80 characters.'));
   });
 
   it('derives age from birth year and initials from the display name', () => {
@@ -104,8 +110,8 @@ describe('edit profile inputs', () => {
   });
 
   it('validates the same text the save reads: a plus sign is refused, a comma height is read', () => {
-    expect(birthYearProblem('+1990', new Date('2026-11-02T12:00:00Z'))).toBe('Enter a year like 1990.');
-    expect(heightProblem('180,5')).toBeNull();
+    expect(parsedBirthYear('+1990', new Date('2026-11-02T12:00:00Z'))).toEqual(problem('Enter a year like 1990.'));
+    expect(parsedHeightCm({ cm: '180,5', feet: '', inches: '' }, 'kg')).toEqual(ok(180.5));
     expect(optionalNumber('abc')).toBeNaN();
   });
 
@@ -114,20 +120,20 @@ describe('edit profile inputs', () => {
     expect(bodyweightRangeInUnit('lb')).toEqual({ lowest: 45, highest: 881 });
   });
 
-  it('checks a typed bodyweight in the chosen unit', () => {
-    expect(bodyweightInUnitProblem('', 'kg')).toBeNull();
-    expect(bodyweightInUnitProblem('80', 'kg')).toBeNull();
-    expect(bodyweightInUnitProblem('19', 'kg')).toBe('Bodyweight must be between 20 and 400 kg.');
-    expect(bodyweightInUnitProblem('heavy', 'kg')).toBe('Bodyweight must be between 20 and 400 kg.');
-    expect(bodyweightInUnitProblem('45', 'lb')).toBeNull();
-    expect(bodyweightInUnitProblem('44', 'lb')).toBe('Bodyweight must be between 45 and 881 lb.');
+  it('reads a typed bodyweight in the chosen unit as kilograms', () => {
+    const outOfKgRange = problem('Bodyweight must be between 20 and 400 kg.');
+    expect(parsedBodyweightKg('', 'kg')).toEqual(ok(null));
+    expect(parsedBodyweightKg(' ', 'kg')).toEqual(ok(null));
+    expect(parsedBodyweightKg('80', 'kg')).toEqual(ok(80));
+    expect(parsedBodyweightKg('19', 'kg')).toEqual(outOfKgRange);
+    expect(parsedBodyweightKg('heavy', 'kg')).toEqual(outOfKgRange);
+    expect(parsedBodyweightKg('45', 'lb').kind).toBe('ok');
+    expect(parsedBodyweightKg('44', 'lb')).toEqual(problem('Bodyweight must be between 45 and 881 lb.'));
   });
 
   it('reads a comma as the decimal point of a bodyweight', () => {
-    expect(bodyweightInUnitProblem('80,5', 'kg')).toBeNull();
-    expect(bodyweightInUnitProblem('80,5,1', 'kg')).toBe('Bodyweight must be between 20 and 400 kg.');
-    expect(bodyweightKgFromInput('80,5', 'kg')).toBe(80.5);
-    expect(bodyweightKgFromInput(' ', 'kg')).toBeNull();
+    expect(parsedBodyweightKg('80,5', 'kg')).toEqual(ok(80.5));
+    expect(parsedBodyweightKg('80,5,1', 'kg')).toEqual(problem('Bodyweight must be between 20 and 400 kg.'));
   });
 
   it('nudges bodyweight by one step of the chosen unit and keeps it in range', () => {
@@ -143,11 +149,14 @@ describe('edit profile inputs', () => {
   });
 
   it('reads the height in centimetres from either set of fields', () => {
-    expect(heightInCm({ cm: '180', feet: '', inches: '' }, 'kg')).toBe(180);
-    expect(heightInCm({ cm: '', feet: '5', inches: '11' }, 'kg')).toBeNull();
-    expect(heightInCm({ cm: '', feet: '5', inches: '11' }, 'lb')).toBe(180.3);
-    expect(heightInCm({ cm: '', feet: '6', inches: '' }, 'lb')).toBe(182.9);
-    expect(heightInCm({ cm: '180', feet: ' ', inches: '' }, 'lb')).toBeNull();
+    expect(parsedHeightCm({ cm: '180', feet: '', inches: '' }, 'kg')).toEqual(ok(180));
+    expect(parsedHeightCm({ cm: '', feet: '5', inches: '11' }, 'kg')).toEqual(ok(null));
+    expect(parsedHeightCm({ cm: '', feet: '5', inches: '11' }, 'lb')).toEqual(ok(180.3));
+    expect(parsedHeightCm({ cm: '', feet: '6', inches: '' }, 'lb')).toEqual(ok(182.9));
+    expect(parsedHeightCm({ cm: '180', feet: ' ', inches: '' }, 'lb')).toEqual(ok(null));
+    expect(parsedHeightCm({ cm: '', feet: '3', inches: '' }, 'lb')).toEqual(
+      problem('Height must be between 100 and 250 cm.'),
+    );
   });
 
   it('compares only the height fields of the chosen unit', () => {
@@ -160,17 +169,22 @@ describe('edit profile inputs', () => {
 
   it('wants whole feet and 0–11 inches', () => {
     const height = (feet: string, inches: string) => ({ cm: '', feet, inches });
-    expect(feetAndInchesProblem(height('5', '12'), 'kg')).toBeNull();
-    expect(feetAndInchesProblem(height('', ''), 'lb')).toBeNull();
-    expect(feetAndInchesProblem(height('5', '11'), 'lb')).toBeNull();
-    expect(feetAndInchesProblem(height('6', ''), 'lb')).toBeNull();
+    expect(parsedHeightCm(height('5', '12'), 'kg')).toEqual(ok(null));
+    expect(parsedHeightCm(height('5', '11'), 'lb').kind).toBe('ok');
     for (const [feet, inches] of [
       ['5', '12'],
       ['5.5', '0'],
       ['-1', '0'],
       ['5', '-1'],
     ])
-      expect(feetAndInchesProblem(height(feet, inches), 'lb')).toBe('Enter whole feet and 0–11 inches.');
+      expect(parsedHeightCm(height(feet, inches), 'lb')).toEqual(problem('Enter whole feet and 0–11 inches.'));
+  });
+
+  it('reads feet and inches like every other number field', () => {
+    const height = (feet: string, inches: string) => ({ cm: '', feet, inches });
+    expect(parsedHeightCm(height('0x5', ''), 'lb')).toEqual(problem('Enter whole feet and 0–11 inches.'));
+    expect(parsedHeightCm(height('6', '1e1'), 'lb')).toEqual(problem('Enter whole feet and 0–11 inches.'));
+    expect(parsedHeightCm(height('5,0', '11'), 'lb')).toEqual(ok(180.3));
   });
 
   it('explains save failures, mapping the database rules to plain text', () => {

@@ -15,6 +15,7 @@ import {
 } from '@domain/index.ts';
 import { formatCount } from '../format.ts';
 import { capitalized } from '../names.ts';
+import { type Parsed } from '../parsed.ts';
 import { parsedDecimal } from '../units.ts';
 
 export const UPDATE_APP_TEXT = 'Update the app to use this program';
@@ -161,15 +162,9 @@ export function liftName(definition: ProgramDefinition, lift: string): string {
   return definition.lifts.find((candidate) => candidate.key === lift)?.name ?? lift;
 }
 
-export function referenceValueProblem(label: string, raw: string | undefined, unit: WeightUnit): string | null {
+export function parsedReferenceValue(label: string, raw: string | undefined, unit: WeightUnit): Parsed<number> {
   const max = MAX_REFERENCE_VALUE[unit];
-  const parsed = parsedNumber(
-    label,
-    raw ?? '',
-    (value) => value > 0 && value <= max,
-    `must be above 0 and at most ${max}`,
-  );
-  return parsed.kind === 'problem' ? parsed.problem : null;
+  return parsedNumber(label, raw ?? '', (value) => value > 0 && value <= max, `must be above 0 and at most ${max}`);
 }
 
 function entryOf(row: ProgramTemplateRow): TemplateListEntry {
@@ -365,9 +360,7 @@ function listedChoices(values: readonly number[]): string {
   return `${values.slice(0, -1).join(', ')} or ${values[values.length - 1]}`;
 }
 
-type ParsedNumber = { kind: 'ok'; value: number } | { kind: 'problem'; problem: string };
-
-function parsedNumber(label: string, raw: string, isAllowed: (value: number) => boolean, rule: string): ParsedNumber {
+function parsedNumber(label: string, raw: string, isAllowed: (value: number) => boolean, rule: string): Parsed<number> {
   const text = raw.trim();
   if (text === '') return { kind: 'problem', problem: `Enter ${label}` };
   const value = parsedDecimal(text);
@@ -380,7 +373,7 @@ export function roundingTextOf(form: EnrollForm): { increment: string; barWeight
   );
 }
 
-function roundingOf(form: EnrollForm): { increment: ParsedNumber; barWeight: ParsedNumber } {
+function roundingOf(form: EnrollForm): { increment: Parsed<number>; barWeight: Parsed<number> } {
   const text = roundingTextOf(form);
   const increments = ROUNDING_INCREMENTS[form.unit];
   return {
@@ -394,7 +387,7 @@ function roundingOf(form: EnrollForm): { increment: ParsedNumber; barWeight: Par
   };
 }
 
-function numberOptionsOf(definition: ProgramDefinition, form: EnrollForm): Record<string, ParsedNumber> {
+function numberOptionsOf(definition: ProgramDefinition, form: EnrollForm): Record<string, Parsed<number>> {
   return Object.fromEntries(
     definition.options.flatMap((option) => {
       if (option.kind !== 'number') return [];
@@ -472,19 +465,39 @@ function unitOptionProblems(definition: ProgramDefinition, form: EnrollForm): En
   });
 }
 
-export function enrollFieldProblems(definition: ProgramDefinition, form: EnrollForm): EnrollFieldProblem[] {
+function referenceInputsOf(definition: ProgramDefinition, form: EnrollForm) {
+  return inputFields(definition, form).map((field) => ({
+    field,
+    parsed: parsedReferenceValue(field.label, form.inputValues[field.lift], form.unit),
+  }));
+}
+
+function parsedEnrollFields(definition: ProgramDefinition, form: EnrollForm) {
+  return {
+    references: referenceInputsOf(definition, form),
+    rounding: roundingOf(form),
+    numberOptions: numberOptionsOf(definition, form),
+  };
+}
+
+function fieldProblemsOf(
+  definition: ProgramDefinition,
+  form: EnrollForm,
+  { references, rounding, numberOptions }: ReturnType<typeof parsedEnrollFields>,
+): EnrollFieldProblem[] {
   const problems: EnrollFieldProblem[] = [];
-  for (const field of inputFields(definition, form)) {
-    const text = referenceValueProblem(field.label, form.inputValues[field.lift], form.unit);
-    if (text) problems.push({ field: inputFieldKey(field.lift), text });
-  }
-  const { increment, barWeight } = roundingOf(form);
-  if (increment.kind === 'problem') problems.push({ field: 'increment', text: increment.problem });
-  if (barWeight.kind === 'problem') problems.push({ field: 'barWeight', text: barWeight.problem });
+  for (const { field, parsed } of references)
+    if (parsed.kind === 'problem') problems.push({ field: inputFieldKey(field.lift), text: parsed.problem });
+  if (rounding.increment.kind === 'problem') problems.push({ field: 'increment', text: rounding.increment.problem });
+  if (rounding.barWeight.kind === 'problem') problems.push({ field: 'barWeight', text: rounding.barWeight.problem });
   problems.push(...unitOptionProblems(definition, form));
-  for (const [key, parsed] of Object.entries(numberOptionsOf(definition, form)))
+  for (const [key, parsed] of Object.entries(numberOptions))
     if (parsed.kind === 'problem') problems.push({ field: optionFieldKey(key), text: parsed.problem });
   return problems;
+}
+
+export function enrollFieldProblems(definition: ProgramDefinition, form: EnrollForm): EnrollFieldProblem[] {
+  return fieldProblemsOf(definition, form, parsedEnrollFields(definition, form));
 }
 
 export function startingWeightHint(fields: readonly InputField[], form: EnrollForm): string | null {
@@ -511,16 +524,17 @@ export function referencePreview(definition: ProgramDefinition, form: EnrollForm
 }
 
 export function enrollPayload(definition: ProgramDefinition, form: EnrollForm): EnrollPayloadResult {
-  const problems = enrollFieldProblems(definition, form).map((problem) => problem.text);
-  const { increment, barWeight } = roundingOf(form);
+  const fields = parsedEnrollFields(definition, form);
+  const problems = fieldProblemsOf(definition, form, fields).map((problem) => problem.text);
+  const { increment, barWeight } = fields.rounding;
   if (problems.length > 0 || increment.kind === 'problem' || barWeight.kind === 'problem') {
     return { kind: 'invalid', problems };
   }
   const inputs: Record<string, Partial<Record<InputKind, number>>> = {};
-  for (const field of inputFields(definition, form))
-    inputs[field.lift] = { [field.kind]: parsedDecimal(form.inputValues[field.lift] ?? '')! };
+  for (const { field, parsed } of fields.references)
+    if (parsed.kind === 'ok') inputs[field.lift] = { [field.kind]: parsed.value };
   const options: Record<string, OptionValue> = { ...form.options };
-  for (const [key, parsed] of Object.entries(numberOptionsOf(definition, form)))
+  for (const [key, parsed] of Object.entries(fields.numberOptions))
     if (parsed.kind === 'ok') options[key] = parsed.value;
   return {
     kind: 'ok',

@@ -1,3 +1,5 @@
+import { type Parsed } from './parsed.ts';
+
 const INVISIBLE_BLANKS = String.fromCharCode(0xfeff, 0x200b);
 const SURROUNDING_BLANKS = new RegExp(`^[\\s${INVISIBLE_BLANKS}]+|[\\s${INVISIBLE_BLANKS}]+$`, 'g');
 export const CONTROL_CHARACTER = /\p{Cc}/u;
@@ -15,10 +17,12 @@ export function trimmedName(raw: string): string {
   return raw.replace(SURROUNDING_BLANKS, '');
 }
 
-export function nameProblem(raw: string, longest: number): string | null {
+export function parsedName(raw: string, longest: number): Parsed<string> {
   const name = trimmedName(raw);
-  if (name === '') return 'Enter a name.';
-  if (CONTROL_CHARACTER.test(name) || BIDI_CONTROL.test(name)) return "Names can't contain control characters.";
-  if (characterCount(name) > longest) return `Names can be at most ${longest} characters.`;
-  return null;
+  if (name === '') return { kind: 'problem', problem: 'Enter a name.' };
+  if (CONTROL_CHARACTER.test(name) || BIDI_CONTROL.test(name))
+    return { kind: 'problem', problem: "Names can't contain control characters." };
+  if (characterCount(name) > longest)
+    return { kind: 'problem', problem: `Names can be at most ${longest} characters.` };
+  return { kind: 'ok', value: name };
 }
