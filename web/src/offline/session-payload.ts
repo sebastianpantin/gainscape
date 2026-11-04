@@ -1,6 +1,5 @@
 import type { BoutValues, HoldValues } from '../lib/workout/exercise-edit-rules.ts';
 import type { DraftExercise, DraftProgram, DraftSet, WorkoutDraft } from './draft-format.ts';
-import { exercisesOf } from './draft-days.ts';
 
 export function boutPayload(bout: BoutValues & { id: string }, exerciseId: string, position: number) {
   const { id, distanceM, interval, effort } = bout;
@@ -47,9 +46,9 @@ function programPayloadOf(program: DraftProgram) {
 function secondDayPayload(draft: WorkoutDraft) {
   const { secondDay } = draft;
   if (secondDay == null) return null;
-  const doneSetIds = exercisesOf(draft, 'second').flatMap((exercise) =>
-    exercise.sets.flatMap((set) => (set.done ? [set.id] : [])),
-  );
+  const doneSetIds = draft.exercises
+    .filter((exercise) => exercise.inSecondDay === true)
+    .flatMap((exercise) => exercise.sets.flatMap((set) => (set.done ? [set.id] : [])));
   return { id: secondDay.sessionId, program: programPayloadOf(secondDay.program), setIds: doneSetIds };
 }
 
