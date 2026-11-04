@@ -167,7 +167,7 @@ async function showInThisTab(queryClient: QueryClient, write: Write): Promise<Qu
     case 'timezone-changed':
       return write.profile ? showSavedProfile(queryClient, write.profile) : [];
     case 'gear-changed':
-      return write.crafted ? showCraftedInventory(queryClient, write.userId) : [];
+      return write.crafted ? showCraftedInventory(queryClient, write.userId) : [itemsQuery(write.userId).queryKey];
     case 'weekly-goal-saved':
       return refetchNow(queryClient, weeklyGoalQuery);
     case 'pins-changed':

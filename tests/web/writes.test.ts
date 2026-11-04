@@ -212,6 +212,13 @@ describe('wrote', () => {
     expect(queryAt(queryClient, queries.loadoutQuery(USER_ID).queryKey)?.state.isInvalidated).toBe(true);
   });
 
+  it('leaves the held items alone on an equip, since equipping changes only the loadout', async () => {
+    const queryClient = seeded();
+    await wrote(queryClient, { change: 'gear-changed', userId: USER_ID });
+    expect(queryAt(queryClient, queries.itemsQuery(USER_ID).queryKey)?.state.isInvalidated).toBe(false);
+    expect(queryAt(queryClient, queries.loadoutQuery(USER_ID).queryKey)?.state.isInvalidated).toBe(true);
+  });
+
   it('falls back to refreshing when the writing tab cannot load what changed, and says why', async () => {
     server.collection.mockRejectedValue(new Error('offline'));
     const queryClient = seeded();

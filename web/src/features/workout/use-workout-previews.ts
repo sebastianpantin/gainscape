@@ -10,12 +10,12 @@ import { type DraftPreview, previewDraft, type PreviewContext, type SetPreview }
 const NO_PREVIEW: DraftPreview = { previews: [], records: [] };
 
 function rememberingPreviewer(context: PreviewContext): (draft: DraftDays) => DraftPreview {
-  const previewed = new WeakMap<DraftDays['exercises'], DraftPreview>();
+  const previewed = new WeakMap<DraftDays['exercises'], { secondDay: DraftDays['secondDay']; preview: DraftPreview }>();
   return (draft) => {
     const known = previewed.get(draft.exercises);
-    if (known) return known;
+    if (known && known.secondDay === draft.secondDay) return known.preview;
     const preview = previewDraft(draft, context);
-    previewed.set(draft.exercises, preview);
+    previewed.set(draft.exercises, { secondDay: draft.secondDay, preview });
     return preview;
   };
 }
