@@ -3,7 +3,7 @@ import { roundTo } from '@domain/math.ts';
 import { z } from 'zod';
 import { CONTROL_CHARACTER, characterCount } from '../names.ts';
 import { type Parsed } from '../parsed.ts';
-import { nullableNumber, numericColumn } from '../rows.ts';
+import { columnsOf, nullableNumber, numericColumn } from '../rows.ts';
 import { TOKEN_COLORS } from '../ui/token-colors.ts';
 import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, parsedDecimal, unitToKg } from '../units.ts';
 
@@ -75,11 +75,6 @@ export const BADGE_COLORS: Record<BadgeColor, { label: string; fill: string; lig
 export const TRAINING_FOCUSES = Object.keys(TRAINING_FOCUS_LABELS) as TrainingFocus[];
 export const BADGE_COLOR_KEYS = Object.keys(BADGE_COLORS) as BadgeColor[];
 
-export const PROFILE_COLUMNS =
-  'username, display_name, bio, training_focus, training_since, badge_color, show_weights, show_bodyweight, created_at';
-export const PROFILE_PRIVATE_COLUMNS =
-  'bodyweight_kg, height_cm, birth_year, sex, unit_pref, effort_input_mode, timezone, timezone_changed_at';
-
 export const profileRowSchema = z.object({
   username: z.string(),
   display_name: z.string(),
@@ -102,6 +97,9 @@ export const profilePrivateRowSchema = z.object({
   timezone: z.string(),
   timezone_changed_at: z.string().nullable(),
 });
+
+export const PROFILE_COLUMNS = columnsOf(profileRowSchema);
+export const PROFILE_PRIVATE_COLUMNS = columnsOf(profilePrivateRowSchema);
 
 export function profileFromRows(
   publicRow: z.infer<typeof profileRowSchema>,

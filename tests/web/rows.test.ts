@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { nullableNumber, numericColumn, parsedRow, parsedRows, UNREADABLE_ROWS_TEXT } from '../../web/src/lib/rows.ts';
+import {
+  columnsOf,
+  columnsOfEach,
+  nullableNumber,
+  numericColumn,
+  parsedRow,
+  parsedRows,
+  rowListsSchema,
+  UNREADABLE_ROWS_TEXT,
+} from '../../web/src/lib/rows.ts';
 
 describe('nullableNumber', () => {
   it('keeps null and turns numeric strings from Postgres into numbers', () => {
@@ -38,5 +47,32 @@ describe('parsedRow', () => {
 
   it('fails with a sentence for the user on a malformed row', () => {
     expect(() => parsedRow(rowSchema, { id: 7, weight_kg: 1 })).toThrow(UNREADABLE_ROWS_TEXT);
+  });
+});
+
+describe('columnsOf', () => {
+  it('selects every column the row schema reads, in schema order', () => {
+    expect(columnsOf(rowSchema)).toBe('id,weight_kg');
+  });
+
+  it('selects an embedded table through the columns given for it', () => {
+    const goalSchema = z.object({ reps: z.number(), exercises: z.object({ name: z.string() }) });
+    expect(columnsOf(goalSchema, { exercises: columnsOf(z.object({ name: z.string() })) })).toBe(
+      'reps,exercises(name)',
+    );
+  });
+});
+
+describe('row groups', () => {
+  const schemas = { pins: z.object({ exercise_id: z.string(), position: z.number() }), goals: rowSchema };
+
+  it('names the columns of each table in a group', () => {
+    expect(columnsOfEach(schemas)).toEqual({ pins: 'exercise_id,position', goals: 'id,weight_kg' });
+  });
+
+  it('reads a list of rows for each table in a group', () => {
+    const rows = { pins: [{ exercise_id: 'a', position: 1 }], goals: [{ id: 'b', weight_kg: '80' }] };
+    expect(rowListsSchema(schemas).parse(rows)).toEqual(rows);
+    expect(rowListsSchema(schemas).safeParse({ pins: [], goals: [{ id: 'b' }] }).success).toBe(false);
   });
 });

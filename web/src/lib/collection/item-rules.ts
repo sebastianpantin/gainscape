@@ -7,7 +7,7 @@ import type { CatalogChallenge } from './challenge-rules.ts';
 import { capitalized } from '../names.ts';
 import { z } from 'zod';
 import { parsedJson } from '../json-rules.ts';
-import { parsedRow, parsedRows } from '../rows.ts';
+import { columnsOf, parsedRow, parsedRows } from '../rows.ts';
 import { TOKEN_COLORS } from '../ui/token-colors.ts';
 
 export const ITEM_KINDS = ['gear', 'material', 'pet', 'scroll'] as const;
@@ -16,11 +16,6 @@ export const ITEM_RARITIES = ['common', 'uncommon', 'rare', 'legendary'] as cons
 export type ItemRarity = (typeof ITEM_RARITIES)[number];
 
 export const ITEM_ACTIONS_OFFLINE_TEXT = "You're offline. Equipping and crafting need a connection.";
-
-export const ITEM_COLUMNS =
-  'id,key,name,kind,rarity,tier,gear_slot,icon_key,description,grants_challenge_id,sort_order';
-export const RECIPE_COLUMNS = 'id,key,output_item_id,output_quantity,recipe_inputs(item_id,quantity)';
-export const INVENTORY_COLUMNS = 'item_id,quantity,first_obtained_at';
 
 export const TIER_COLORS: Record<ItemTier, string> = {
   rookie: '#8a7d66',
@@ -90,15 +85,21 @@ export const itemRowSchema = z.object({
   sort_order: z.number(),
 });
 
+export const ITEM_COLUMNS = columnsOf(itemRowSchema);
+
 type ItemRow = z.infer<typeof itemRowSchema>;
+
+const recipeInputRowSchema = z.object({ item_id: z.string(), quantity: z.number() });
 
 export const recipeRowSchema = z.object({
   id: z.string(),
   key: z.string(),
   output_item_id: z.string(),
   output_quantity: z.number(),
-  recipe_inputs: z.array(z.object({ item_id: z.string(), quantity: z.number() })),
+  recipe_inputs: z.array(recipeInputRowSchema),
 });
+
+export const RECIPE_COLUMNS = columnsOf(recipeRowSchema, { recipe_inputs: columnsOf(recipeInputRowSchema) });
 
 type RecipeRow = z.infer<typeof recipeRowSchema>;
 
@@ -107,6 +108,8 @@ export const inventoryRowSchema = z.object({
   quantity: z.number(),
   first_obtained_at: z.string(),
 });
+
+export const INVENTORY_COLUMNS = columnsOf(inventoryRowSchema);
 
 type InventoryRow = z.infer<typeof inventoryRowSchema>;
 

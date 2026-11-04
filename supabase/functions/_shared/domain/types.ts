@@ -4,10 +4,12 @@ import type { GearLoadout } from './gear.ts';
 export type LoadType = 'external' | 'bodyweight' | 'bodyweight_plus';
 export type EffortLevel = 'easy' | 'moderate' | 'hard' | 'near_failure' | 'failure';
 export type EffortInputType = 'level' | 'rir' | 'rpe' | 'cardio';
+export const EFFORT_INPUT_TYPES: readonly EffortInputType[] = Object.freeze(['level', 'rir', 'rpe', 'cardio']);
 export type CardioEffortLevel = 'easy' | 'moderate' | 'hard' | 'max';
 export const CARDIO_EFFORT_LEVELS: readonly CardioEffortLevel[] = Object.freeze(['easy', 'moderate', 'hard', 'max']);
 export type SetKind = 'lift' | 'cardio' | 'hold';
 export type ExerciseMeasure = 'reps' | 'time' | 'distance';
+export const EXERCISE_MEASURES: readonly ExerciseMeasure[] = Object.freeze(['reps', 'time', 'distance']);
 export type RirSource = 'logged' | 'estimated' | 'cold_start' | 'default';
 
 export type EffortInput =

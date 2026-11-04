@@ -1,39 +1,40 @@
 import { collectionCompletion, type CollectionExercise } from '@domain/collection.ts';
-import { type CardioRecordKind, measuresRepsCapacity, REP_MAX_SLOT_COUNT } from '@domain/types.ts';
+import { CARDIO_RECORD_KINDS, measuresRepsCapacity, REP_MAX_SLOT_COUNT } from '@domain/types.ts';
+import { z } from 'zod';
 import { type Exercise, isLiftExercise, type LiftExercise, type LoadType } from '../exercises/catalog-rules.ts';
 import { rateLimitedMessage } from '../platform/rate-limit.ts';
 import type { CollectionData, ExerciseStrengthView, RepMaxSlotView } from './collection-data.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
-import { nullableNumber } from '../rows.ts';
+import { columnsOfEach, nullableNumber, numericColumn, rowListsSchema } from '../rows.ts';
 import { formatWeight } from '../units.ts';
 
-export const COLLECTION_COLUMNS = {
-  repMaxes: 'exercise_id, reps, load_kg, exact_set_id, achieved_at',
-  bodyweightRecords: 'exercise_id, max_reps',
-  strengths: 'exercise_id, e1rm_kg, reps_capacity',
-  pins: 'exercise_id, position',
-  cardioRecords: 'exercise_id, kind, value',
-} as const;
+export const collectionRowSchemas = {
+  repMaxes: z.object({
+    exercise_id: z.string(),
+    reps: z.number(),
+    load_kg: numericColumn,
+    exact_set_id: z.string().nullable(),
+    achieved_at: z.string().nullable().catch(null),
+  }),
+  bodyweightRecords: z.object({ exercise_id: z.string(), max_reps: z.number() }),
+  strengths: z.object({
+    exercise_id: z.string(),
+    e1rm_kg: numericColumn.nullable(),
+    reps_capacity: z.number().nullable(),
+  }),
+  pins: z.object({ exercise_id: z.string(), position: z.number() }),
+  cardioRecords: z.object({ exercise_id: z.string(), kind: z.enum(CARDIO_RECORD_KINDS), value: numericColumn }),
+};
 
-export interface StrengthRow {
-  exercise_id: string;
-  e1rm_kg: number | string | null;
-  reps_capacity: number | null;
-}
+export const repMaxLoadRowSchema = collectionRowSchemas.repMaxes.pick({ exercise_id: true, reps: true, load_kg: true });
 
-export interface CollectionRows {
-  repMaxes: {
-    exercise_id: string;
-    reps: number;
-    load_kg: number | string;
-    exact_set_id: string | null;
-    achieved_at: string | null;
-  }[];
-  bodyweightRecords: { exercise_id: string; max_reps: number }[];
-  strengths: StrengthRow[];
-  pins: { exercise_id: string; position: number }[];
-  cardioRecords: { exercise_id: string; kind: CardioRecordKind; value: number | string }[];
-}
+export const collectionRowsSchema = rowListsSchema(collectionRowSchemas);
+
+export type CollectionRows = z.infer<typeof collectionRowsSchema>;
+
+type StrengthRow = CollectionRows['strengths'][number];
+
+export const COLLECTION_COLUMNS = columnsOfEach(collectionRowSchemas);
 
 export function emptySlots<Slot>(): (Slot | null)[] {
   return Array.from({ length: REP_MAX_SLOT_COUNT }, () => null);

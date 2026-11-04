@@ -16,13 +16,12 @@ import {
 import { formatCount } from '../format.ts';
 import { capitalized } from '../names.ts';
 import { type Parsed } from '../parsed.ts';
+import { columnsOf } from '../rows.ts';
 import { parsedDecimal } from '../units.ts';
 
 export const UPDATE_APP_TEXT = 'Update the app to use this program';
 
 const UNUSABLE_TEMPLATE_TEXT = "This program can't be used right now";
-
-export const PROGRAM_TEMPLATE_COLUMNS = 'key, version, name, definition, owner_user_id';
 
 export const programTemplateRowSchema = z.object({
   key: z.string(),
@@ -31,6 +30,8 @@ export const programTemplateRowSchema = z.object({
   definition: z.unknown(),
   owner_user_id: z.string().nullable().optional(),
 });
+
+export const PROGRAM_TEMPLATE_COLUMNS = columnsOf(programTemplateRowSchema);
 
 export type ProgramTemplateRow = z.infer<typeof programTemplateRowSchema>;
 

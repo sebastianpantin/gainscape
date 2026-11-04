@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { sessionXp } from '../format.ts';
-import { numericColumn, parsedRows } from '../rows.ts';
+import { columnsOf, numericColumn, parsedRows } from '../rows.ts';
 import { daysInMonth, shiftMonth } from '../ui/date-bucket-rules.ts';
 
 const trainingDayRowSchema = z.object({
@@ -55,6 +55,8 @@ export async function queryTrainingDays(
 
 const latestTrainingDateRowSchema = z.object({ local_date: z.string() });
 
+const LATEST_TRAINING_DATE_COLUMNS = columnsOf(latestTrainingDateRowSchema);
+
 export async function queryLatestTrainingDate(
   client: SupabaseClient,
   userId: string,
@@ -62,7 +64,7 @@ export async function queryLatestTrainingDate(
 ): Promise<string | null> {
   const { data, error } = await client
     .from('sessions')
-    .select('local_date')
+    .select(LATEST_TRAINING_DATE_COLUMNS)
     .eq('user_id', userId)
     .lte('local_date', today)
     .order('local_date', { ascending: false })

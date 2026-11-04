@@ -19,3 +19,31 @@ export function parsedRow<Row>(schema: z.ZodType<Row>, data: unknown): Row {
   if (!parsed.success) throw new Error(UNREADABLE_ROWS_TEXT);
   return parsed.data;
 }
+
+export function columnsOf<Shape extends z.ZodRawShape>(
+  schema: z.ZodObject<Shape>,
+  embedded: Partial<Record<keyof Shape & string, string>> = {},
+): string {
+  return Object.keys(schema.shape)
+    .map((column) => {
+      const inner = embedded[column as keyof Shape & string];
+      return inner === undefined ? column : `${column}(${inner})`;
+    })
+    .join(',');
+}
+
+type RowSchemas = Record<string, z.ZodObject>;
+
+export function columnsOfEach<Schemas extends RowSchemas>(schemas: Schemas): { [Table in keyof Schemas]: string } {
+  return Object.fromEntries(Object.entries(schemas).map(([table, schema]) => [table, columnsOf(schema)])) as {
+    [Table in keyof Schemas]: string;
+  };
+}
+
+export function rowListsSchema<Schemas extends RowSchemas>(schemas: Schemas) {
+  return z.object(
+    Object.fromEntries(Object.entries(schemas).map(([table, schema]) => [table, z.array(schema)])) as {
+      [Table in keyof Schemas]: z.ZodArray<Schemas[Table]>;
+    },
+  );
+}

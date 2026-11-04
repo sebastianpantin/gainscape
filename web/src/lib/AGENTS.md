@@ -5,7 +5,7 @@
 
 ## Purpose
 
-`web/src/lib/` is the web app's non-visual layer. It holds the Supabase client, auth, typed fetchers and RPC wrappers, the TanStack Query setup, per-user device stores and the pure rules they use. Decisions live in pure modules that `tests/web/` covers without a stack. I/O modules only fetch and hand the rows to a pure function.
+`web/src/lib/` is the web app's non-visual layer: the Supabase client, auth, typed fetchers and RPC wrappers, the TanStack Query setup, per-user device stores and their pure rules. Decisions live in pure modules `tests/web/` covers without a stack; I/O modules only fetch and hand rows to them.
 
 ## Map
 
@@ -59,7 +59,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Users never see a raw error code or database text. Every failure maps to a sentence, with a generic fallback (`programErrorText`, `pinProblemText`, the account export and delete messages).
 - `emailChangeProblem` does not use `authErrorMessage` on purpose: `authErrorMessage` would call a 403 an invalid link.
 - A password change re-checks the current password against the email `getUser()` returns now, not a cached one. Only `invalid_credentials` means the password was wrong.
-- Row shapes are hand-written zod `*RowSchema`s (`*Row` is inferred) beside the `*_COLUMNS` strings; update both on a schema change. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a row with a new server value and falls back to its saved copy: ship the client value a release before the server writes it. String numerics: `numericColumn`, then `Number(...)`.
+- Row shapes are hand-written zod `*RowSchema`s (`*Row` is `z.infer`); the select is `columnsOf(schema, embedded)` (`rows.ts`), so they cannot drift; only selects with a join hint (`!inner`, `!fkey`) stay hand-written. Every read goes through `parsedRows`/`parsedRow`, never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a new server value and falls back to its saved copy: ship the client value a release before the server writes it. String numerics: `numericColumn`, then `Number(...)`.
 
 ### Must stay in sync with SQL
 
@@ -114,7 +114,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
   - Blocked storage reads as the defaults, and `deviceStorage()` returns null.
   - `readOnboarding` and `readLastSeenRelease` write the value back to tell `absent` from `unavailable`.
   - A blocked notify prompt counts as answered, so the prompt never nags.
-- `ui/use-count-up.ts` counts a number up from the value this device last showed (`ui/last-seen-number-store.ts`, one record per user keyed by metric; skill XP is shared by the Train hero and the Skills cards). A first view, a drop and reduced motion jump straight to the value, so a new device never counts from zero. The value is saved only once the count ends, so a screen left mid-count counts again next time.
+- `ui/use-count-up.ts` counts up from the value this device last showed (`ui/last-seen-number-store.ts`, per user and metric; the Train hero and Skills cards share skill XP). A first view, a drop and reduced motion jump straight to the value. The value is saved only when the count ends, so a screen left mid-count counts again.
 - Only `exerciseListLoadQuery` reads and writes the exercise cache (`loadExercisesCacheFirst`); imperative code uses `fetchQuery` or `fetchLatestExerciseList`. The cache holds every exercise, archived ones included. Every reader that wants the training list applies `activeExercises`. A cached activity without `tracksDistance` reads as true.
 - Offline, fetchers fail at once (`failFastWhenOffline`, `OfflineError`), and cache-first loaders show the saved copy without sending a request. `useOnlineSignal` (`platform/use-online.ts`) gives loaders a reconnect counter to reload on.
 

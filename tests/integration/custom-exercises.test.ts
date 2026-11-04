@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EXERCISE_COLUMNS, type ExerciseRow, toExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import { EXERCISE_COLUMNS, exerciseRowSchema, toExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import { parsedRows } from '../../web/src/lib/rows.ts';
 import { builtInExerciseId, createTestUser, db, postCompleteSession, type TestUser } from './local-stack.ts';
 import { aSet, hoursAgo, payloadAt } from './session-support.ts';
 
@@ -185,7 +186,7 @@ describe('exercise skill shares', () => {
   async function visibleSkillNames(user: TestUser): Promise<Map<string, string[]>> {
     const { data, error } = await user.client.from('exercises').select(EXERCISE_COLUMNS);
     expect(error).toBeNull();
-    const exercises = (data as unknown as ExerciseRow[]).map(toExercise);
+    const exercises = parsedRows(exerciseRowSchema, data).map(toExercise);
     return new Map(exercises.map((exercise) => [exercise.id, exercise.skillShares.map((share) => share.skillName)]));
   }
 

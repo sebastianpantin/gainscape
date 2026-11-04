@@ -1,6 +1,9 @@
 import { type ExerciseStrength, REP_MAX_SLOT_COUNT, type StrengthState } from '@domain/index.ts';
 import { CARDIO_RECORD_KINDS, type CardioRecordKind, isRecord } from '@domain/types.ts';
+import { type z } from 'zod';
+import { collectionRowSchemas, repMaxLoadRowSchema } from '../collection/collection-rules.ts';
 import { parsedJson } from '../json-rules.ts';
+import { columnsOfEach, rowListsSchema } from '../rows.ts';
 
 export interface RecordBaseline {
   repMaxKg: Readonly<Record<string, readonly (number | null)[]>>;
@@ -22,17 +25,17 @@ export function sessionBaselineAsOf(
   return [loaded, saved].find((baseline) => baseline !== null && baseline.asOf === asOf) ?? null;
 }
 
-export const RECORD_BASELINE_COLUMNS = {
-  repMaxes: 'exercise_id, reps, load_kg',
-  bodyweightRecords: 'exercise_id, max_reps',
-  cardioRecords: 'exercise_id, kind, value',
-} as const;
+const recordBaselineRowSchemas = {
+  repMaxes: repMaxLoadRowSchema,
+  bodyweightRecords: collectionRowSchemas.bodyweightRecords,
+  cardioRecords: collectionRowSchemas.cardioRecords,
+};
 
-interface RecordBaselineRows {
-  repMaxes: readonly { exercise_id: string; reps: number; load_kg: number | string }[];
-  bodyweightRecords: readonly { exercise_id: string; max_reps: number }[];
-  cardioRecords: readonly { exercise_id: string; kind: CardioRecordKind; value: number | string }[];
-}
+export const recordBaselineRowsSchema = rowListsSchema(recordBaselineRowSchemas);
+
+type RecordBaselineRows = z.infer<typeof recordBaselineRowsSchema>;
+
+export const RECORD_BASELINE_COLUMNS = columnsOfEach(recordBaselineRowSchemas);
 
 export function recordBaselineFrom(rows: RecordBaselineRows): RecordBaseline {
   const repMaxKg: Record<string, (number | null)[]> = {};
