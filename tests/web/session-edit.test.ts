@@ -441,12 +441,16 @@ describe('after the server accepts an edit', () => {
   });
 
   it('forgets the edited and replayed sessions after a first-try reply', () => {
-    expect(summariesToForget(session.id, ['later-1'], false, 'later-2')).toEqual([session.id, 'later-1']);
+    expect(summariesToForget(session.id, ['later-1'], false, ['later-2'])).toEqual([session.id, 'later-1']);
   });
 
   it('also forgets any remembered summary after a retried reply, which may be the no-op answer to a lost write', () => {
-    expect(summariesToForget(session.id, [], true, 'later-2')).toEqual([session.id, 'later-2']);
-    expect(summariesToForget(session.id, [], true, undefined)).toEqual([session.id]);
+    expect(summariesToForget(session.id, [], true, ['later-2'])).toEqual([session.id, 'later-2']);
+    expect(summariesToForget(session.id, [], true, [])).toEqual([session.id]);
+  });
+
+  it('forgets every Session of a remembered two-Day summary after a retried reply', () => {
+    expect(summariesToForget(session.id, [], true, ['day-1', 'day-2'])).toEqual([session.id, 'day-1', 'day-2']);
   });
 });
 

@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHUNK_RELOAD_KEY } from '../../web/src/pwa/chunk-reload.ts';
 import { FINISH_WINDOW_OVERRIDE_KEY } from '../../web/src/features/workout/workout-rules.ts';
-import { rememberLastSummary } from '../../web/src/offline/last-summary.ts';
 import { saveCachedExercises } from '../../web/src/lib/exercises/catalog-cache.ts';
 import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { saveCachedExerciseNotes } from '../../web/src/lib/exercises/exercise-note-cache.ts';
@@ -15,8 +14,8 @@ import { parsePlateSettings } from '../../web/src/lib/workout/plate-rules.ts';
 import { savePlateSettings } from '../../web/src/lib/workout/plate-settings-store.ts';
 import { preferencesCache } from '../../web/src/lib/profile/preferences.ts';
 import { type Profile } from '../../web/src/lib/profile/profile-rules.ts';
-import { dismissFollowCard } from '../../web/src/lib/programs/follow-card-store.ts';
-import { dismissSummary } from '../../web/src/lib/programs/program-summary-store.ts';
+import { dismissFollowCard } from '../../web/src/lib/programs/follow-card.ts';
+import { dismissSummary } from '../../web/src/lib/programs/program-summary-rules.ts';
 import { parseRestState } from '../../web/src/lib/workout/rest-timer-rules.ts';
 import { saveRestState } from '../../web/src/lib/workout/rest-timer-store.ts';
 import { saveSessionBaseline } from '../../web/src/lib/workout/session-baseline-store.ts';
@@ -30,7 +29,6 @@ import { collectionCache, type SavedCollection } from '../../web/src/offline/col
 import { createLocalDraftStore, fallbackKeyFor, readFallbackRecord } from '../../web/src/offline/draft-store.ts';
 import { type ItemsCache, saveItemsCache } from '../../web/src/offline/items-cache.ts';
 import { profileCache } from '../../web/src/offline/profile-cache.ts';
-import { EMPTY_PROGRAM_CACHE, saveProgramCache } from '../../web/src/offline/program-cache.ts';
 import { programListCache } from '../../web/src/offline/program-list-cache.ts';
 import { questsCache } from '../../web/src/offline/quests-cache.ts';
 import { companionPetStore } from '../../web/src/lib/collection/companion-pet-store.ts';
@@ -40,6 +38,7 @@ import { forgetUserDeviceData, forgetUserProgressData } from '../../web/src/offl
 import { installCardKey } from '../../web/src/pwa/install-state.ts';
 import { workout } from './draft-store.contract.ts';
 import { MemoryStorage } from './memory-storage.ts';
+import { storeRecord } from './stored-enrollment-fixture.ts';
 
 const LEAVING_USER = '11111111-1111-4111-8111-111111111111';
 const STAYING_USER = '22222222-2222-4222-8222-222222222222';
@@ -89,6 +88,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function rememberSummary(userId: string): void {
+  session.setItem('gainscape.last-summary', JSON.stringify({ userId, summary: SUMMARY }));
+}
+
 async function writeEveryStore(userId: string): Promise<void> {
   saveCachedExercises(local, userId, [EXERCISE]);
   local.setItem(`gainscape.exercises.v1.${userId}`, JSON.stringify({ v: 1, userId, exercises: [] }));
@@ -108,7 +111,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   collectionCache.save(local, userId, { rows: {} } as unknown as SavedCollection);
   saveItemsCache(local, userId, { catalog: { items: [] }, inventory: [] } as unknown as ItemsCache);
   profileCache.save(local, userId, { username: 'lifter' } as unknown as Profile);
-  saveProgramCache(local, userId, EMPTY_PROGRAM_CACHE);
+  storeRecord(local, userId, {});
   programListCache.save(local, userId, []);
   standingCache.save(local, userId, { skills: [], xpBySkillId: {} });
   questsCache.save(local, userId, { quests: [], progress: [], completions: [], exerciseNames: {} });
@@ -119,7 +122,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   companionPetStore.save(local, userId, 'pet-item');
   local.setItem(installCardKey(userId), 'due');
   await createLocalDraftStore(local).put(userId, 10, workout(`session-of-${userId}`));
-  rememberLastSummary(userId, SUMMARY);
+  rememberSummary(userId);
 }
 
 function entriesOf(storage: Storage): [string, string][] {
@@ -155,7 +158,7 @@ describe('forgetting a user on this device', () => {
     await writeEveryStore(LEAVING_USER);
     await writeEveryStore(STAYING_USER);
     const stayingBefore = entriesMentioning(local, STAYING_USER);
-    rememberLastSummary(LEAVING_USER, SUMMARY);
+    rememberSummary(LEAVING_USER);
 
     await forgetUserDeviceData(
       { localStorage: local, sessionStorage: session, draftStore: createLocalDraftStore(local) },
@@ -170,7 +173,7 @@ describe('forgetting a user on this device', () => {
   });
 
   it('keeps the remembered summary of another user in this tab', async () => {
-    rememberLastSummary(STAYING_USER, SUMMARY);
+    rememberSummary(STAYING_USER);
     await forgetUserDeviceData(
       { localStorage: local, sessionStorage: session, draftStore: createLocalDraftStore(local) },
       LEAVING_USER,

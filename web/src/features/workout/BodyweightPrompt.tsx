@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react';
-import { bodyweightInUnitProblem, bodyweightKgFromInput, type UnitPref } from '../../lib/profile/profile.ts';
+import { parsedBodyweightKg, type UnitPref } from '../../lib/profile/profile.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { DecimalInput } from '../../components/DecimalInput.tsx';
 
@@ -16,10 +16,10 @@ export function BodyweightPrompt({ unit, onSave, submitLabel = 'Save and finish 
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const bodyweightKg = bodyweightKgFromInput(bodyweight, unit);
+    const parsed = parsedBodyweightKg(bodyweight, unit);
+    if (parsed.kind === 'problem') return setProblem(parsed.problem);
+    const bodyweightKg = parsed.value;
     if (bodyweightKg === null) return setProblem('Enter your bodyweight.');
-    const rangeProblem = bodyweightInUnitProblem(bodyweight, unit);
-    if (rangeProblem) return setProblem(rangeProblem);
     setSaving(true);
     setProblem(null);
     try {

@@ -1,4 +1,5 @@
-import type { FinishAttemptResult, SendOutcome } from './finish-lock.ts';
+import type { FinishAttemptResult } from './finish-lock.ts';
+import type { SendOutcome } from './finish-outcome.ts';
 import { messageOf } from '../lib/error-text.ts';
 
 export type FinishStatus =

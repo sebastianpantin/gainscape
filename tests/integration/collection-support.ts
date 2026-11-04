@@ -1,16 +1,18 @@
 import { expect } from 'vitest';
-import { EXERCISE_COLUMNS, type ExerciseRow, toExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
+import { EXERCISE_COLUMNS, exerciseRowSchema, toExercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   COLLECTION_COLUMNS,
   collectionDataFrom,
+  collectionRowsSchema,
   countCollection,
 } from '../../web/src/lib/collection/collection-rules.ts';
+import { parsedRow, parsedRows } from '../../web/src/lib/rows.ts';
 import type { TestUser } from './local-stack.ts';
 
 async function visibleExercises(user: TestUser) {
   const { data, error } = await user.client.from('exercises').select(EXERCISE_COLUMNS).order('name');
   expect(error).toBeNull();
-  return (data as unknown as ExerciseRow[]).map(toExercise);
+  return parsedRows(exerciseRowSchema, data).map(toExercise);
 }
 
 async function collectionRows(user: TestUser) {
@@ -28,13 +30,13 @@ async function collectionRows(user: TestUser) {
     user.client.from('cardio_records').select(COLLECTION_COLUMNS.cardioRecords).eq('user_id', user.id),
   ]);
   for (const result of [repMaxes, bodyweightRecords, strengths, pins, cardioRecords]) expect(result.error).toBeNull();
-  return {
-    repMaxes: repMaxes.data!,
-    bodyweightRecords: bodyweightRecords.data!,
-    strengths: strengths.data!,
-    pins: pins.data!,
-    cardioRecords: cardioRecords.data!,
-  };
+  return parsedRow(collectionRowsSchema, {
+    repMaxes: repMaxes.data,
+    bodyweightRecords: bodyweightRecords.data,
+    strengths: strengths.data,
+    pins: pins.data,
+    cardioRecords: cardioRecords.data,
+  });
 }
 
 export async function webCollectionCounts(user: TestUser): Promise<{ filledSlots: number; totalSlots: number }> {

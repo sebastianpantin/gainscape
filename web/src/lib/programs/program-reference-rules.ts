@@ -7,8 +7,7 @@ import {
   retestVarOf,
   type WeightUnit,
 } from '@domain/index.ts';
-import { parsedDecimal } from '../units.ts';
-import { liftName, REFERENCE_VAR_LABELS, referenceValueProblem, shownReference } from './program-enroll-rules.ts';
+import { liftName, parsedReferenceValue, REFERENCE_VAR_LABELS, shownReference } from './program-enroll-rules.ts';
 
 export interface ReferenceField {
   lift: string;
@@ -65,13 +64,10 @@ export function referenceEvents(
   for (const field of fields) {
     const raw = edited[referenceFieldKey(field)];
     if (raw === undefined || (field.value === null && raw.trim() === '')) continue;
-    const problem = referenceValueProblem(field.label, raw, field.unit);
-    if (problem) {
-      problems.push(problem);
-      continue;
-    }
-    const value = parsedDecimal(raw)!;
-    if (value !== field.value) events.push({ kind: 'set_reference', lift: field.lift, var: field.var, value });
+    const parsed = parsedReferenceValue(field.label, raw, field.unit);
+    if (parsed.kind === 'problem') problems.push(parsed.problem);
+    else if (parsed.value !== field.value)
+      events.push({ kind: 'set_reference', lift: field.lift, var: field.var, value: parsed.value });
   }
   return problems.length > 0 ? { kind: 'invalid', problems } : { kind: 'ok', events };
 }

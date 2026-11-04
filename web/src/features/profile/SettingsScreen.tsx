@@ -29,7 +29,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
         <>
           <TrainingSection userId={userId} profile={state.profile} replaceProfile={replace} />
           <WeeklyGoalSection />
-          <TimezoneSection profile={state.profile} replaceProfile={replace} />
+          <TimezoneSection userId={userId} profile={state.profile} replaceProfile={replace} />
           <section className="panel stack" aria-labelledby="privacy-heading">
             <h2 id="privacy-heading">Privacy</h2>
             <Link className="button" to="/profile/preview">

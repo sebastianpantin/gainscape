@@ -6,12 +6,6 @@ import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { programErrorText } from '../../lib/programs/program-error-rules.ts';
-import {
-  SKIP_CONFIRM_LABEL,
-  SKIP_OFFLINE_TEXT,
-  skipDialogTitle,
-  skipLabel,
-} from '../../lib/programs/program-skip-rules.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import {
   type ActiveProgram,
@@ -20,6 +14,10 @@ import {
   pickedDay,
   positionLabel,
   prescriptionCards,
+  SKIP_CONFIRM_LABEL,
+  SKIP_OFFLINE_TEXT,
+  skipDialogTitle,
+  skipLabel,
   startLabel,
 } from '../../lib/programs/program-today-rules.ts';
 import { type PrescribedDayStart } from '../../offline/draft-starts.ts';

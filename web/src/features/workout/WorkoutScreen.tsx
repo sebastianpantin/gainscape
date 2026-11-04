@@ -8,6 +8,7 @@ import { formatCount, formatXp } from '../../lib/format.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/platform/use-online.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
+import { useActiveProgram } from '../../lib/programs/enrollment.ts';
 import { barbellSetupFor, draftBar } from '../../lib/programs/program-set-rules.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
@@ -19,9 +20,8 @@ import { readTrainingDeviceSettings } from '../../lib/workout/training-device-st
 import { doneSetCount, withSessionRpe } from '../../offline/draft-edits.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { useOnboarding } from '../onboarding/use-onboarding.ts';
-import { useActiveProgram } from '../programs/use-active-program.ts';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
-import { recallLastSummary, summarySessionIds } from '../../offline/last-summary.ts';
+import { finishOutcomeCovers } from '../../offline/finish-outcome.ts';
 import { CardioExerciseCard } from './CardioExerciseCard.tsx';
 import { ChallengeBanner } from './ChallengeBanner.tsx';
 import { liftEquipment } from './exercise-card-rules.ts';
@@ -61,7 +61,7 @@ import {
   type DraftDay,
   dayNameOf,
   draftTitle,
-  exerciseDay,
+  exerciseIndexesOf,
 } from '../../offline/draft-days.ts';
 import { useWorkoutPreviews } from './use-workout-previews.ts';
 import { useWorkoutStart } from './use-workout-start.ts';
@@ -107,12 +107,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const onlineSignal = useOnlineSignal();
   const queryClient = useQueryClient();
   const standing = useStanding(userId);
-  const {
-    cache: programCache,
-    program: activeProgram,
-    loadStatus: programLoadStatus,
-    showCache: showProgramCache,
-  } = useActiveProgram(userId);
+  const { program: activeProgram, loadStatus: programLoadStatus, adjust: adjustProgram } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
   useRestAlert(userId, rest.timer);
   const [keepAwake] = useState(() => readTrainingDeviceSettings(deviceStorage(), userId).keepAwake);
@@ -152,10 +147,10 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const strength = useExerciseStrength(userId);
   const sessionBaseline = useSessionBaseline(userId, draft?.startedAt ?? null, onlineSignal);
   const bodyweightKg = useLatestBodyweight(userId);
-  const start = useWorkoutStart({ userId, exercises, startWorkout, programCache, showProgramCache });
+  const start = useWorkoutStart({ userId, exercises, startWorkout, adjustProgram });
   const { previews, records, feedbackFor } = useWorkoutPreviews({
     exercises,
-    draftExercises: draft?.exercises ?? null,
+    draft,
     baseline: sessionBaseline,
     bodyweightKg,
   });
@@ -193,8 +188,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     markSynced,
     onSynced: (summary) => navigate('/reveal', { state: summary }),
     onSuperseded: (sessionId) => {
-      const remembered = recallLastSummary(userId);
-      if (remembered && summarySessionIds(remembered).includes(sessionId)) navigate('/reveal');
+      if (finishOutcomeCovers(userId, sessionId)) navigate('/reveal');
       else void reload();
     },
     onDeleted: () => void reload('deleted'),
@@ -355,9 +349,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     return <LiftExerciseCard key={exercise.clientId} exercise={exercise} exerciseIndex={exerciseIndex} lift={lift} />;
   };
   const exercisesOfDay = (day: DraftDay) =>
-    draft.exercises.flatMap((exercise, exerciseIndex) =>
-      exerciseDay(draft, exerciseIndex) === day ? [renderCard(exercise, exerciseIndex)] : [],
-    );
+    exerciseIndexesOf(draft, day).map((exerciseIndex) => renderCard(draft.exercises[exerciseIndex], exerciseIndex));
 
   return (
     <main className="screen stack">

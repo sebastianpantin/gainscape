@@ -16,6 +16,10 @@ _Avoid_: workout (when you mean the stored record), log
 A change to the sets of a Session after it was accepted; it makes the server recompute what the Session and every later Session earned.
 _Avoid_: update, correction
 
+**Finish outcome**:
+What one Finish of a Draft saved: the server's summary, merged over its Days, and the Sessions it covers, one per Day the server stored. The Reveal shows it, and it is forgotten when any of its Sessions is edited or deleted.
+_Avoid_: last summary, finish result
+
 **Preview**:
 The XP and Records the app estimates for a Draft's sets before the server accepts it. Only a hint; the server decides.
 _Avoid_: estimate, prediction
@@ -131,3 +135,9 @@ _Avoid_: level, phase
 **Retest**:
 A single heavy set a Slot asks for after its last Stage fails, which resets its Reference from the reps done.
 _Avoid_: test set, max-out
+
+## App
+
+**Write**:
+A change this device saves to the server that the app reads back, such as a profile save, a pin or a craft. After each Write, the tab that made it shows what changed and refreshes the rest, and every other tab refreshes all of it.
+_Avoid_: data change, mutation, announcement

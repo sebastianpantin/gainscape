@@ -1,6 +1,10 @@
 import { useId, useState } from 'react';
-import { DISMISS_SUMMARY_LABEL, rolloverSummary } from '../../lib/programs/program-summary-rules.ts';
-import { dismissSummary, isSummaryDismissed } from '../../lib/programs/program-summary-store.ts';
+import {
+  DISMISS_SUMMARY_LABEL,
+  dismissSummary,
+  isSummaryDismissed,
+  rolloverSummary,
+} from '../../lib/programs/program-summary-rules.ts';
 import { type ActiveProgram } from '../../lib/programs/program-today-rules.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 

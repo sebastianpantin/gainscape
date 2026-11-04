@@ -1,10 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
-import { announceDataChange } from '../../../lib/query/data-changes.ts';
+import { wrote } from '../../../lib/query/writes.ts';
 import { changeTimezone, cooldownStartFor, formatDay, type Profile } from '../../../lib/profile/profile.ts';
 import { type SectionProps } from './section-props.ts';
 
-export function useTimezoneChange(profile: Profile, replaceProfile: SectionProps['replaceProfile']) {
+export function useTimezoneChange(userId: string, profile: Profile, replaceProfile: SectionProps['replaceProfile']) {
   const queryClient = useQueryClient();
   const [candidate, setCandidate] = useState(profile.timezone);
   const [message, setMessage] = useState<{ kind: 'problem' | 'status'; text: string } | null>(null);
@@ -18,8 +18,11 @@ export function useTimezoneChange(profile: Profile, replaceProfile: SectionProps
     const result = await changeTimezone(candidate);
     setBusy(false);
     if (result.ok) {
-      replaceProfile((current) => ({ ...current, timezone: candidate, timezoneChangedAt: new Date().toISOString() }));
-      void announceDataChange(queryClient, 'timezone-changed');
+      const timezoneChangedAt = new Date().toISOString();
+      void wrote(queryClient, {
+        change: 'timezone-changed',
+        profile: { userId, update: (current) => ({ ...current, timezone: candidate, timezoneChangedAt }) },
+      });
       setMessage({ kind: 'status', text: `Time zone changed to ${candidate}.` });
     } else if (result.reason === 'too_soon') {
       replaceProfile((current) => ({ ...current, timezoneChangedAt: cooldownStartFor(result.nextAllowedAt) }));

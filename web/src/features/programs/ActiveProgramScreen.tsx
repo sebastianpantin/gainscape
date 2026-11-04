@@ -3,18 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { TermHelpRow } from '../../components/TermHelpRow.tsx';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
-import {
-  adjustEnrollment,
-  endEnrollment,
-  forgetCachedEnrollment,
-  refreshProgramFactsOrCached,
-} from '../../lib/programs/program-enrollment.ts';
+import { useActiveProgram } from '../../lib/programs/enrollment.ts';
 import { referenceEvents, referenceFieldKey, referenceFields } from '../../lib/programs/program-reference-rules.ts';
 import { referenceHelpKeys } from '../../lib/ui/term-help-rules.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
-import { useActiveProgram } from './use-active-program.ts';
 import { DecimalInput } from '../../components/DecimalInput.tsx';
 import { BackLink } from '../../components/BackLink.tsx';
 
@@ -25,7 +19,7 @@ interface ActiveProgramScreenProps {
 export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
   const navigate = useNavigate();
   const offline = useIsOffline();
-  const { cache, program, loadStatus, statusText, showCache } = useActiveProgram(userId);
+  const { enrollment, program, loadStatus, statusText, adjust, stop: stopFollowing } = useActiveProgram(userId);
   const [edited, setEdited] = useState<Record<string, string>>({});
   const [problems, setProblems] = useState<string[]>([]);
   const { showToast } = useToast();
@@ -39,8 +33,7 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
   const fields = program.kind === 'ready' ? referenceFields(program.definition, program.enrollment, program.state) : [];
 
   const save = async () => {
-    if (!cache.enrollment) return;
-    const enrollment = cache.enrollment;
+    if (!enrollment) return;
     const result = referenceEvents(fields, edited);
     if (result.kind === 'invalid') {
       setProblems(result.problems);
@@ -50,12 +43,11 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
     setBusy(true);
     let failed = false;
     try {
-      for (const event of result.events) await adjustEnrollment(enrollment.id, event);
+      await adjust(result.events);
     } catch (error) {
       failed = true;
       setProblems([programErrorText(error)]);
     } finally {
-      showCache(await refreshProgramFactsOrCached(userId, enrollment));
       setEdited({});
       setBusy(false);
     }
@@ -63,11 +55,10 @@ export function ActiveProgramScreen({ userId }: ActiveProgramScreenProps) {
   };
 
   const stop = async () => {
-    if (!cache.enrollment) return;
+    if (!enrollment) return;
     setBusy(true);
     try {
-      await endEnrollment(cache.enrollment.id);
-      forgetCachedEnrollment(userId);
+      await stopFollowing();
       navigate('/');
     } catch (error) {
       setProblems([programErrorText(error)]);

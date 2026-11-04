@@ -32,7 +32,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
 - Edit profile shows a field's problem only after that field blurs or after a Save attempt, linked with `aria-describedby` and `aria-invalid`. Save stays enabled; a Save with problems focuses the first invalid field (found by its `name`). Save cancels `mousedown` so the field does not blur first: the problem it would reveal shifts Save down mid-tap and the click is lost.
 - A database trigger logs the profile bodyweight save as today's bodyweight entry. Save is disabled offline. After each save, invalidate `bodyweightTrendQuery`.
 - `saveBodyweight` is the only path for a bodyweight prompt answer. It updates `profile_private`, the device profile cache (`rememberSavedBodyweight`) and the loaded `profileQuery`, then announces `profile-saved`. The trend and the friend preview refresh from that announcement.
-- After an equip, unequip or craft, announce `gear-changed` (`announceDataChange`). That invalidates the loadout here and in other tabs.
+- After an equip, unequip or craft, call `wrote` with `gear-changed` (`crafted` after a craft shows the new inventory). That refreshes the loadout here and in other tabs.
 - `LoadoutPanel` keeps the slot grid with `…` values while loading so the screen does not jump. It renders nothing when `get_loadout` returns null, which means a user the caller may not view.
 - `ProfileBadge` is `aria-hidden` unless `named`, which only the card sets. `nameIsPageTitle` makes the name the page `h1`; the friend profile uses it.
 - `FriendPreviewScreen` mirrors `../friends/FriendProfileScreen.tsx`. Keep the two in step.
@@ -48,7 +48,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
 - The RIR and RPE hints come from `GLOSSARY` in `../../lib/ui/glossary.ts`, the same text as the workout help.
 - Sign-out must keep drafts (`signOutKeepingDrafts`).
 - Reset, deletion and sign-out warn about an unsynced draft (`useDraftLossGuard` over `hasDraftOnDevice`), checking both the booted draft store and the `localStorage` fallback.
-  - Reset needs `RESET` typed, then calls `resetMyData`, then `forgetUserProgressData`, then `announceDataChange('account-reset')`.
+  - Reset needs `RESET` typed, then calls `resetMyData`, then `forgetUserProgressData`, then `wrote` with `account-reset`.
   - Deletion calls `forgetUserDeviceData`, which clears every per-user key and keeps the forgotten-draft tombstone.
 - Account deletion and export call the `delete-account` and `export-data` Edge Functions. A payload change needs the integration test updated too.
 - Account results show as toasts. A panel toggle or a starting export dismisses the toast. Failures stay in the `problem` alert.

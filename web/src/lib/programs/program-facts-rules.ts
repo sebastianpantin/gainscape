@@ -1,5 +1,5 @@
 import {
-  type EffortInputType,
+  EFFORT_INPUT_TYPES,
   type FactSet,
   type Position,
   type PrescriptionSnapshot,
@@ -8,9 +8,7 @@ import {
   type ReferenceVar,
 } from '@domain/index.ts';
 import { z } from 'zod';
-
-export const ENROLLMENT_COLUMNS =
-  'id, template_key, template_version, unit, options, lift_bindings, inputs, rounding, started_at, ended_at';
+import { columnsOf } from '../rows.ts';
 
 export const enrollmentRowSchema = z.object({
   id: z.string(),
@@ -25,40 +23,9 @@ export const enrollmentRowSchema = z.object({
   ended_at: z.string().nullable(),
 });
 
+export const ENROLLMENT_COLUMNS = columnsOf(enrollmentRowSchema);
+
 export type EnrollmentRow = z.infer<typeof enrollmentRowSchema>;
-
-export interface EnrollmentEventRow {
-  id: string;
-  kind: string;
-  payload: Record<string, unknown>;
-  effective_at: string;
-}
-
-export interface FactSetRow {
-  ref: string | null;
-  exercise_id: string;
-  weight_kg: number;
-  reps: number | null;
-  effort_input_type: EffortInputType | null;
-  effort_value: number | null;
-  prescribed_weight_kg: number | null;
-  prescribed_reps: number | null;
-  prescribed_min_reps: number | null;
-  prescribed_amrap: boolean | null;
-}
-
-export interface LinkedSessionRow {
-  id: string;
-  completed_at: string;
-  program_position: Position;
-  sets: FactSetRow[];
-}
-
-export interface EnrollmentFactsRows {
-  enrollment: EnrollmentRow;
-  events: EnrollmentEventRow[];
-  sessions: LinkedSessionRow[];
-}
 
 export function enrollmentFromRow(row: EnrollmentRow): ProgramEnrollment {
   return {
@@ -177,38 +144,43 @@ export const programFactSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('jump_to'), ...factStamp, position: positionSchema }),
 ]);
 
-export const enrollmentFactsRowsSchema: z.ZodType<EnrollmentFactsRows> = z.object({
-  enrollment: enrollmentRowSchema,
-  events: z.array(
-    z.object({
-      id: z.string(),
-      kind: z.string(),
-      payload: z.record(z.string(), z.unknown()),
-      effective_at: z.string(),
-    }),
-  ),
-  sessions: z.array(
-    z.object({
-      id: z.string(),
-      completed_at: z.string(),
-      program_position: positionSchema,
-      sets: z.array(
-        z.object({
-          ref: z.string().nullable(),
-          exercise_id: z.string(),
-          weight_kg: z.number(),
-          reps: z.number().nullable(),
-          effort_input_type: z.enum(['level', 'rir', 'rpe', 'cardio']).nullable(),
-          effort_value: z.number().nullable(),
-          prescribed_weight_kg: z.number().nullable(),
-          prescribed_reps: z.number().nullable(),
-          prescribed_min_reps: z.number().nullable(),
-          prescribed_amrap: z.boolean().nullable(),
-        }),
-      ),
-    }),
-  ),
+const enrollmentEventRowSchema = z.object({
+  id: z.string(),
+  kind: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  effective_at: z.string(),
 });
+
+const factSetRowSchema = z.object({
+  ref: z.string().nullable(),
+  exercise_id: z.string(),
+  weight_kg: z.number(),
+  reps: z.number().nullable(),
+  effort_input_type: z.enum(EFFORT_INPUT_TYPES).nullable(),
+  effort_value: z.number().nullable(),
+  prescribed_weight_kg: z.number().nullable(),
+  prescribed_reps: z.number().nullable(),
+  prescribed_min_reps: z.number().nullable(),
+  prescribed_amrap: z.boolean().nullable(),
+});
+
+const linkedSessionRowSchema = z.object({
+  id: z.string(),
+  completed_at: z.string(),
+  program_position: positionSchema,
+  sets: z.array(factSetRowSchema),
+});
+
+export const enrollmentFactsRowsSchema = z.object({
+  enrollment: enrollmentRowSchema,
+  events: z.array(enrollmentEventRowSchema),
+  sessions: z.array(linkedSessionRowSchema),
+});
+
+export type EnrollmentEventRow = z.infer<typeof enrollmentEventRowSchema>;
+export type FactSetRow = z.infer<typeof factSetRowSchema>;
+export type LinkedSessionRow = z.infer<typeof linkedSessionRowSchema>;
+export type EnrollmentFactsRows = z.infer<typeof enrollmentFactsRowsSchema>;
 
 export function isProgramFact(value: unknown): value is ProgramFact {
   return programFactSchema.safeParse(value).success;

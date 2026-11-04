@@ -2,11 +2,11 @@ import type { ChartSeries } from '../ui/line-chart-rules.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
 import { shownWeight } from '../units.ts';
 import { z } from 'zod';
-import { numericColumn } from '../rows.ts';
-
-export const BODYWEIGHT_ENTRY_COLUMNS = 'logged_on, bodyweight_kg';
+import { columnsOf, numericColumn } from '../rows.ts';
 
 export const bodyweightEntryRowSchema = z.object({ logged_on: z.string(), bodyweight_kg: numericColumn });
+
+export const BODYWEIGHT_ENTRY_COLUMNS = columnsOf(bodyweightEntryRowSchema);
 
 export type BodyweightEntryRow = z.infer<typeof bodyweightEntryRowSchema>;
 

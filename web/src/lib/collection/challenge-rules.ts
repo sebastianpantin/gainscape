@@ -7,8 +7,7 @@ import { kgToUnit, unitToKg, type WeightUnit } from '@domain/units.ts';
 import { z } from 'zod';
 import type { DraftChallenge, WorkoutDraft } from '../../offline/draft-format.ts';
 import { formatXp } from '../format.ts';
-
-export const CHALLENGE_COLUMNS = 'id,key,name,definition';
+import { columnsOf } from '../rows.ts';
 
 export interface CatalogChallenge {
   id: string;
@@ -23,6 +22,8 @@ export const challengeRowSchema = z.object({
   name: z.string(),
   definition: z.unknown(),
 });
+
+export const CHALLENGE_COLUMNS = columnsOf(challengeRowSchema);
 
 type ChallengeRow = z.infer<typeof challengeRowSchema>;
 

@@ -1,26 +1,7 @@
-import type { SessionSummary } from '@domain/types.ts';
-import type { InvokeOutcome } from '../lib/platform/function-client-rules.ts';
-import type { RememberedTiming } from '../lib/workout/session-timing-rules.ts';
-import { RATE_LIMITED_STATUS, retryAfterSeconds } from '../lib/platform/rate-limit.ts';
-import { type PlannedChallenge, rememberLastSummary, type SavedDay } from './last-summary.ts';
 import { storedSessionId, type WorkoutDraft } from './draft-format.ts';
 import type { SyncedChange } from './draft-session.ts';
 import type { DraftStore } from './draft-store.ts';
-
-export interface CompletedSessionSummary extends SessionSummary, RememberedTiming, PlannedChallenge {
-  programLinked?: boolean;
-  completedAt?: string;
-  storedContentDiffers?: true;
-  days?: SavedDay[];
-}
-
-export type SendOutcome =
-  | { kind: 'synced'; summary: CompletedSessionSummary }
-  | { kind: 'deleted' }
-  | { kind: 'retryable'; reason: string; retryAfterMs?: number; serverFault?: true }
-  | { kind: 'rejected'; reason: string }
-  | { kind: 'needs_sign_in' }
-  | { kind: 'wrong_account' };
+import type { SendOutcome } from './finish-outcome.ts';
 
 export type FinishAttemptResult =
   { kind: 'aborted' } | { kind: 'superseded' } | { kind: 'not_finished' } | { kind: 'sent'; outcome: SendOutcome };
@@ -35,28 +16,6 @@ interface FinishAttempt {
   signal: AbortSignal;
 }
 
-const SESSION_DELETED_STATUS = 410;
-const SERVER_ERROR_STATUS = 500;
-const REBUILD_REQUIRED_CODE = 'rebuild_required';
-const TRANSIENT_CLIENT_ERROR_STATUSES = new Set([404, 408, 425]);
-const PROFILE_NOT_FOUND_CODE = 'profile_not_found';
-
-export function sendOutcomeFrom(outcome: InvokeOutcome<CompletedSessionSummary>): SendOutcome {
-  if (outcome.kind === 'ok') return { kind: 'synced', summary: outcome.data };
-  if (outcome.kind !== 'http_error') return outcome;
-  if (outcome.status === SESSION_DELETED_STATUS) return { kind: 'deleted' };
-  if (outcome.status === RATE_LIMITED_STATUS) {
-    const seconds = retryAfterSeconds(outcome.details);
-    return { kind: 'retryable', reason: outcome.code, retryAfterMs: seconds === null ? undefined : seconds * 1000 };
-  }
-  if (TRANSIENT_CLIENT_ERROR_STATUSES.has(outcome.status) && outcome.code !== PROFILE_NOT_FOUND_CODE)
-    return { kind: 'retryable', reason: outcome.code };
-  if (outcome.status < SERVER_ERROR_STATUS) return { kind: 'rejected', reason: outcome.code };
-  return outcome.code === REBUILD_REQUIRED_CODE
-    ? { kind: 'retryable', reason: outcome.code }
-    : { kind: 'retryable', reason: outcome.code, serverFault: true };
-}
-
 export function finishLockName(userId: string): string {
   return `gainscape.finish.${userId}`;
 }
@@ -66,11 +25,7 @@ async function sendStoredDraft(attempt: FinishAttempt): Promise<FinishAttemptRes
   if (!record) return { kind: 'not_finished' };
   if (storedSessionId(record) !== attempt.sessionId || record.kind !== 'draft') return { kind: 'superseded' };
   if (record.draft.finishedAt === null) return { kind: 'not_finished' };
-  const sent = await attempt.send(record.draft);
-  const plannedChallenge = record.draft.challenge;
-  const outcome: SendOutcome =
-    sent.kind === 'synced' && plannedChallenge ? { ...sent, summary: { ...sent.summary, plannedChallenge } } : sent;
-  if (outcome.kind === 'synced') rememberLastSummary(attempt.userId, outcome.summary);
+  const outcome = await attempt.send(record.draft);
   if (outcome.kind === 'synced' || outcome.kind === 'deleted')
     await attempt.markSynced(attempt.sessionId, outcome.kind);
   return { kind: 'sent', outcome };

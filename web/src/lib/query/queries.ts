@@ -1,6 +1,7 @@
 import { type LastLoggedWeights } from '@domain/index.ts';
 import { infiniteQueryOptions, type QueryClient, queryOptions } from '@tanstack/react-query';
 import { type CacheFirstLoad } from '../../offline/cache-first.ts';
+import { finishOutcomeLoot } from '../../offline/finish-outcome.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { fetchBodyweightTrend } from '../progress/bodyweight-trend.ts';
 import { fetchExercises, fetchSkills } from '../exercises/catalog.ts';
@@ -9,7 +10,7 @@ import { type Exercise, type Skill } from '../exercises/catalog-rules.ts';
 import { type Collection, fetchExerciseStrength, loadCollectionCacheFirst } from '../collection/collection-data.ts';
 import { collectionPercent, countCollection } from '../collection/collection-rules.ts';
 import { fetchExerciseProgress } from '../progress/exercise-progress.ts';
-import { fetchSessionPage } from '../history/history.ts';
+import { fetchSession, fetchSessionPage } from '../history/history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession, isUuid } from '../history/history-rules.ts';
 import {
   fetchLoadout,
@@ -21,14 +22,8 @@ import {
 import { fetchTrainingHistory } from '../profile/onboarding.ts';
 import { loadProfileCacheFirst, type Profile } from '../profile/profile.ts';
 import { type Preferences } from '../profile/preferences.ts';
-import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from '../programs/program-enrollment.ts';
-import {
-  cachedPrograms,
-  fetchLastLoggedSets,
-  loadProgramsCacheFirst,
-  type PublishedProgram,
-  publishProgram,
-} from '../programs/programs.ts';
+import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from '../programs/enrollment.ts';
+import { fetchLastLoggedSets, loadProgramsCacheFirst } from '../programs/programs.ts';
 import {
   FEED_PAGE_SIZE,
   fetchCollectionView,
@@ -61,7 +56,6 @@ import {
 import { fetchLatestTrainingDate, loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
 import { loadWeeklyExerciseSetsCacheFirst } from '../stats/volume-history.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
-import { announceDataChange } from './data-changes.ts';
 import { allInOrder } from './settle-rules.ts';
 
 export const FRIENDS_QUERY_PREFIX = ['friends'] as const;
@@ -100,16 +94,6 @@ export function strengthQuery(userId: string) {
 
 export function programsQuery(userId: string) {
   return queryOptions({ queryKey: ['programs', userId] as const, queryFn: () => loadProgramsCacheFirst(userId) });
-}
-
-export function showChangedPrograms(queryClient: QueryClient, userId: string): void {
-  const { queryKey } = programsQuery(userId);
-  const saved = cachedPrograms(userId);
-  if (saved) {
-    void queryClient.cancelQueries({ queryKey });
-    queryClient.setQueryData(queryKey, { loaded: saved, fromCache: false });
-  }
-  void announceDataChange(queryClient, 'programs-changed');
 }
 
 export function collectionQuery(userId: string) {
@@ -187,6 +171,18 @@ export function recentSetsQuery(userId: string) {
   return queryOptions({
     queryKey: ['history', userId, 'recent-sets'] as const,
     queryFn: () => fetchRecentSets(Date.now()),
+  });
+}
+
+export function finishLootQuery(userId: string, sessionIds: readonly string[]) {
+  return queryOptions({
+    queryKey: ['history', userId, 'finish-loot', ...sessionIds] as const,
+    queryFn: () =>
+      finishOutcomeLoot(
+        (sessionId) => fetchSession(sessionId).then((stored) => stored && (stored.summary.drops ?? [])),
+        userId,
+        sessionIds,
+      ),
   });
 }
 
@@ -268,17 +264,6 @@ export function enrollChoicesQuery(userId: string) {
     queryKey: ['enroll-choices', userId] as const,
     queryFn: () => loadEnrollChoicesCacheFirst(userId),
   });
-}
-
-export async function publishForEnroll(
-  queryClient: QueryClient,
-  userId: string,
-  programId: string,
-  publish: (programId: string) => Promise<PublishedProgram> = publishProgram,
-): Promise<PublishedProgram> {
-  const published = await publish(programId);
-  queryClient.removeQueries({ queryKey: enrollChoicesQuery(userId).queryKey });
-  return published;
 }
 
 export const weeklyGoalQuery = queryOptions({
@@ -420,6 +405,7 @@ export const EVERY_QUERY = [
   ownedPetsQuery,
   rarestDropQuery,
   recentSetsQuery,
+  finishLootQuery,
   historyQuery,
   hiscoresQuery,
   friendProfileQuery,
@@ -444,3 +430,13 @@ export const EVERY_QUERY = [
   relativeStrengthQuery,
   dotsHistoryQuery,
 ] as const;
+
+type KeyOf<Query> = Query extends (...args: never[]) => { queryKey: infer Key }
+  ? Key
+  : Query extends { queryKey: infer Key }
+    ? Key
+    : never;
+
+type RootOf<Query> = KeyOf<Query> extends readonly [infer Root, ...unknown[]] ? Root : never;
+
+export type QueryRoot = RootOf<(typeof EVERY_QUERY)[number]>;

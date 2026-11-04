@@ -11,7 +11,7 @@ Training programs: list, copy from templates, create and edit own programs (days
 
 - Routes: `ProgramsScreen.tsx` (`/programs`, with `FollowablePrograms.tsx`), `ProgramEditor.tsx` (`/programs/:programId` and `/programs/new`), `ProgramEnrollScreen.tsx` (`/programs/enroll/:key`), `ActiveProgramScreen.tsx` (`/programs/active`), `ProgramPlanScreen.tsx` (`/programs/active/plan`). `ProgramStatusScreen.tsx` stands in when there is no ready program.
 - `program-edit.ts`: pure editor logic (day and exercise edits, limits, validation, progression and increments). Put new editor rules here and test them first.
-- `use-active-program.ts`: the followed program from the saved cache; shared with `workout/WorkoutScreen.tsx`.
+- The followed program comes from `useActiveProgram` and `savedEnrollment` in `../../lib/programs/enrollment.ts`, shared with `workout/WorkoutScreen.tsx`. Screens never read program storage directly.
 - Enrollment and prescription rules live in `../../lib/programs/program-*-rules.ts`; persistence in `../../lib/programs/programs.ts`.
 
 ## Rules and gotchas
@@ -19,7 +19,7 @@ Training programs: list, copy from templates, create and edit own programs (days
 - `PlannedExercise` is defined in `../../offline/draft-starts.ts` and is what a started day copies into the draft. Its `progression` is not copied, so adding it needed no draft format bump; changing what the draft stores needs the draft versioning and `tests/web/draft-format.test.ts` updated.
 - Both template lists show how often you train, derived from the definition (`templateScheduleText`) or the day count, because templates carry no description. A description would need a catalog and seed change.
 - Only rep lifts are plannable (`isPlannableExercise`): `save_program` plans sets of reps and refuses holds and cardio.
-- Following an own program publishes a snapshot first (`publishForEnroll`), then drops the cached `enrollChoicesQuery` so the enroll screen loads the new version. Publishing and enrolling need a connection and are disabled offline.
+- Following an own program publishes a snapshot first (`publishProgram`), then `wrote` with `program-published` drops the cached `enrollChoicesQuery` so the enroll screen loads the new version. Publishing and enrolling need a connection and are disabled offline.
 - Editing a followed program shows `You're following an earlier version`. The `followStatus` check passes `null` until the exercise list has loaded (status `undecided`, notice hidden), and uses `loadTypeOf` over the whole exercise list, holds included, so a legacy hold slot clamps like the server. "Use these changes" saves, publishes and opens the enroll form with router state `{ carried }` (unit and current working weights), which then re-follows the same template without the replace dialog.
 - Deleting a followed program stops following it and forgets the cached enrollment; the confirm dialog says so.
 - Increments are stored in both units: presets pair 1.25 kg/2.5 lb, 2.5/5, 5/10; a custom value converts to the nearest 0.25 kg or 0.5 lb within 0.25-20 kg / 0.5-45 lb. These bounds match the database checks.

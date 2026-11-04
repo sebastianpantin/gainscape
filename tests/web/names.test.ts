@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { nameProblem, trimmedName } from '../../web/src/lib/names.ts';
+import { parsedName, trimmedName } from '../../web/src/lib/names.ts';
+import { problemOf } from '../../web/src/lib/parsed.ts';
+
+const nameProblem = (raw: string, longest: number) => problemOf(parsedName(raw, longest));
 
 describe('name validation', () => {
   it('trims whitespace, byte-order marks and zero-width spaces', () => {
     expect(trimmedName('\u200B\uFEFF\t My Press \n\uFEFF')).toBe('My Press');
+  });
+
+  it('reads the trimmed name the save sends', () => {
+    expect(parsedName('\u200B My Press \n', 40)).toEqual({ kind: 'ok', value: 'My Press' });
   });
 
   it('rejects blank, control-character and overlong names', () => {

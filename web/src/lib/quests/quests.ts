@@ -7,7 +7,7 @@ import type { InvokeOutcome } from '../platform/function-client-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
 import { supabase } from '../platform/supabase.ts';
 import { z } from 'zod';
-import { parsedRows } from '../rows.ts';
+import { columnsOf, parsedRows } from '../rows.ts';
 import {
   QUEST_COLUMNS,
   QUEST_COMPLETION_COLUMNS,
@@ -24,9 +24,11 @@ import {
 
 const exerciseNameRowSchema = z.object({ id: z.string(), name: z.string() });
 
+const EXERCISE_NAME_COLUMNS = columnsOf(exerciseNameRowSchema);
+
 async function fetchExerciseNames(exerciseIds: string[]): Promise<Record<string, string>> {
   if (exerciseIds.length === 0) return {};
-  const { data, error } = await supabase.from('exercises').select('id,name').in('id', exerciseIds);
+  const { data, error } = await supabase.from('exercises').select(EXERCISE_NAME_COLUMNS).in('id', exerciseIds);
   if (error) throw error;
   return Object.fromEntries(parsedRows(exerciseNameRowSchema, data).map((row) => [row.id, row.name]));
 }

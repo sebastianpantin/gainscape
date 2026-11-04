@@ -212,3 +212,63 @@ export function dayStartFrom(program: ReadyProgram, position: Position, lastLogg
 export function hasProgramDayToStart(program: ActiveProgram): boolean {
   return program.kind === 'ready' && dayChoices(program.definition, program.state).length > 0;
 }
+
+export function followingText(program: ActiveProgram): string | null {
+  if (program.kind === 'none') return null;
+  return program.kind === 'template_missing' ? "You're following a program" : `You're following ${program.name}`;
+}
+
+export type ProgramLoadStatus = 'cached' | 'refreshing' | 'failed' | 'none';
+
+export type ProgramRefreshState = 'pending' | 'done' | 'failed';
+
+interface ProgramLoadInput {
+  hasCachedEnrollment: boolean;
+  refresh: ProgramRefreshState;
+}
+
+const UNCACHED_STATUS: Readonly<Record<ProgramRefreshState, ProgramLoadStatus>> = {
+  pending: 'refreshing',
+  done: 'none',
+  failed: 'failed',
+};
+
+const STATUS_TEXT: Readonly<Record<ProgramLoadStatus, string | null>> = {
+  cached: null,
+  refreshing: 'Loading program…',
+  none: "You're not following a program.",
+  failed: "Couldn't load your program. Check your connection.",
+};
+
+export function programLoadStatus(input: ProgramLoadInput): ProgramLoadStatus {
+  return input.hasCachedEnrollment ? 'cached' : UNCACHED_STATUS[input.refresh];
+}
+
+export function programStatusText(status: ProgramLoadStatus): string | null {
+  return STATUS_TEXT[status];
+}
+
+export function offlineRefreshState(stored: { refreshed: boolean }): ProgramRefreshState {
+  return stored.refreshed ? 'done' : 'failed';
+}
+
+export const SKIP_OFFLINE_TEXT = "You're offline. Skipping a day needs a connection.";
+
+export const SKIP_CONFIRM_LABEL = 'Skip day';
+
+export interface SkipDayEvent {
+  kind: 'skip_day';
+  position: Position;
+}
+
+export function skipLabel(definition: ProgramDefinition, position: Position): string {
+  return `Skip ${positionLabel(definition, position)}`;
+}
+
+export function skipDialogTitle(definition: ProgramDefinition, position: Position): string {
+  return `${skipLabel(definition, position)}?`;
+}
+
+export function skipDayEvent(position: Position): SkipDayEvent {
+  return { kind: 'skip_day', position };
+}

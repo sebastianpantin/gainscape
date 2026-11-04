@@ -5,17 +5,17 @@
 
 ## Purpose
 
-`web/src/lib/` is the web app's non-visual layer. It holds the Supabase client, auth, typed fetchers and RPC wrappers, the TanStack Query setup, per-user device stores and the pure rules they use. Decisions live in pure modules that `tests/web/` covers without a stack. I/O modules only fetch and hand the rows to a pure function.
+`web/src/lib/` is the web app's non-visual layer: the Supabase client, auth, typed fetchers and RPC wrappers, the TanStack Query setup, per-user device stores and their pure rules. Decisions live in pure modules `tests/web/` covers without a stack; I/O modules only fetch and hand rows to them.
 
 ## Map
 
 Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O sibling, and a new file goes in the folder of the area it serves.
 
 - `platform/`: the Supabase client, Edge Function calls, auth, `keyedStore`, rate limits, cross-tab channels, online and route-focus hooks, device and celebration effects, and the changelog rules with the last seen release.
-- `query/`: the TanStack Query client, every query definition, freshness and state rules, and `data-changes.ts`.
+- `query/`: the TanStack Query client, every query definition, freshness and state rules, and `writes.ts`.
 - `exercises/`: the exercise catalog and its device cache, custom exercises, exercise notes, search, swap substitutes and repeat keys.
 - `workout/`: live-workout rules and stores: set editing, cardio, effort labels, supersets, warm-ups, plates, rest timer, training device, session timing and baseline, progression hints, the active workout bar, record text.
-- `programs/`: program persistence, enrollment and every `program-*-rules.ts`.
+- `programs/`: program persistence, the Enrollment (`enrollment.ts`), `program-*-rules.ts`.
 - `history/`: past sessions, the history overview and the last session of an exercise.
 - `progress/`: standing, the skill map, recovery, weekly goal, weekly muscle volume, bodyweight trend and exercise progress.
 - `collection/`: items, gear, challenges, the companion pet and the records collection.
@@ -24,7 +24,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `stats/`: the Stats screen's aggregate RPC reads (cache-first via `../offline/stats-cache.ts`) and their rules, one pair per section of `../features/stats/AGENTS.md`.
 - `quests/`: the quest log (cache-first), `start-quest` and `quest-rules.ts` (board, step and requirement text, start errors).
 - `ui/`: pure helpers behind shared components (number field, count-up, charts, toast, term help, week and month keys) and `glossary.ts`.
-- The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`.
+- The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`, `parsed.ts`.
 - Start here: `platform/supabase.ts` (the one client), `platform/use-auth-session.ts` (auth boot), `platform/function-client.ts` (`invokeAsOwner`) and `query/` (the server data cache and its invalidation).
 - `*-rules.ts` files are pure, and so are a few small modules without the suffix (`units.ts`, `format.ts`, `error-text.ts`, `names.ts`, the caches); `tests/web/` covers them without a stack.
 - A `<feature>.ts` beside a `<feature>-rules.ts` is the I/O half.
@@ -55,15 +55,16 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - Call Edge Functions with `invokeAsOwner`, not `supabase.functions.invoke`. It binds the token to one user id, refreshes once on a 401, and returns an outcome instead of throwing. It returns `needs_sign_in` only when the auth server rejects the session (a 4xx other than 429). A 429, a 5xx or a network failure is `retryable`.
 - `platform/supabase.ts` wraps `fetch` so auth calls time out after `REQUEST_TIMEOUT_MS`. Refresh-token grants are excluded from the timeout.
 - 429 handling is shared in `platform/rate-limit.ts`. A database `PT429` from a client write goes through `withFriendlyRateLimit` or `rateLimitedMessage`.
+- A form field has one `parsed*` function returning `Parsed<T>` (`parsed.ts`); the error shown and the save both read it, so they cannot disagree. Never pair a `*Problem` check with a separate parse.
 - Users never see a raw error code or database text. Every failure maps to a sentence, with a generic fallback (`programErrorText`, `pinProblemText`, the account export and delete messages).
 - `emailChangeProblem` does not use `authErrorMessage` on purpose: `authErrorMessage` would call a 403 an invalid link.
 - A password change re-checks the current password against the email `getUser()` returns now, not a cached one. Only `invalid_credentials` means the password was wrong.
-- Row shapes are hand-written zod `*RowSchema`s (`*Row` is inferred) beside the `*_COLUMNS` strings; update both on a schema change. Every server read goes through `parsedRows`/`parsedRow` (`rows.ts`), never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a row with a new server value and falls back to its saved copy: ship the client value a release before the server writes it. String numerics: `numericColumn`, then `Number(...)`.
+- Row shapes are hand-written zod `*RowSchema`s (`*Row` is `z.infer`); the select is `columnsOf(schema, embedded)` (`rows.ts`), so they cannot drift; only selects with a join hint (`!inner`, `!fkey`) stay hand-written. Every read goes through `parsedRows`/`parsedRow`, never a cast; a malformed answer fails with `UNREADABLE_ROWS_TEXT`. Enums are strict, so an older cached PWA rejects a new server value and falls back to its saved copy: ship the client value a release before the server writes it. String numerics: `numericColumn`, then `Number(...)`.
 
 ### Must stay in sync with SQL
 
 - `MINIMUM_PASSWORD_LENGTH` (12) is also set in `supabase/config.toml`. Import it from `platform/auth-links.ts`.
-- `nameProblem` rejects blank names, control characters and bidi controls (U+202A to U+202E, U+2066 to U+2069). It counts length in code points, like `char_length`. The display name check in migration 036 restates the same rules.
+- `parsedName` rejects blank names, control characters and bidi controls (U+202A to U+202E, U+2066 to U+2069), counting code points like `char_length`. Migration 036's display name check restates it.
 - `trimNote` trims JS whitespace plus U+0085. That is the same set `save_exercise_note` trims since migration 038.
 - The row types in `programs/program-facts-rules.ts` match migration 023.
 - `followStatus` mirrors `private.compiled_program_definition`:
@@ -81,18 +82,19 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 ### Query cache
 
 - `createQueryClient` has no retries and uses `networkMode: 'always'`. A failed or offline load then shows its problem at once, not a skeleton; supabase-js retries GETs except History's list and the profile (`.retry(false)`); `tests/web/query-client.test.ts` pins it.
-- `FRESH_FOR_MS` (60 s) only limits how long changes from other devices take to show; the reads only Train home adds (`HOME_QUERY_ROOTS`) wait 5 min, as this device's writes invalidate them. Every write this device makes to queried data must call `announceDataChange` (`query/data-changes.ts`), which invalidates locally and broadcasts on `gainscape.data-changes`.
-- Every query factory is defined in `query/queries.ts` and listed in `EVERY_QUERY`, and its root is in `QUERY_ROOTS_CHANGED_BY` or `ALWAYS_STALE_QUERY_ROOTS`. `tests/web/query-freshness-rules.test.ts` fails on a `*Query` export missing from either.
-- The tab that made a write skips the roots it already updated optimistically (profile, items after a craft, weekly goal, pins). So a refetch started before a second optimistic write cannot undo it. Optimistic writes call `cancelQueries` before `setQueryData`.
-- `account-reset` resets the roots instead of invalidating them, so no screen shows pre-reset data while it refetches.
+- `FRESH_FOR_MS` (60 s) only limits how long changes from other devices take to show; the reads only Train home adds (`HOME_QUERY_ROOTS`) wait 5 min, as this device's writes refresh them. Every Write to queried data calls `wrote(queryClient, write)` (`query/writes.ts`) once, after the server accepted it. Features never invalidate or set queries to stay fresh; only optimistic patches (`useProfile().replace`, the feed's gz) and the Items catalog reload set data.
+- `wrote` broadcasts on `gainscape.data-changes`, shows in this tab what the Write brought (saved profile, crafted inventory, refetched pins and weekly goal) and invalidates the rest of the change's roots. It skips only a query it just put fresh data in, so a refetch started before a second optimistic save cannot undo it. If showing fails, it invalidates and rethrows.
+- `tests/web/writes.test.ts` checks every Write leaves nothing stale in the writing tab that other tabs refresh.
+- Roots are typed `QueryRoot`, derived from the keys in `EVERY_QUERY`, so a root cannot drift from a key. Every factory is in `EVERY_QUERY`, and its root is changed by a Write, always stale or a catalog; tests fail otherwise.
+- `account-reset` resets every query but the catalogs instead of invalidating it, so no screen shows pre-reset data while it refetches.
 - A saved copy (`fromCache: true`) and anything read offline get a `staleTime` of 0, so they retry on the next visit and on reconnect.
 - Always stale:
   - friends, feed, hiscores and friend profile, because other people change them;
   - program templates and enroll choices, because their cache-first loaders drop `fromCache`;
   - the first-run training history check, so the intro never comes back after a first workout.
-- Program saves, copies and deletes call `showChangedPrograms`: it puts the saved list into `programsQuery` and announces `programs-changed`.
-- These writes need no announcement: enrollment writes (no query reads enrollments), program publishing (`publishForEnroll` removes the enroll choices) and friend actions.
-- A finished workout refreshes every tab through `useDataChangeInvalidation`, which listens for `synced` and `deleted` on the `gainscape.drafts` channel. The finish flow has no hook of its own.
+- `programs-changed` shows the saved program list and still refetches it; a deleted workout leaves History at once and History still refetches, as later Sessions are recomputed. Program publishing and removing a friend drop their queries in this tab, so no stale list flashes.
+- Enrollment writes need no `wrote`: `programs/enrollment.ts` tells its own hooks. Nor do Gz and friend requests other than removal: those reads are always stale.
+- A finished workout refreshes every tab, this one too, through `useBroadcastWrites`, which listens for `synced` and `deleted` on the `gainscape.drafts` channel. The finish flow calls no `wrote`.
 - Query keys carry the user id, and `App.tsx` clears the client when the user changes.
 - Some keys sit under another key on purpose, so invalidating or removing the parent covers them too:
   - `feedPreviewQuery` under `FEED_QUERY_PREFIX`
@@ -112,7 +114,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
   - Blocked storage reads as the defaults, and `deviceStorage()` returns null.
   - `readOnboarding` and `readLastSeenRelease` write the value back to tell `absent` from `unavailable`.
   - A blocked notify prompt counts as answered, so the prompt never nags.
-- `ui/use-count-up.ts` counts a number up from the value this device last showed (`ui/last-seen-number-store.ts`, one record per user keyed by metric; skill XP is shared by the Train hero and the Skills cards). A first view, a drop and reduced motion jump straight to the value, so a new device never counts from zero. The value is saved only once the count ends, so a screen left mid-count counts again next time.
+- `ui/use-count-up.ts` counts up from the value this device last showed (`ui/last-seen-number-store.ts`, per user and metric; the Train hero and Skills cards share skill XP). A first view, a drop and reduced motion jump straight to the value. The value is saved only when the count ends, so a screen left mid-count counts again.
 - Only `exerciseListLoadQuery` reads and writes the exercise cache (`loadExercisesCacheFirst`); imperative code uses `fetchQuery` or `fetchLatestExerciseList`. The cache holds every exercise, archived ones included. Every reader that wants the training list applies `activeExercises`. A cached activity without `tracksDistance` reads as true.
 - Offline, fetchers fail at once (`failFastWhenOffline`, `OfflineError`), and cache-first loaders show the saved copy without sending a request. `useOnlineSignal` (`platform/use-online.ts`) gives loaders a reconnect counter to reload on.
 

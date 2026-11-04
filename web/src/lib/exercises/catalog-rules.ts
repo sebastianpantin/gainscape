@@ -1,5 +1,6 @@
-import { type CardioEffortLevel, CARDIO_EFFORT_LEVELS } from '@domain/types.ts';
+import { type CardioEffortLevel, CARDIO_EFFORT_LEVELS, EXERCISE_MEASURES } from '@domain/types.ts';
 import { z } from 'zod';
+import { columnsOf } from '../rows.ts';
 
 export const MODALITIES = ['lift', 'cardio'] as const;
 export type Modality = (typeof MODALITIES)[number];
@@ -83,8 +84,9 @@ export function isCardioExercise(exercise: Exercise): exercise is CardioExercise
   return exercise.modality === 'cardio';
 }
 
-export const EXERCISE_COLUMNS =
-  'id, key, name, equipment, modality, load_type, owner_user_id, archived_at, reference_pace_s_per_km, pace_unit, max_effort, tracks_distance, record_min_distance_m, measure, exercise_skills(share_bp, skills(key, name))';
+const skillNameRowSchema = z.object({ key: z.string(), name: z.string() });
+
+const exerciseSkillRowSchema = z.object({ share_bp: z.number(), skills: skillNameRowSchema.nullable() });
 
 export const exerciseRowSchema = z.object({
   id: z.string(),
@@ -100,10 +102,12 @@ export const exerciseRowSchema = z.object({
   max_effort: z.enum(CARDIO_EFFORT_LEVELS).nullable(),
   tracks_distance: z.boolean(),
   record_min_distance_m: z.number().nullable(),
-  measure: z.enum(['reps', 'time', 'distance']).optional(),
-  exercise_skills: z.array(
-    z.object({ share_bp: z.number(), skills: z.object({ key: z.string(), name: z.string() }).nullable() }),
-  ),
+  measure: z.enum(EXERCISE_MEASURES).optional(),
+  exercise_skills: z.array(exerciseSkillRowSchema),
+});
+
+export const EXERCISE_COLUMNS = columnsOf(exerciseRowSchema, {
+  exercise_skills: columnsOf(exerciseSkillRowSchema, { skills: columnsOf(skillNameRowSchema) }),
 });
 
 export type ExerciseRow = z.infer<typeof exerciseRowSchema>;

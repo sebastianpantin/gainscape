@@ -11,7 +11,7 @@ import {
   USERNAME_HINT,
   USERNAME_PATTERN,
 } from '../../lib/platform/auth-links.ts';
-import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../../lib/platform/rate-limit.ts';
 import { signOutSettled } from '../../lib/platform/auth-restore.ts';
 import { supabase } from '../../lib/platform/supabase.ts';
@@ -168,7 +168,7 @@ export function AuthCallbackScreen({ callback, onDone }: { callback: AuthCallbac
         setBusy(false);
         return;
       }
-      void announceDataChange(queryClient, 'profile-saved');
+      void wrote(queryClient, { change: 'profile-saved' });
     }
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);

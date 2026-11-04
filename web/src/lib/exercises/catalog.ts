@@ -7,7 +7,7 @@ import {
   type Skill,
   toExercise,
 } from './catalog-rules.ts';
-import { numericColumn, parsedRows } from '../rows.ts';
+import { columnsOf, numericColumn, parsedRows } from '../rows.ts';
 import { supabase } from '../platform/supabase.ts';
 
 const skillRowSchema = z.object({
@@ -21,11 +21,11 @@ const skillRowSchema = z.object({
 
 const skillXpRowSchema = z.object({ skill_id: z.string(), xp: numericColumn });
 
+const SKILL_COLUMNS = columnsOf(skillRowSchema);
+const SKILL_XP_COLUMNS = columnsOf(skillXpRowSchema);
+
 export async function fetchSkills(): Promise<Skill[]> {
-  const { data, error } = await supabase
-    .from('skills')
-    .select('id, key, name, sort_order, combat_weight, modality')
-    .order('sort_order');
+  const { data, error } = await supabase.from('skills').select(SKILL_COLUMNS).order('sort_order');
   if (error) throw error;
   return parsedRows(skillRowSchema, data).map((row) => ({
     id: row.id,
@@ -52,7 +52,7 @@ export async function fetchExercises({ includeArchived, signal }: ExerciseQuery)
 }
 
 export async function fetchSkillXp(userId: string): Promise<Map<string, number>> {
-  const { data, error } = await supabase.from('user_skills').select('skill_id, xp').eq('user_id', userId);
+  const { data, error } = await supabase.from('user_skills').select(SKILL_XP_COLUMNS).eq('user_id', userId);
   if (error) throw error;
   return new Map(parsedRows(skillXpRowSchema, data).map((row) => [row.skill_id, Number(row.xp)]));
 }

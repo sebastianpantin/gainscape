@@ -13,6 +13,7 @@ import {
   type LiftSetInput,
   NO_RECORDS,
   processSession,
+  type RecordState,
   resolveEffort,
   type SetInput,
   type SetResult,
@@ -32,6 +33,7 @@ import type {
   HoldDraftSet,
   LiftDraftExercise,
 } from '../../offline/draft-format.ts';
+import { type DraftDay, type DraftDays, daysOf, exerciseDay, exerciseIndexesOf } from '../../offline/draft-days.ts';
 
 export type PreviewBasis = 'logged' | 'estimated' | 'cold_start' | 'unrated' | 'warmup' | 'cardio_or_hold' | 'unknown';
 
@@ -254,34 +256,53 @@ export interface DraftPreview {
   records: (PreviewRecord | null)[][];
 }
 
+function doneInputsOf(placed: readonly PlacedSet[][], exerciseIndexes: readonly number[]): SetInput[] {
+  return exerciseIndexes.flatMap((index) =>
+    placed[index].flatMap((entry) => (entry.done && entry.input ? [entry.input] : [])),
+  );
+}
+
 export function previewDraft(
-  exercises: readonly DraftExercise[],
+  draft: DraftDays,
   { isBuiltIn, strength, bodyweightKg, recordBaseline, cfg = DEFAULT_BALANCE }: PreviewContext,
 ): DraftPreview {
+  const { exercises } = draft;
   const definitions = new Map(
     exercises.map((exercise) => [exercise.exerciseId, previewDefinition(exercise, isBuiltIn(exercise.exerciseId))]),
   );
   const catalog: Catalog = { skills: previewSkills(exercises), exercises: definitions };
   const placed = placeSets(exercises, isBuiltIn, strength, bodyweightKg, cfg);
-  const doneInputs = placed.flat().flatMap((entry) => (entry.done && entry.input ? [entry.input] : []));
-  const resultsFor = (inputs: SetInput[], records = NO_RECORDS): Map<string, SetResult> => {
-    const { outputs } = processSession(
+  const runSession = (inputs: SetInput[], records: RecordState = NO_RECORDS) => {
+    const { nextState, outputs } = processSession(
       { skillXp: {}, bodyweightKg, records },
       { id: PREVIEW_SESSION_ID, startedAt: PREVIEW_STARTED_AT, sets: inputs },
       cfg,
       { catalog, strength: strength ?? {} },
     );
-    return new Map(outputs.sets.map((result) => [result.set.id, result]));
+    return { results: new Map(outputs.sets.map((result) => [result.set.id, result])), records: nextState.records };
   };
-  const doneResults = resultsFor(doneInputs, recordBaseline === null ? NO_RECORDS : recordStateFrom(recordBaseline));
 
-  const previews = placed.map((sets) =>
+  const doneResults = new Map<string, SetResult>();
+  const doneInputsByDay = new Map<DraftDay, SetInput[]>();
+  let records = recordBaseline === null ? NO_RECORDS : recordStateFrom(recordBaseline);
+  for (const day of daysOf(draft)) {
+    const exerciseIndexes = exerciseIndexesOf(draft, day);
+    const doneInputs = doneInputsOf(placed, exerciseIndexes);
+    const done = runSession(doneInputs, records);
+    done.results.forEach((result, setId) => doneResults.set(setId, result));
+    records = done.records ?? NO_RECORDS;
+    doneInputsByDay.set(day, doneInputs);
+  }
+
+  const previews = placed.map((sets, exerciseIndex) =>
     sets.map((entry) => {
       if (entry.warmup) return WARMUP_PREVIEW;
       if (entry.input === null || (strength === null && entry.unrated)) return UNKNOWN_PREVIEW;
       const result = entry.done
         ? doneResults.get(entry.input.id)
-        : resultsFor([...doneInputs, entry.input]).get(entry.input.id);
+        : runSession([...(doneInputsByDay.get(exerciseDay(draft, exerciseIndex)) ?? []), entry.input]).results.get(
+            entry.input.id,
+          );
       return result ? toPreview(result, entry.hasPriorSession) : UNKNOWN_PREVIEW;
     }),
   );

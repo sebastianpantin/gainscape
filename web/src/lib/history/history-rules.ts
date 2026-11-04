@@ -1,33 +1,20 @@
+import { type StoredSetColumnRow, type StoredSetColumns, storedSetColumnsOf } from '@domain/set-codec.ts';
 import {
-  STORED_SET_COLUMNS,
-  type StoredSetColumnRow,
-  type StoredSetColumns,
-  storedSetColumnsOf,
-} from '@domain/set-codec.ts';
-import type { CardioInterval, EffortInput, EffortInputType, RirSource, SessionSummary } from '@domain/types.ts';
+  type CardioInterval,
+  EFFORT_INPUT_TYPES,
+  type EffortInput,
+  type RirSource,
+  type SessionSummary,
+} from '@domain/types.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { type InvokeOutcome, retryDelayMs } from '../platform/function-client-rules.ts';
 import type { OverviewSet } from './history-overview-rules.ts';
-import { nullableNumber, numericColumn, parsedRows } from '../rows.ts';
+import { columnsOf, nullableNumber, numericColumn, parsedRows } from '../rows.ts';
 import { RIR_SOURCES } from '../progress/recovery-rules.ts';
 
 export const HISTORY_PAGE_SIZE = 50;
 
-const SESSION_COLUMNS =
-  'id,started_at,ended_at,session_rpe,local_date,history_only,revision,program_day_id,notes,summary';
-const SESSION_PAGE_COLUMNS = `${SESSION_COLUMNS},sets(position,is_warmup,effective_load_kg,reps,exercises(name))`;
-const SESSION_DETAIL_COLUMNS = `${SESSION_COLUMNS},sets(count)`;
-const SET_COLUMNS = [
-  ...STORED_SET_COLUMNS,
-  'rir',
-  'rir_source',
-  'rir_flagged',
-  'e1rm_before_kg',
-  'effective_reps',
-  'xp_awarded',
-  'pace_flagged',
-].join(',');
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface SessionDetail {
@@ -110,23 +97,27 @@ const sessionColumnsSchema = z.object({
   summary: z.custom<SessionSummary>((value) => typeof value === 'object' && value !== null),
 });
 
-const sessionPageRowSchema = sessionColumnsSchema.extend({
-  sets: z.array(
-    z.object({
-      position: z.number(),
-      is_warmup: z.boolean(),
-      effective_load_kg: z.union([z.number(), z.string()]).nullable(),
-      reps: z.number().nullable(),
-      exercises: z.object({ name: z.string() }).nullable(),
-    }),
-  ),
+const overviewExerciseRowSchema = z.object({ name: z.string() });
+
+const overviewSetRowSchema = z.object({
+  position: z.number(),
+  is_warmup: z.boolean(),
+  effective_load_kg: numericColumn.nullable(),
+  reps: z.number().nullable(),
+  exercises: overviewExerciseRowSchema.nullable(),
 });
 
-const sessionDetailRowSchema = sessionColumnsSchema.extend({
-  sets: z.tuple([z.object({ count: z.number() })]),
+const sessionPageRowSchema = sessionColumnsSchema.extend({ sets: z.array(overviewSetRowSchema) });
+
+const SESSION_PAGE_COLUMNS = columnsOf(sessionPageRowSchema, {
+  sets: columnsOf(overviewSetRowSchema, { exercises: columnsOf(overviewExerciseRowSchema) }),
 });
 
-const EFFORT_INPUT_TYPES = ['level', 'rir', 'rpe', 'cardio'] as const satisfies readonly EffortInputType[];
+const setCountRowSchema = z.object({ count: z.number() });
+
+const sessionDetailRowSchema = sessionColumnsSchema.extend({ sets: z.tuple([setCountRowSchema]) });
+
+const SESSION_DETAIL_COLUMNS = columnsOf(sessionDetailRowSchema, { sets: columnsOf(setCountRowSchema) });
 
 const storedSetColumnsSchema = z.object({
   id: z.string(),
@@ -155,6 +146,8 @@ const setRowSchema = storedSetColumnsSchema.extend({
   xp_awarded: z.number(),
   pace_flagged: z.boolean(),
 });
+
+const SET_COLUMNS = columnsOf(setRowSchema);
 
 type SetRow = z.infer<typeof setRowSchema>;
 

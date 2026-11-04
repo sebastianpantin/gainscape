@@ -2,7 +2,8 @@ import { MS_PER_DAY } from '@domain/math.ts';
 import { roundTo } from '@domain/math.ts';
 import { z } from 'zod';
 import { CONTROL_CHARACTER, characterCount } from '../names.ts';
-import { nullableNumber, numericColumn } from '../rows.ts';
+import { type Parsed } from '../parsed.ts';
+import { columnsOf, nullableNumber, numericColumn } from '../rows.ts';
 import { TOKEN_COLORS } from '../ui/token-colors.ts';
 import { cmToFeetAndInches, feetAndInchesToCm, kgToUnit, parsedDecimal, unitToKg } from '../units.ts';
 
@@ -74,11 +75,6 @@ export const BADGE_COLORS: Record<BadgeColor, { label: string; fill: string; lig
 export const TRAINING_FOCUSES = Object.keys(TRAINING_FOCUS_LABELS) as TrainingFocus[];
 export const BADGE_COLOR_KEYS = Object.keys(BADGE_COLORS) as BadgeColor[];
 
-export const PROFILE_COLUMNS =
-  'username, display_name, bio, training_focus, training_since, badge_color, show_weights, show_bodyweight, created_at';
-export const PROFILE_PRIVATE_COLUMNS =
-  'bodyweight_kg, height_cm, birth_year, sex, unit_pref, effort_input_mode, timezone, timezone_changed_at';
-
 export const profileRowSchema = z.object({
   username: z.string(),
   display_name: z.string(),
@@ -101,6 +97,9 @@ export const profilePrivateRowSchema = z.object({
   timezone: z.string(),
   timezone_changed_at: z.string().nullable(),
 });
+
+export const PROFILE_COLUMNS = columnsOf(profileRowSchema);
+export const PROFILE_PRIVATE_COLUMNS = columnsOf(profilePrivateRowSchema);
 
 export function profileFromRows(
   publicRow: z.infer<typeof profileRowSchema>,
@@ -127,50 +126,42 @@ export function profileFromRows(
   };
 }
 
-function rangeProblem(raw: string, lowest: number, highest: number, message: string): string | null {
-  if (raw.trim() === '') return null;
-  const value = parsedDecimal(raw);
-  if (value === null || value < lowest || value > highest) return message;
-  return null;
+function withinRange(value: number | null, lowest: number, highest: number, message: string): Parsed<number | null> {
+  if (value === null || (value >= lowest && value <= highest)) return { kind: 'ok', value };
+  return { kind: 'problem', problem: message };
 }
 
-export function heightProblem(raw: string): string | null {
-  return rangeProblem(
-    raw,
-    LOWEST_HEIGHT_CM,
-    HIGHEST_HEIGHT_CM,
-    `Height must be between ${LOWEST_HEIGHT_CM} and ${HIGHEST_HEIGHT_CM} cm.`,
-  );
+function parsedYear(
+  raw: string,
+  earliest: number,
+  latest: number,
+  label: string,
+  example: number,
+): Parsed<number | null> {
+  const year = optionalNumber(raw);
+  if (year !== null && !Number.isInteger(year)) return { kind: 'problem', problem: `Enter a year like ${example}.` };
+  return withinRange(year, earliest, latest, `${label} must be between ${earliest} and ${latest}.`);
 }
 
 export function latestBirthYear(now = new Date()): number {
   return now.getUTCFullYear() - MINIMUM_AGE_YEARS;
 }
 
-export function birthYearProblem(raw: string, now = new Date()): string | null {
-  if (raw.trim() !== '' && !Number.isInteger(optionalNumber(raw))) return 'Enter a year like 1990.';
-  return rangeProblem(
-    raw,
-    EARLIEST_BIRTH_YEAR,
-    latestBirthYear(now),
-    `Birth year must be between ${EARLIEST_BIRTH_YEAR} and ${latestBirthYear(now)}.`,
-  );
+export function parsedBirthYear(raw: string, now = new Date()): Parsed<number | null> {
+  return parsedYear(raw, EARLIEST_BIRTH_YEAR, latestBirthYear(now), 'Birth year', 1990);
 }
 
-export function trainingSinceProblem(raw: string, now = new Date()): string | null {
-  if (raw.trim() !== '' && !Number.isInteger(optionalNumber(raw))) return 'Enter a year like 2019.';
-  return rangeProblem(
-    raw,
-    EARLIEST_TRAINING_YEAR,
-    now.getUTCFullYear(),
-    `Training since must be between ${EARLIEST_TRAINING_YEAR} and ${now.getUTCFullYear()}.`,
-  );
+export function parsedTrainingSince(raw: string, now = new Date()): Parsed<number | null> {
+  return parsedYear(raw, EARLIEST_TRAINING_YEAR, now.getUTCFullYear(), 'Training since', 2019);
 }
 
-export function bioProblem(raw: string): string | null {
-  if (characterCount(raw) > BIO_MAX_LENGTH) return `Bio can be at most ${BIO_MAX_LENGTH} characters.`;
-  if (CONTROL_CHARACTER.test(raw)) return "Bio can't contain line breaks or control characters.";
-  return null;
+export function parsedBio(raw: string): Parsed<string | null> {
+  const bio = raw.trim();
+  if (characterCount(bio) > BIO_MAX_LENGTH)
+    return { kind: 'problem', problem: `Bio can be at most ${BIO_MAX_LENGTH} characters.` };
+  if (CONTROL_CHARACTER.test(bio))
+    return { kind: 'problem', problem: "Bio can't contain line breaks or control characters." };
+  return { kind: 'ok', value: bio === '' ? null : bio };
 }
 
 export function ageFrom(birthYear: number | null, now = new Date()): number | null {
@@ -209,19 +200,15 @@ export function bodyweightRangeInUnit(unit: UnitPref): { lowest: number; highest
   };
 }
 
-export function bodyweightKgFromInput(raw: string, unit: UnitPref): number | null {
-  if (raw.trim() === '') return null;
-  return unitToKg(parsedDecimal(raw) ?? Number.NaN, unit);
-}
-
-export function bodyweightInUnitProblem(raw: string, unit: UnitPref): string | null {
-  const kg = bodyweightKgFromInput(raw, unit);
-  if (kg === null) return null;
-  if (!Number.isFinite(kg) || kg < LOWEST_BODYWEIGHT_KG || kg > HIGHEST_BODYWEIGHT_KG) {
-    const { lowest, highest } = bodyweightRangeInUnit(unit);
-    return `Bodyweight must be between ${lowest} and ${highest} ${unit}.`;
-  }
-  return null;
+export function parsedBodyweightKg(raw: string, unit: UnitPref): Parsed<number | null> {
+  const typed = optionalNumber(raw);
+  const { lowest, highest } = bodyweightRangeInUnit(unit);
+  return withinRange(
+    typed === null ? null : unitToKg(typed, unit),
+    LOWEST_BODYWEIGHT_KG,
+    HIGHEST_BODYWEIGHT_KG,
+    `Bodyweight must be between ${lowest} and ${highest} ${unit}.`,
+  );
 }
 
 export const BODYWEIGHT_OFFLINE_TEXT = "You're offline. Saving bodyweight needs a connection.";
@@ -246,29 +233,36 @@ export function initialHeight(heightCm: number | null): HeightInput {
   return { cm: String(heightCm), feet: String(feet), inches: String(inches) };
 }
 
-function feetAndInchesBlank(input: HeightInput): boolean {
-  return input.feet.trim() === '' && input.inches.trim() === '';
-}
-
-export function heightInCm(input: HeightInput, unit: UnitPref): number | null {
-  if (unit === 'kg') return optionalNumber(input.cm);
-  if (feetAndInchesBlank(input)) return null;
-  return feetAndInchesToCm({ feet: Number(input.feet || 0), inches: Number(input.inches || 0) });
-}
-
 export function sameHeightInput(a: HeightInput, b: HeightInput, unit: UnitPref): boolean {
   return unit === 'kg' ? a.cm === b.cm : a.feet === b.feet && a.inches === b.inches;
 }
 
 const HIGHEST_INCHES = 11;
 
-export function feetAndInchesProblem(input: HeightInput, unit: UnitPref): string | null {
-  if (unit === 'kg' || feetAndInchesBlank(input)) return null;
-  const feet = Number(input.feet || 0);
-  const inches = Number(input.inches || 0);
-  if (!Number.isInteger(feet) || feet < 0 || !Number.isInteger(inches) || inches < 0 || inches > HIGHEST_INCHES)
-    return 'Enter whole feet and 0–11 inches.';
-  return null;
+function wholeCount(raw: string): number | null {
+  const count = raw.trim() === '' ? 0 : parsedDecimal(raw);
+  return count !== null && Number.isInteger(count) && count >= 0 ? count : null;
+}
+
+function typedHeightCm(input: HeightInput, unit: UnitPref): Parsed<number | null> {
+  if (unit === 'kg') return { kind: 'ok', value: optionalNumber(input.cm) };
+  if (input.feet.trim() === '' && input.inches.trim() === '') return { kind: 'ok', value: null };
+  const feet = wholeCount(input.feet);
+  const inches = wholeCount(input.inches);
+  if (feet === null || inches === null || inches > HIGHEST_INCHES)
+    return { kind: 'problem', problem: 'Enter whole feet and 0–11 inches.' };
+  return { kind: 'ok', value: feetAndInchesToCm({ feet, inches }) };
+}
+
+export function parsedHeightCm(input: HeightInput, unit: UnitPref): Parsed<number | null> {
+  const typed = typedHeightCm(input, unit);
+  if (typed.kind === 'problem') return typed;
+  return withinRange(
+    typed.value,
+    LOWEST_HEIGHT_CM,
+    HIGHEST_HEIGHT_CM,
+    `Height must be between ${LOWEST_HEIGHT_CM} and ${HIGHEST_HEIGHT_CM} cm.`,
+  );
 }
 
 const SERVER_RULE_MESSAGES: Record<string, string> = {

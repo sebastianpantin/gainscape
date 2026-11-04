@@ -9,7 +9,7 @@ import { exerciseListQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { PrescriptionCards } from './PrescriptionCards.tsx';
 import { ProgramStatusScreen } from './ProgramStatusScreen.tsx';
-import { useActiveProgram } from './use-active-program.ts';
+import { useActiveProgram } from '../../lib/programs/enrollment.ts';
 import { useLastLoggedWeights } from './use-last-logged-weights.ts';
 
 interface ProgramPlanScreenProps {

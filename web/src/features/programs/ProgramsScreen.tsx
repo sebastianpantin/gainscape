@@ -11,21 +11,20 @@ import {
   deleteProgram,
   ownPrograms,
   type Program,
+  publishProgram,
   templates,
 } from '../../lib/programs/programs.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { formatCount } from '../../lib/format.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
-import { forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
-import { followingText } from '../../lib/programs/program-discovery-rules.ts';
+import { forgetEnrollment, savedEnrollment } from '../../lib/programs/enrollment.ts';
 import { isEnrolledIn, isFollowing } from '../../lib/programs/program-follow-rules.ts';
-import { activeProgram } from '../../lib/programs/program-today-rules.ts';
-import { programsQuery, publishForEnroll, showChangedPrograms } from '../../lib/query/queries.ts';
+import { followingText } from '../../lib/programs/program-today-rules.ts';
+import { programsQuery } from '../../lib/query/queries.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { cacheFirstNotice } from '../../offline/cache-first.ts';
 import { OFFLINE_PROGRAMS_NOTICE } from '../../offline/program-list-cache.ts';
-import { readProgramCache } from '../../offline/program-cache.ts';
-import { cachedProgramFacts } from '../../offline/program-facts-cache.ts';
 import { FollowablePrograms } from './FollowablePrograms.tsx';
 
 interface ProgramsScreenProps {
@@ -53,10 +52,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const pendingCopyIds = useRef(new Map<string, string>());
-  const [following] = useState(() => {
-    const { templates, enrollment, facts } = readProgramCache(localStorage, userId);
-    return followingText(activeProgram(templates, enrollment, facts ? cachedProgramFacts(facts) : []));
-  });
+  const [following] = useState(() => followingText(savedEnrollment(userId).program));
 
   const load = programList.data;
   const programs = load?.loaded ?? savedPrograms;
@@ -71,7 +67,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
     try {
       const copiedId = await copyProgram(userId, template.id, newId);
       pendingCopyIds.current.delete(template.id);
-      showChangedPrograms(queryClient, userId);
+      void wrote(queryClient, { change: 'programs-changed', userId });
       navigate(`/programs/${copiedId}`);
     } catch (error) {
       setActionProblem(messageOf(error, 'Could not copy the template.'));
@@ -83,7 +79,8 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
     setBusy(true);
     setActionProblem(null);
     try {
-      const { key } = await publishForEnroll(queryClient, userId, program.id);
+      const { key } = await publishProgram(program.id);
+      void wrote(queryClient, { change: 'program-published', userId });
       navigate(`/programs/enroll/${key}`);
     } catch (error) {
       setActionProblem(programErrorText(error));
@@ -92,7 +89,7 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
   };
 
   const askToRemove = (program: Program) => {
-    const { enrollment } = readProgramCache(localStorage, userId);
+    const { enrollment } = savedEnrollment(userId);
     setPendingDelete({
       program,
       following: isFollowing(program.id, enrollment),
@@ -105,8 +102,8 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
     setActionProblem(null);
     try {
       await deleteProgram(userId, program.id);
-      if (cachedEnrollmentInProgram) forgetCachedEnrollment(userId);
-      showChangedPrograms(queryClient, userId);
+      if (cachedEnrollmentInProgram) forgetEnrollment(userId);
+      void wrote(queryClient, { change: 'programs-changed', userId });
     } catch (error) {
       setActionProblem(messageOf(error, 'Could not delete the program.'));
     }

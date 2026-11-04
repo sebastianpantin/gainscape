@@ -1,44 +1,43 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { MS_PER_DAY } from '@domain/math.ts';
-import { MAX_SET_LOAD_KG, measuresRepsCapacity, REP_MAX_SLOT_COUNT } from '@domain/types.ts';
+import { EXERCISE_MEASURES, MAX_SET_LOAD_KG, measuresRepsCapacity, REP_MAX_SLOT_COUNT } from '@domain/types.ts';
 import { z } from 'zod';
 import { LOAD_TYPES, type LoadType, MODALITIES, type Modality } from '../exercises/catalog-rules.ts';
+import { repMaxLoadRowSchema } from '../collection/collection-rules.ts';
 import { formatLoad } from '../format.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
-import { numericColumn, parsedRows } from '../rows.ts';
+import { columnsOf, numericColumn, parsedRows } from '../rows.ts';
 import { highestWeightInUnit, shownWeight, steppedWeight, unitToKg } from '../units.ts';
 import { liftE1rmKg, type RepMaxEntry } from './exercise-progress-rules.ts';
-
-const LIFT_GOAL_COLUMNS =
-  'exercise_id, target_kg, reps, target_date, exercises(name, modality, load_type, measure, archived_at)';
-const GOAL_REP_MAX_COLUMNS = 'exercise_id, reps, load_kg';
 
 export const HIGHEST_GOAL_REPS = REP_MAX_SLOT_COUNT;
 const NEW_GOAL_REPS = 5;
 const UNACHIEVED_PROGRESS_CAP = 0.99;
 export const GOAL_REACHED_TEXT = 'Goal reached';
 
+const goalExerciseRowSchema = z.object({
+  name: z.string(),
+  modality: z.enum(MODALITIES),
+  load_type: z.enum(LOAD_TYPES).nullable(),
+  measure: z.enum(EXERCISE_MEASURES).optional(),
+  archived_at: z.string().nullable(),
+});
+
 export const liftGoalRowSchema = z.object({
   exercise_id: z.string(),
   target_kg: numericColumn,
   reps: z.number(),
   target_date: z.string().nullable(),
-  exercises: z.object({
-    name: z.string(),
-    modality: z.enum(MODALITIES),
-    load_type: z.enum(LOAD_TYPES).nullable(),
-    measure: z.enum(['reps', 'time', 'distance']).optional(),
-    archived_at: z.string().nullable(),
-  }),
+  exercises: goalExerciseRowSchema,
 });
+
+const LIFT_GOAL_COLUMNS = columnsOf(liftGoalRowSchema, { exercises: columnsOf(goalExerciseRowSchema) });
 
 export type LiftGoalRow = z.infer<typeof liftGoalRowSchema>;
 
-export const goalRepMaxRowSchema = z.object({
-  exercise_id: z.string(),
-  reps: z.number(),
-  load_kg: numericColumn,
-});
+export const goalRepMaxRowSchema = repMaxLoadRowSchema;
+
+const GOAL_REP_MAX_COLUMNS = columnsOf(goalRepMaxRowSchema);
 
 export type GoalRepMaxRow = z.infer<typeof goalRepMaxRowSchema>;
 

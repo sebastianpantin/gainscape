@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import {
   OFFLINE_EXERCISES_NOTICE,
   OFFLINE_EXERCISES_WITHOUT_SKILLS_NOTICE,
@@ -57,7 +57,7 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
     try {
       await setCustomExerciseArchived(exercise.id, archived);
       setActionProblem(null);
-      void announceDataChange(queryClient, 'exercise-saved');
+      void wrote(queryClient, { change: 'exercise-saved' });
     } catch (error) {
       setActionProblem(messageOf(error, 'Could not update the exercise.'));
     }
@@ -105,7 +105,7 @@ export function ExercisesScreen({ userId }: ExercisesScreenProps) {
           exercise={editing.kind === 'edit' ? editing.exercise : null}
           skills={skills ?? []}
           onSaved={(exerciseId) => {
-            void announceDataChange(queryClient, 'exercise-saved');
+            void wrote(queryClient, { change: 'exercise-saved' });
             if (fromWorkout && editing.kind === 'new')
               return navigate('/', { replace: true, state: { addExerciseId: exerciseId } });
             closeForm();

@@ -15,7 +15,8 @@ import {
   saveCustomExercise,
   type SkillShare,
 } from '../../lib/exercises/custom-exercises.ts';
-import { nameProblem, trimmedName } from '../../lib/names.ts';
+import { parsedName } from '../../lib/names.ts';
+import { problemOf } from '../../lib/parsed.ts';
 import { mixedSoloShareText, percentsFromShares, shareTotal, sharesToSave, skillsForModality } from './share-form.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { FieldProblem } from '../../components/FieldProblem.tsx';
@@ -79,23 +80,24 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
   const total = shareTotal(shareForm);
   const soloShareProblem = mixedSoloShareText(shareForm);
   const shares = sharesToSave(shareForm);
-  const nameIssue = nameProblem(name, NAME_MAX_LENGTH);
-  const canSave = !loading && !saving && nameIssue === null && shares !== null;
+  const parsed = parsedName(name, NAME_MAX_LENGTH);
+  const nameIssue = problemOf(parsed);
+  const ready = !loading && !saving && parsed.kind === 'ok' && shares !== null ? { name: parsed.value, shares } : null;
   const shownNameIssue = name !== '' ? nameIssue : null;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!canSave) return;
+    if (!ready) return;
     setSaving(true);
     setProblem(null);
     try {
       await saveCustomExercise({
         id,
-        name: trimmedName(name),
+        name: ready.name,
         modality,
         loadType: modality === 'lift' ? loadType : null,
         equipment,
-        shares: shares!,
+        shares: ready.shares,
       });
       onSaved(id);
     } catch (error) {
@@ -189,7 +191,7 @@ export function CustomExerciseForm({ exercise, skills, onSaved, onCancel }: Cust
         </p>
       )}
       <div className="row">
-        <button className="button primary" type="submit" disabled={!canSave}>
+        <button className="button primary" type="submit" disabled={!ready}>
           Save exercise
         </button>
         <button className="button" type="button" onClick={onCancel}>

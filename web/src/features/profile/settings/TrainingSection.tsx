@@ -18,6 +18,7 @@ const EFFORT_OPTIONS: { value: EffortInputMode; label: string; hint: string }[] 
 export function TrainingSection({ userId, profile, replaceProfile }: SectionProps) {
   const { applyPreferences } = usePreferences();
   const { save, pending, problem } = useOptimisticProfileSave<'unitPref' | 'effortInputMode'>(
+    userId,
     profile,
     replaceProfile,
     (changes) => updatePrivateProfile(userId, changes),

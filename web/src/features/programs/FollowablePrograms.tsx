@@ -3,14 +3,14 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { templateListEntries, templateScheduleText } from '../../lib/programs/program-enroll-rules.ts';
 import { programTemplatesQuery } from '../../lib/query/queries.ts';
-import { readProgramCache } from '../../offline/program-cache.ts';
+import { savedEnrollment } from '../../lib/programs/enrollment.ts';
 
 interface FollowableProgramsProps {
   userId: string;
 }
 
 export function FollowablePrograms({ userId }: FollowableProgramsProps) {
-  const [savedTemplates] = useState(() => readProgramCache(localStorage, userId).templates);
+  const [savedTemplates] = useState(() => savedEnrollment(userId).templates);
   const live = useQuery(programTemplatesQuery(userId));
   const templates = live.data ?? savedTemplates;
   const failed = live.isError;

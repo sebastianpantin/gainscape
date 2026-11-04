@@ -6,6 +6,7 @@ import { formatCount } from '../../lib/format.ts';
 import type { LoadType } from '../../lib/exercises/catalog-rules.ts';
 import { finishedAtFor } from '../../lib/workout/session-timing-rules.ts';
 import { type WorkoutDraft } from '../../offline/draft-format.ts';
+import { withDaysSent } from '../../offline/draft-days.ts';
 import {
   doneSetCount,
   markPlannedSetsDone,
@@ -177,15 +178,7 @@ export function finishDraft(
   const checked = withCurrentLoadTypes(latest, loadTypes);
   if (checked.changedNames.length > 0) return checked;
   const logged = markPlannedDone ? markPlannedSetsDone(checked.draft) : checked.draft;
-  const secondDay = logged.secondDay == null ? logged.secondDay : { ...logged.secondDay, sent: true as const };
-  return {
-    draft: {
-      ...logged,
-      ...(secondDay === undefined ? {} : { secondDay }),
-      finishedAt: finishedAtFor(logged.startedAt, now),
-    },
-    changedNames: [],
-  };
+  return { draft: { ...withDaysSent(logged), finishedAt: finishedAtFor(logged.startedAt, now) }, changedNames: [] };
 }
 
 export function loadTypeChangedText(changedNames: readonly string[]): string {

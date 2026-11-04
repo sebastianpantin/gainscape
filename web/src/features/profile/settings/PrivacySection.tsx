@@ -5,6 +5,7 @@ import { type SectionProps } from './section-props.ts';
 
 export function PrivacySection({ userId, profile, replaceProfile }: SectionProps) {
   const { save, pending, problem } = useOptimisticProfileSave<'showWeights' | 'showBodyweight'>(
+    userId,
     profile,
     replaceProfile,
     (changes) => updatePublicProfile(userId, changes),

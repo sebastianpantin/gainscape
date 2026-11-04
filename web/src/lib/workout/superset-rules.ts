@@ -1,5 +1,6 @@
 import { type DraftExercise, type WorkoutDraft, withValidSupersets } from '../../offline/draft-format.ts';
 import { addSet } from '../../offline/draft-edits.ts';
+import { sameDay } from '../../offline/draft-days.ts';
 import { roomForSets, updateExerciseAt } from './exercise-edit-rules.ts';
 
 export interface SupersetGroup {
@@ -51,6 +52,7 @@ function withSupersetId(draft: WorkoutDraft, exerciseIndexes: number[], superset
 export function groupWithNext(draft: WorkoutDraft, exerciseIndex: number): WorkoutDraft {
   const next = draft.exercises[exerciseIndex + 1];
   if (draft.exercises[exerciseIndex]?.modality !== 'lift' || next?.modality !== 'lift') return draft;
+  if (!sameDay(draft, exerciseIndex, exerciseIndex + 1)) return draft;
   const nextId = supersetIdAt(draft, exerciseIndex + 1);
   const ownId = supersetIdAt(draft, exerciseIndex);
   if (nextId !== null && nextId === ownId) return draft;

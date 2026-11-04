@@ -1,12 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { parsedRow, parsedRows } from '../rows.ts';
+import { columnsOf, parsedRow, parsedRows } from '../rows.ts';
 
 export const EXERCISE_NOTE_MAX_LENGTH = 500;
 export const EXERCISE_NOTE_OFFLINE_TEXT = 'Notes can be edited when you are online.';
-const EXERCISE_NOTE_COLUMNS = 'exercise_id, body';
-
 const exerciseNoteRowSchema = z.object({ exercise_id: z.string(), body: z.string() });
+
+const EXERCISE_NOTE_COLUMNS = columnsOf(exerciseNoteRowSchema);
 
 type ExerciseNoteRow = z.infer<typeof exerciseNoteRowSchema>;
 

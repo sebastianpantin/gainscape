@@ -16,7 +16,7 @@ import { inputHelpKeys } from '../../lib/ui/term-help-rules.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { UNIT_OPTIONS } from '../../lib/profile/profile.ts';
-import { type EnrollChoices, enrollProgram, forgetCachedEnrollment } from '../../lib/programs/program-enrollment.ts';
+import { enroll as enrollIn, type EnrollChoices, savedEnrollment } from '../../lib/programs/enrollment.ts';
 import { enrollChoicesQuery } from '../../lib/query/queries.ts';
 import { type LoadedState, loadedState } from '../../lib/query/query-state-rules.ts';
 import {
@@ -46,7 +46,6 @@ import {
   withUnit,
 } from '../../lib/programs/program-enroll-rules.ts';
 import { carriedFollowOf, carriedInputs } from '../../lib/programs/program-follow-rules.ts';
-import { readProgramCache } from '../../offline/program-cache.ts';
 import { DecimalInput } from '../../components/DecimalInput.tsx';
 
 interface ProgramEnrollScreenProps {
@@ -102,7 +101,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const idPrefix = useId();
   const offline = useIsOffline();
   const [confirmingReplace, setConfirmingReplace] = useState<EnrollProgramPayload | null>(null);
-  const [enrolledRow] = useState(() => readProgramCache(localStorage, userId).enrollment);
+  const [enrolledRow] = useState(() => savedEnrollment(userId).enrollment);
 
   const heading = (name: string | null) => (
     <>
@@ -154,7 +153,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
   const fields = inputFields(definition, form);
   const weightHint = startingWeightHint(fields, form);
   const weightHintId = `${idPrefix}-weight-hint`;
-  const replacing = replacedProgramName(readProgramCache(localStorage, userId).templates, enrolledRow);
+  const replacing = replacedProgramName(choices.data?.templates ?? [], enrolledRow);
   const selectLifts = bindingSelectLifts(definition);
 
   const enroll = async (payload: EnrollProgramPayload) => {
@@ -162,8 +161,7 @@ export function ProgramEnrollScreen({ userId }: ProgramEnrollScreenProps) {
     setProblems([]);
     setBusy(true);
     try {
-      await enrollProgram(payload);
-      forgetCachedEnrollment(userId);
+      await enrollIn(userId, payload);
       navigate('/');
     } catch (error) {
       setProblems([programErrorText(error)]);

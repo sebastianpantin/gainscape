@@ -3,20 +3,20 @@ import { useId, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { exerciseLabels, isLiftExercise, isPlannableExercise } from '../../lib/exercises/catalog-rules.ts';
-import { cachedPrograms, type ProgramDoc, saveProgram } from '../../lib/programs/programs.ts';
+import { cachedPrograms, type ProgramDoc, publishProgram, saveProgram } from '../../lib/programs/programs.ts';
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/programs/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { BackLink } from '../../components/BackLink.tsx';
 import { useGoBack } from '../../lib/ui/use-go-back.ts';
 import { FieldProblem } from '../../components/FieldProblem.tsx';
-import { nameProblem } from '../../lib/names.ts';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { exerciseListQuery, programsQuery, publishForEnroll, showChangedPrograms } from '../../lib/query/queries.ts';
+import { exerciseListQuery, programsQuery } from '../../lib/query/queries.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import type { PlannedExercise, ProgressionKind } from '../../offline/draft-starts.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { useFocusAfterRemoval } from '../workout/use-focus-after-removal.ts';
@@ -29,6 +29,7 @@ import {
   changePlannedExercise,
   changeProgression,
   DAY_NAME_MAX_LENGTH,
+  dayNameProblem,
   docFor,
   exerciseIssue,
   hasUnsavedChanges,
@@ -42,6 +43,7 @@ import {
   newProgramDoc,
   pairedIncrement,
   PROGRAM_NAME_MAX_LENGTH,
+  programNameProblem,
   progressionIssue,
   removeDay,
   removePlannedExercise,
@@ -55,7 +57,7 @@ import {
 } from './program-edit.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { exerciseKeys } from '../../lib/exercises/exercise-key-rules.ts';
-import { useActiveProgram } from './use-active-program.ts';
+import { useActiveProgram } from '../../lib/programs/enrollment.ts';
 
 const ADD_DAY_FOCUS_KEY = 'add-day';
 
@@ -94,7 +96,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   const fieldId = useId();
   const { unitPref } = usePreferences();
   const offline = useIsOffline();
-  const { cache: programCache, program: followed } = useActiveProgram(userId);
+  const { enrollment: followedEnrollment, templates: followedTemplates, program: followed } = useActiveProgram(userId);
   const { showToast } = useToast();
   const { focusTarget, focusAfterNextChange } = useFocusAfterRemoval(doc?.days);
   const exerciseList = useQuery(exerciseListQuery(userId));
@@ -184,12 +186,12 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
 
   const programNameId = `${fieldId}-program`;
   const dayNameId = (dayId: string) => `${fieldId}-day-${dayId}`;
-  const programNameProblem = namesChecked ? nameProblem(doc.name, PROGRAM_NAME_MAX_LENGTH) : null;
+  const shownProgramNameProblem = namesChecked ? programNameProblem(doc.name) : null;
   const refuse = (text: string) => {
     setProblem({ text, shownFor: doc });
     const firstBadName = [
-      { id: programNameId, problem: nameProblem(doc.name, PROGRAM_NAME_MAX_LENGTH) },
-      ...doc.days.map((day) => ({ id: dayNameId(day.id), problem: nameProblem(day.name, DAY_NAME_MAX_LENGTH) })),
+      { id: programNameId, problem: programNameProblem(doc.name) },
+      ...doc.days.map((day) => ({ id: dayNameId(day.id), problem: dayNameProblem(day.name) })),
     ].find(({ problem }) => problem !== null);
     if (!firstBadName) return;
     setNamesChecked(true);
@@ -202,7 +204,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
-      showChangedPrograms(queryClient, userId);
+      void wrote(queryClient, { change: 'programs-changed', userId });
       unsaved.allowLeaving();
       leaveEditor();
     } catch (error) {
@@ -213,22 +215,22 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
 
   const outdated =
     !creating &&
-    followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates, exercises ? loadTypeOf : null) ===
-      'outdated';
+    followStatus(trimmedDoc(doc), followedEnrollment, followedTemplates, exercises ? loadTypeOf : null) === 'outdated';
 
   const followChanges = async () => {
     if (issue) return refuse(issue);
-    if (!programCache.enrollment) return;
+    if (!followedEnrollment) return;
     const carried: CarriedFollow = {
-      unit: programCache.enrollment.unit,
+      unit: followedEnrollment.unit,
       workingWeights: followed.kind === 'ready' ? workingWeights(followed.state) : {},
     };
     setSaving(true);
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
-      showChangedPrograms(queryClient, userId);
-      const { key } = await publishForEnroll(queryClient, userId, doc.id);
+      void wrote(queryClient, { change: 'programs-changed', userId });
+      const { key } = await publishProgram(doc.id);
+      void wrote(queryClient, { change: 'program-published', userId });
       unsaved.allowLeaving();
       void navigate(`/programs/enroll/${key}`, { state: { carried } });
     } catch (error) {
@@ -256,14 +258,14 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
           value={doc.name}
           maxLength={PROGRAM_NAME_MAX_LENGTH}
           onChange={(event) => setDoc({ ...doc, name: event.target.value })}
-          aria-invalid={programNameProblem !== null || undefined}
-          aria-describedby={programNameProblem ? `${programNameId}-problem` : undefined}
+          aria-invalid={shownProgramNameProblem !== null || undefined}
+          aria-describedby={shownProgramNameProblem ? `${programNameId}-problem` : undefined}
         />
       </label>
-      <FieldProblem id={`${programNameId}-problem`} problem={programNameProblem} />
+      <FieldProblem id={`${programNameId}-problem`} problem={shownProgramNameProblem} />
       {doc.days.map((day, dayIndex) => {
         const dayLabel = day.name.trim() || `Day ${dayIndex + 1}`;
-        const dayProblem = namesChecked ? nameProblem(day.name, DAY_NAME_MAX_LENGTH) : null;
+        const dayProblem = namesChecked ? dayNameProblem(day.name) : null;
         return (
           <section className="panel stack" key={day.id} aria-label={`Day ${dayIndex + 1}`}>
             <div className="row spread">

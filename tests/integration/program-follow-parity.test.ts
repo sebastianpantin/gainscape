@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   EXERCISE_COLUMNS,
-  type ExerciseRow,
+  exerciseRowSchema,
   isLiftExercise,
   toExercise,
 } from '../../web/src/lib/exercises/catalog-rules.ts';
@@ -10,11 +10,12 @@ import {
   customLiftKey,
   customTemplateKey,
   PROGRAM_TEMPLATE_COLUMNS,
-  type ProgramTemplateRow,
+  programTemplateRowSchema,
 } from '../../web/src/lib/programs/program-enroll-rules.ts';
 import { type EnrollmentRow } from '../../web/src/lib/programs/program-facts-rules.ts';
 import { followStatus } from '../../web/src/lib/programs/program-follow-rules.ts';
-import { PROGRAM_SELECT, type ProgramRow, toProgram } from '../../web/src/lib/programs/program-row-rules.ts';
+import { PROGRAM_SELECT, programRowSchema, toProgram } from '../../web/src/lib/programs/program-row-rules.ts';
+import { parsedRows } from '../../web/src/lib/rows.ts';
 import { createTestUser, db, type TestUser } from './local-stack.ts';
 import { createCustomExercise } from './session-support.ts';
 import {
@@ -95,8 +96,8 @@ async function webFollowStatus(user: TestUser, published: PublishedCase) {
     user.client.from('exercises').select(EXERCISE_COLUMNS).in('id', published.exerciseIds),
   ]);
   for (const result of [programs, templates, exercises]) expect(result.error).toBeNull();
-  const program = toProgram((programs.data as unknown as ProgramRow[])[0]);
-  const byId = new Map((exercises.data as unknown as ExerciseRow[]).map((row) => [row.id, toExercise(row)]));
+  const program = toProgram(parsedRows(programRowSchema, programs.data)[0]);
+  const byId = new Map(parsedRows(exerciseRowSchema, exercises.data).map((row) => [row.id, toExercise(row)]));
   const loadTypeOf = (exerciseId: string) => {
     const exercise = byId.get(exerciseId);
     return exercise && isLiftExercise(exercise) ? exercise.loadType : null;
@@ -113,7 +114,7 @@ async function webFollowStatus(user: TestUser, published: PublishedCase) {
     started_at: new Date().toISOString(),
     ended_at: null,
   };
-  const rows = templates.data as ProgramTemplateRow[];
+  const rows = parsedRows(programTemplateRowSchema, templates.data);
   const plannedLifts = program.days.flatMap((day) => day.exercises.map((planned) => customLiftKey(planned.exerciseId)));
   return {
     status: followStatus(program, enrollment, rows, loadTypeOf),

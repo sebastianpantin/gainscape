@@ -14,8 +14,8 @@ function allTimezones(): string[] {
   }
 }
 
-export function TimezoneSection({ profile, replaceProfile }: Omit<SectionProps, 'userId'>) {
-  const { candidate, setCandidate, message, busy, change } = useTimezoneChange(profile, replaceProfile);
+export function TimezoneSection({ userId, profile, replaceProfile }: SectionProps) {
+  const { candidate, setCandidate, message, busy, change } = useTimezoneChange(userId, profile, replaceProfile);
   const nextAllowed = nextTimezoneChangeAt(profile);
   const zones = allTimezones();
   const device = deviceTimezone();

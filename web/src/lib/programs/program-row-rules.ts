@@ -1,9 +1,27 @@
 import type { PlannedExercise, PlannedProgression, ProgressionKind } from '../../offline/draft-starts.ts';
 import type { Program, ProgramDoc } from './programs.ts';
 import { z } from 'zod';
-import { numericColumn } from '../rows.ts';
+import { columnsOf, numericColumn } from '../rows.ts';
 
 const PROGRESSION_KINDS = ['none', 'fixed', 'linear'] as const satisfies readonly ProgressionKind[];
+
+const programDayExerciseRowSchema = z.object({
+  position: z.number(),
+  exercise_id: z.string(),
+  target_sets: z.number(),
+  target_reps_min: z.number(),
+  target_reps_max: z.number(),
+  progression: z.enum(PROGRESSION_KINDS),
+  increment_kg: numericColumn.nullable(),
+  increment_lb: numericColumn.nullable(),
+});
+
+const programDayRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  position: z.number(),
+  program_day_exercises: z.array(programDayExerciseRowSchema),
+});
 
 export const programRowSchema = z.object({
   id: z.string(),
@@ -11,33 +29,16 @@ export const programRowSchema = z.object({
   name: z.string(),
   owner_user_id: z.string().nullable(),
   copied_from_id: z.string().nullable(),
-  program_days: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      position: z.number(),
-      program_day_exercises: z.array(
-        z.object({
-          position: z.number(),
-          exercise_id: z.string(),
-          target_sets: z.number(),
-          target_reps_min: z.number(),
-          target_reps_max: z.number(),
-          progression: z.enum(PROGRESSION_KINDS),
-          increment_kg: numericColumn.nullable(),
-          increment_lb: numericColumn.nullable(),
-        }),
-      ),
-    }),
-  ),
+  program_days: z.array(programDayRowSchema),
 });
 
 export type ProgramRow = z.infer<typeof programRowSchema>;
 
-export const PROGRAM_SELECT =
-  'id,key,name,owner_user_id,copied_from_id,program_days(id,name,position,program_day_exercises(position,exercise_id,target_sets,target_reps_min,target_reps_max,progression,increment_kg,increment_lb))';
+export const PROGRAM_SELECT = columnsOf(programRowSchema, {
+  program_days: columnsOf(programDayRowSchema, { program_day_exercises: columnsOf(programDayExerciseRowSchema) }),
+});
 
-type ProgramExerciseRow = ProgramRow['program_days'][number]['program_day_exercises'][number];
+type ProgramExerciseRow = z.infer<typeof programDayExerciseRowSchema>;
 
 function progressionOf(row: ProgramExerciseRow): PlannedProgression {
   if (row.progression === 'linear')

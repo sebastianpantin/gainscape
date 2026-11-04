@@ -11,13 +11,9 @@ import { kgToUnit, type WeightUnit } from '@domain/units.ts';
 import { challengeSummaryText } from '../collection/challenge-rules.ts';
 import { formatCount, formatXp } from '../format.ts';
 import { z } from 'zod';
-import { numericColumn } from '../rows.ts';
+import { columnsOf, numericColumn } from '../rows.ts';
 import type { InvokeOutcome } from '../platform/function-client-rules.ts';
 import { RATE_LIMITED_CODE, retryAfterSeconds, tryAgainIn } from '../platform/rate-limit.ts';
-
-export const QUEST_COLUMNS = 'id,key,name,description,quest_points,sort_order,definition,retired_at';
-export const QUEST_PROGRESS_COLUMNS = 'quest_id,started_at,step_index,step_progress';
-export const QUEST_COMPLETION_COLUMNS = 'quest_id,completed_at,quest_points';
 
 export const questRowSchema = z.object({
   id: z.string(),
@@ -44,6 +40,10 @@ export const questCompletionRowSchema = z.object({
   completed_at: z.string(),
   quest_points: z.number(),
 });
+
+export const QUEST_COLUMNS = columnsOf(questRowSchema);
+export const QUEST_PROGRESS_COLUMNS = columnsOf(questProgressRowSchema);
+export const QUEST_COMPLETION_COLUMNS = columnsOf(questCompletionRowSchema);
 
 export const questRowsSchema = z.object({
   quests: z.array(questRowSchema),

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
 import { type SessionBaseline } from '../../lib/workout/session-baseline-rules.ts';
-import { type DraftExercise } from '../../offline/draft-format.ts';
+import { type DraftDays } from '../../offline/draft-days.ts';
 import { type SetEditChange } from './draft-edit-commands.ts';
 import { becomesRecord, type PreviewRecord } from './record-preview.ts';
 import { type SetFeedback, setFeedback } from './set-feedback-rules.ts';
@@ -9,20 +9,20 @@ import { type DraftPreview, previewDraft, type PreviewContext, type SetPreview }
 
 const NO_PREVIEW: DraftPreview = { previews: [], records: [] };
 
-function rememberingPreviewer(context: PreviewContext): (list: readonly DraftExercise[]) => DraftPreview {
-  const previewed = new WeakMap<readonly DraftExercise[], DraftPreview>();
-  return (list) => {
-    const known = previewed.get(list);
-    if (known) return known;
-    const preview = previewDraft(list, context);
-    previewed.set(list, preview);
+function rememberingPreviewer(context: PreviewContext): (draft: DraftDays) => DraftPreview {
+  const previewed = new WeakMap<DraftDays['exercises'], { secondDay: DraftDays['secondDay']; preview: DraftPreview }>();
+  return (draft) => {
+    const known = previewed.get(draft.exercises);
+    if (known && known.secondDay === draft.secondDay) return known.preview;
+    const preview = previewDraft(draft, context);
+    previewed.set(draft.exercises, { secondDay: draft.secondDay, preview });
     return preview;
   };
 }
 
 interface WorkoutPreviewsOptions {
   exercises: readonly Exercise[];
-  draftExercises: readonly DraftExercise[] | null;
+  draft: DraftDays | null;
   baseline: SessionBaseline | null;
   bodyweightKg: number | null;
 }
@@ -40,7 +40,7 @@ export interface WorkoutPreviews {
 
 export function useWorkoutPreviews({
   exercises,
-  draftExercises,
+  draft,
   baseline,
   bodyweightKg,
 }: WorkoutPreviewsOptions): WorkoutPreviews {
@@ -51,14 +51,11 @@ export function useWorkoutPreviews({
     const isBuiltIn = (exerciseId: string) => !customIds.has(exerciseId);
     return rememberingPreviewer({ isBuiltIn, strength, bodyweightKg, recordBaseline });
   }, [exercises, strength, bodyweightKg, recordBaseline]);
-  const { previews, records } = useMemo(
-    () => (draftExercises === null ? NO_PREVIEW : previewOf(draftExercises)),
-    [draftExercises, previewOf],
-  );
+  const { previews, records } = useMemo(() => (draft === null ? NO_PREVIEW : previewOf(draft)), [draft, previewOf]);
 
   const feedbackFor = ({ previous, next, setId, place, vibrate, sound }: SetChange) => {
     const { exerciseIndex, setIndex } = place;
-    const previewAfter = () => previewOf(next.exercises);
+    const previewAfter = () => previewOf(next);
     return setFeedback({
       label: place.label,
       wasDone: previous.exercises[exerciseIndex]?.sets[setIndex]?.done ?? false,
@@ -66,13 +63,7 @@ export function useWorkoutPreviews({
       preview: () => previewAfter().previews[exerciseIndex][setIndex],
       record: () => previewAfter().records[exerciseIndex][setIndex],
       becameRecord: () =>
-        becomesRecord(
-          previewOf(previous.exercises).records,
-          previous.exercises,
-          previewAfter().records,
-          next.exercises,
-          setId,
-        ),
+        becomesRecord(previewOf(previous).records, previous.exercises, previewAfter().records, next.exercises, setId),
       vibrate,
       sound,
     });

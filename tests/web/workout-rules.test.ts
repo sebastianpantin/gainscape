@@ -19,6 +19,7 @@ import {
 } from '../../web/src/features/workout/workout-rules.ts';
 import type { LoadType } from '../../web/src/lib/exercises/catalog-rules.ts';
 import type { WorkoutDraft } from '../../web/src/offline/draft-format.ts';
+import { canRemoveSecondDay } from '../../web/src/offline/draft-days.ts';
 
 describe('syncProblemText', () => {
   it('names the network problem, says retries run while Train is open and that the workout is kept', () => {
@@ -307,7 +308,9 @@ describe('finishDraft', () => {
         programLabel: 'P — Wed',
       },
     };
-    expect(finishDraft(withDay, options).draft.secondDay?.sent).toBe(true);
+    const reopened = { ...finishDraft(withDay, options).draft, finishedAt: null };
+    expect(canRemoveSecondDay(withDay)).toBe(true);
+    expect(canRemoveSecondDay(reopened)).toBe(false);
     expect(finishDraft(draft(), options).draft.secondDay).toBeUndefined();
   });
 

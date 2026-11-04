@@ -15,21 +15,20 @@ import {
 import { prefersReducedMotion } from '../../lib/platform/device-effects.ts';
 import { formatXp, sessionXp } from '../../lib/format.ts';
 import { GLOSSARY } from '../../lib/ui/glossary.ts';
-import { fetchSession } from '../../lib/history/history.ts';
 import { type CatalogItem, colorFor, fanfareFor } from '../../lib/collection/item-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
 import { type CacheFirstLoad } from '../../offline/cache-first.ts';
-import type { CompletedSessionSummary } from '../../offline/finish-lock.ts';
 import { markInstallCardDue } from '../../pwa/install.ts';
 import {
   exerciseListQuery,
+  finishLootQuery,
   itemCatalogQuery,
   questsQuery,
   skillsQuery,
   standingQuery,
 } from '../../lib/query/queries.ts';
-import { recallLastSummary, rememberLastSummary, summarySessionIds } from '../../offline/last-summary.ts';
+import { finishOutcomeOf, type FinishSummary, recallFinishOutcome } from '../../offline/finish-outcome.ts';
 import {
   bonusText,
   challengeFailReason,
@@ -291,7 +290,9 @@ interface RevealScreenProps {
 
 export function RevealScreen({ userId }: RevealScreenProps) {
   const location = useLocation();
-  const summary = (location.state as CompletedSessionSummary | null) ?? recallLastSummary(userId);
+  const routedSummary = location.state as FinishSummary | null;
+  const outcome = routedSummary ? finishOutcomeOf(routedSummary) : recallFinishOutcome(userId);
+  const summary = outcome?.summary ?? null;
   const { unitPref } = usePreferences();
   const exercises = useQuery(exerciseListQuery(userId)).data ?? [];
   const standing = loadedAfterMount(useQuery({ ...standingQuery(userId), refetchOnMount: 'always' }));
@@ -299,7 +300,11 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   const xpBySkillId = standing && new Map(standing.skills.map(({ skill, progress }) => [skill.id, progress.xp]));
   const itemCatalog = useQuery(itemCatalogQuery(userId));
   const items: LoadedItems = itemCatalog.data?.loaded.items ?? (itemCatalog.isError ? 'failed' : 'loading');
-  const [freshDrops, setFreshDrops] = useState<DropSummary[] | null>(null);
+  const freshDrops = useQuery({
+    ...finishLootQuery(userId, outcome?.sessionIds ?? []),
+    enabled: outcome !== null,
+    refetchOnMount: 'always',
+  }).data;
   const hasQuestNews = summary?.quests !== undefined;
   const questLog = loadedAfterMount(
     useQuery({ ...questsQuery(userId), enabled: hasQuestNews, refetchOnMount: 'always' }),
@@ -314,25 +319,6 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   useEffect(() => {
     if (sessionId) markInstallCardDue(userId);
   }, [sessionId, userId]);
-
-  const savedSessionIds = summary ? summarySessionIds(summary).join(' ') : '';
-  useEffect(() => {
-    if (!savedSessionIds) return;
-    let active = true;
-    Promise.all(savedSessionIds.split(' ').map((id) => fetchSession(id))).then(
-      (stored) => {
-        if (!active || stored.some((session) => !session)) return;
-        const drops = stored.flatMap((session) => session?.summary.drops ?? []);
-        setFreshDrops(drops);
-        const cached = recallLastSummary(userId);
-        if (cached && cached.sessionId === sessionId) rememberLastSummary(userId, { ...cached, drops });
-      },
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [savedSessionIds, sessionId, userId]);
 
   if (!summary) {
     return (

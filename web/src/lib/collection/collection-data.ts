@@ -2,18 +2,24 @@ import { type StrengthState } from '@domain/types.ts';
 import type { CardioRecordRow } from '../workout/cardio-rules.ts';
 import { fetchExercises } from '../exercises/catalog.ts';
 import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
-import { collectionCache, collectionRowsSchema, type SavedCollection } from '../../offline/collection-cache.ts';
+import { collectionCache, type SavedCollection } from '../../offline/collection-cache.ts';
 import { cachedExerciseFields } from '../exercises/catalog-cache.ts';
 import { type Exercise } from '../exercises/catalog-rules.ts';
 import {
   COLLECTION_COLUMNS,
   collectionDataFrom,
   type CollectionRows,
+  collectionRowsSchema,
   pinProblemText,
   strengthByExerciseFrom,
 } from './collection-rules.ts';
 import { withFriendlyRateLimit } from '../platform/rate-limit.ts';
-import { RECORD_BASELINE_COLUMNS, type RecordBaseline, recordBaselineFrom } from '../workout/session-baseline-rules.ts';
+import {
+  RECORD_BASELINE_COLUMNS,
+  type RecordBaseline,
+  recordBaselineFrom,
+  recordBaselineRowsSchema,
+} from '../workout/session-baseline-rules.ts';
 import { z } from 'zod';
 import { nullableNumber, numericColumn, parsedRow, parsedRows } from '../rows.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
@@ -99,11 +105,13 @@ export async function fetchRecordBaseline(userId: string): Promise<RecordBaselin
   if (repMaxes.error) throw repMaxes.error;
   if (bodyweightRecords.error) throw bodyweightRecords.error;
   if (cardioRecords.error) throw cardioRecords.error;
-  return recordBaselineFrom({
-    repMaxes: repMaxes.data,
-    bodyweightRecords: bodyweightRecords.data,
-    cardioRecords: cardioRecords.data,
-  });
+  return recordBaselineFrom(
+    parsedRow(recordBaselineRowsSchema, {
+      repMaxes: repMaxes.data,
+      bodyweightRecords: bodyweightRecords.data,
+      cardioRecords: cardioRecords.data,
+    }),
+  );
 }
 
 const strengthStateRowSchema = z.object({
