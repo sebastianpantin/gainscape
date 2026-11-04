@@ -5,7 +5,7 @@ import { formatCount } from '../../lib/format.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
-import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import { questsQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { type CatalogQuest, questBoard, type QuestSkill, startQuestProblemText } from '../../lib/quests/quest-rules.ts';
@@ -51,10 +51,10 @@ export function QuestsScreen({ userId }: QuestsScreenProps) {
     const outcome = await startQuest(userId, quest.questId);
     if (outcome.kind === 'ok') {
       showToast(`Started ${quest.name}`);
-      await announceDataChange(queryClient, 'quest-started');
+      await wrote(queryClient, { change: 'quest-started' });
       return null;
     }
-    if (outcome.kind === 'http_error') void queryClient.invalidateQueries({ queryKey: questsQuery(userId).queryKey });
+    if (outcome.kind === 'http_error') void quests.refetch();
     return startQuestProblemText(outcome, names);
   };
 

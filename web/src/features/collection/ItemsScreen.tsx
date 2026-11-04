@@ -41,14 +41,7 @@ import {
 } from '../../lib/platform/celebration-effects.ts';
 import { companionPetStore } from '../../lib/collection/companion-pet-store.ts';
 import { messageOf } from '../../lib/error-text.ts';
-import {
-  craftItem,
-  equipGear,
-  fetchInventory,
-  fetchItemCatalog,
-  type LoadedItems,
-  unequipGear,
-} from '../../lib/collection/items.ts';
+import { craftItem, equipGear, fetchItemCatalog, type LoadedItems, unequipGear } from '../../lib/collection/items.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { startDraftFromChallenge } from '../../offline/draft-starts.ts';
@@ -56,7 +49,7 @@ import { type ChallengeExerciseEntry, OFFLINE_ITEMS_NOTICE, updateItemsCache } f
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
-import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import { itemsQuery, loadoutQuery } from '../../lib/query/queries.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
@@ -327,33 +320,18 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const { state: draftState, startWorkout, flush } = useWorkoutDraft(userId);
   const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
   const loadout = useQuery(loadoutQuery(userId));
-  const announceGearChanged = () => announceDataChange(queryClient, 'gear-changed');
-
-  const showLoaded = (change: (loaded: LoadedItems) => LoadedItems) => {
-    const { queryKey } = itemsQuery(userId);
-    void queryClient.cancelQueries({ queryKey, exact: true });
-    queryClient.setQueryData<CacheFirstLoad<LoadedItems>>(
-      queryKey,
-      (current) => current && { ...current, loaded: change(current.loaded) },
-    );
-  };
-
-  const refetchInventory = async () => {
-    try {
-      const held = await fetchInventory(userId);
-      updateItemsCache(deviceStorage(), userId, (cache) => ({ ...cache, inventory: [...held.values()] }));
-      showLoaded((loaded) => ({ ...loaded, held }));
-      setRefetchProblem(null);
-    } catch (error) {
-      setRefetchProblem(messageOf(error, 'try again.'));
-    }
-  };
+  const wroteLoadout = () => wrote(queryClient, { change: 'gear-changed', userId });
 
   const refetchCatalog = async () => {
     try {
       const catalog = await fetchItemCatalog();
       updateItemsCache(deviceStorage(), userId, (cache) => ({ ...cache, catalog }));
-      showLoaded((loaded) => ({ ...loaded, catalog }));
+      const { queryKey } = itemsQuery(userId);
+      void queryClient.cancelQueries({ queryKey, exact: true });
+      queryClient.setQueryData<CacheFirstLoad<LoadedItems>>(
+        queryKey,
+        (current) => current && { ...current, loaded: { ...current.loaded, catalog } },
+      );
       setRefetchProblem(null);
     } catch (error) {
       setRefetchProblem(messageOf(error, 'try again.'));
@@ -361,7 +339,12 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   };
 
   const refreshAfterCraft = async () => {
-    await Promise.all([refetchInventory(), announceGearChanged()]);
+    try {
+      await wrote(queryClient, { change: 'gear-changed', userId, crafted: true });
+      setRefetchProblem(null);
+    } catch (error) {
+      setRefetchProblem(messageOf(error, 'try again.'));
+    }
   };
 
   const state = loadedState(items.data, items.isFetching ? null : items.error);
@@ -510,7 +493,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           }}
           onCraftFailed={refreshAfterCraft}
           onCatalogStale={refetchCatalog}
-          onLoadoutChanged={announceGearChanged}
+          onLoadoutChanged={wroteLoadout}
           onStartChallenge={startChallenge}
         />
       ) : (

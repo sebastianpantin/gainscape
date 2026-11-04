@@ -19,7 +19,7 @@ import {
 } from '../../lib/progress/lift-goal-rules.ts';
 import { removeLiftGoal, saveLiftGoal } from '../../lib/progress/lift-goals.ts';
 import { useLiftGoals } from '../../lib/progress/use-lift-goals.ts';
-import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { LiftGoalForm } from './LiftGoalForm.tsx';
 
@@ -45,7 +45,7 @@ export function LiftGoalSection({ userId, exercise, repMaxes }: LiftGoalSectionP
     setProblem(null);
     try {
       await change();
-      await announceDataChange(queryClient, 'lift-goals-saved');
+      await wrote(queryClient, { change: 'lift-goals-saved' });
       setEditing(false);
       showToast(doneText);
     } catch (error) {

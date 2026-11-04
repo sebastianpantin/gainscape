@@ -12,7 +12,8 @@ import { type ProfileView } from '../../lib/social/social.ts';
 import { LoadoutPanel } from './LoadoutPanel.tsx';
 import { ProfileWithTopSkills } from './ProfileWithTopSkills.tsx';
 import { PrivacySection } from './settings/PrivacySection.tsx';
-import { type ProfileUpdate, useProfile } from './use-profile.ts';
+import { type ProfileUpdate } from '../../lib/profile/saved-profile.ts';
+import { useProfile } from './use-profile.ts';
 import { BackLink } from '../../components/BackLink.tsx';
 
 interface FriendPreviewScreenProps {

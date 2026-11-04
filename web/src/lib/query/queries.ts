@@ -23,13 +23,7 @@ import { fetchTrainingHistory } from '../profile/onboarding.ts';
 import { loadProfileCacheFirst, type Profile } from '../profile/profile.ts';
 import { type Preferences } from '../profile/preferences.ts';
 import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from '../programs/program-enrollment.ts';
-import {
-  cachedPrograms,
-  fetchLastLoggedSets,
-  loadProgramsCacheFirst,
-  type PublishedProgram,
-  publishProgram,
-} from '../programs/programs.ts';
+import { fetchLastLoggedSets, loadProgramsCacheFirst } from '../programs/programs.ts';
 import {
   FEED_PAGE_SIZE,
   fetchCollectionView,
@@ -62,7 +56,6 @@ import {
 import { fetchLatestTrainingDate, loadTrainingDaysCacheFirst } from '../stats/training-days.ts';
 import { loadWeeklyExerciseSetsCacheFirst } from '../stats/volume-history.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
-import { announceDataChange } from './data-changes.ts';
 import { allInOrder } from './settle-rules.ts';
 
 export const FRIENDS_QUERY_PREFIX = ['friends'] as const;
@@ -101,16 +94,6 @@ export function strengthQuery(userId: string) {
 
 export function programsQuery(userId: string) {
   return queryOptions({ queryKey: ['programs', userId] as const, queryFn: () => loadProgramsCacheFirst(userId) });
-}
-
-export function showChangedPrograms(queryClient: QueryClient, userId: string): void {
-  const { queryKey } = programsQuery(userId);
-  const saved = cachedPrograms(userId);
-  if (saved) {
-    void queryClient.cancelQueries({ queryKey });
-    queryClient.setQueryData(queryKey, { loaded: saved, fromCache: false });
-  }
-  void announceDataChange(queryClient, 'programs-changed');
 }
 
 export function collectionQuery(userId: string) {
@@ -283,17 +266,6 @@ export function enrollChoicesQuery(userId: string) {
   });
 }
 
-export async function publishForEnroll(
-  queryClient: QueryClient,
-  userId: string,
-  programId: string,
-  publish: (programId: string) => Promise<PublishedProgram> = publishProgram,
-): Promise<PublishedProgram> {
-  const published = await publish(programId);
-  queryClient.removeQueries({ queryKey: enrollChoicesQuery(userId).queryKey });
-  return published;
-}
-
 export const weeklyGoalQuery = queryOptions({
   queryKey: ['weekly-goal'] as const,
   queryFn: ({ signal }) => fetchWeeklyGoalStatus(signal),
@@ -458,3 +430,13 @@ export const EVERY_QUERY = [
   relativeStrengthQuery,
   dotsHistoryQuery,
 ] as const;
+
+type KeyOf<Query> = Query extends (...args: never[]) => { queryKey: infer Key }
+  ? Key
+  : Query extends { queryKey: infer Key }
+    ? Key
+    : never;
+
+type RootOf<Query> = KeyOf<Query> extends readonly [infer Root, ...unknown[]] ? Root : never;
+
+export type QueryRoot = RootOf<(typeof EVERY_QUERY)[number]>;

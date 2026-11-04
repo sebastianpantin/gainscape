@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
 import { SETS_FULL_TEXT } from '../workout/workout-rules.ts';
-import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import {
   addableExercises,
   type BoutSet,
@@ -20,10 +20,10 @@ import {
 import { exerciseKeys } from '../../lib/exercises/exercise-key-rules.ts';
 import { formatXp } from '../../lib/format.ts';
 import { deleteSession, editSession } from '../../lib/history/history.ts';
-import { isUuid, programDayLabel, withoutHistorySession } from '../../lib/history/history-rules.ts';
+import { isUuid, programDayLabel } from '../../lib/history/history-rules.ts';
 import { type CatalogItem } from '../../lib/collection/item-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { fetchLatestExerciseList, historyQuery, itemCatalogQuery, programsQuery } from '../../lib/query/queries.ts';
+import { fetchLatestExerciseList, itemCatalogQuery, programsQuery } from '../../lib/query/queries.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { type Program } from '../../lib/programs/programs.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
@@ -191,7 +191,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
             return setEdit(change.edit);
           case 'saved': {
             const { saved } = change;
-            void announceDataChange(queryClient, 'workout-changed');
+            void wrote(queryClient, { change: 'workout-changed' });
             setLoaded(
               (current) =>
                 current && { ...current, session: { ...current.session, revision: saved.revision }, original: saved },
@@ -206,10 +206,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           case 'delete_settled':
             return setConfirmingDelete(false);
           case 'deleted':
-            queryClient.setQueryData(historyQuery(userId).queryKey, (loadedPages) =>
-              withoutHistorySession(loadedPages, sessionId),
-            );
-            void announceDataChange(queryClient, 'workout-changed');
+            void wrote(queryClient, { change: 'workout-changed', deleted: { userId, sessionId } });
             allowLeaving();
             return navigate(HISTORY_PATH, { replace: true, state: { notice: change.notice } });
           case 'gone':

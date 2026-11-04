@@ -1,13 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  DATA_CHANGES,
-  dataChangeOf,
   FRESH_FOR_MS,
   ALWAYS_STALE_QUERY_ROOTS,
   HOME_QUERY_ROOTS,
   HOME_FRESH_FOR_MS,
-  QUERY_ROOTS_CHANGED_BY,
-  queryRootsToInvalidate,
   staleTimeFor,
 } from '../../web/src/lib/query/query-freshness-rules.ts';
 
@@ -27,33 +23,8 @@ function rootOf(query: (typeof queries.EVERY_QUERY)[number]): string {
 
 const QUERY_ROOTS = queries.EVERY_QUERY.map(rootOf);
 
-function draftMessage(change: string) {
-  return { userId: USER_ID, sessionId: 'session-1', updatedAt: 5, change };
-}
-
-describe('dataChangeOf', () => {
-  it('reads a workout synced or deleted on the server from the draft channel as a workout change', () => {
-    expect(dataChangeOf(draftMessage('synced'))).toBe('workout-changed');
-    expect(dataChangeOf(draftMessage('deleted'))).toBe('workout-changed');
-  });
-
-  it('ignores draft edits and discards, which change nothing on the server', () => {
-    expect(dataChangeOf(draftMessage('written'))).toBeNull();
-    expect(dataChangeOf(draftMessage('discarded'))).toBeNull();
-  });
-
-  it('reads every change another tab announces', () => {
-    for (const change of DATA_CHANGES) expect(dataChangeOf({ change })).toBe(change);
-  });
-
-  it('ignores anything else on the channels', () => {
-    for (const message of [null, 'synced', 42, {}, { change: 'reloaded' }, { change: 7 }])
-      expect(dataChangeOf(message)).toBeNull();
-  });
-});
-
 describe('EVERY_QUERY', () => {
-  it('lists every query factory queries.ts exports, so no query can skip the invalidation map', () => {
+  it('lists every query factory queries.ts exports, so no query can skip saying how it goes stale', () => {
     const exported = Object.entries(queries)
       .filter(([name]) => name.endsWith('Query'))
       .map(([, query]) => query);
@@ -63,143 +34,6 @@ describe('EVERY_QUERY', () => {
 
   it('loads every catalog through a query, so the reveal and session detail share one item catalog', () => {
     for (const root of CATALOG_ROOTS) expect(QUERY_ROOTS).toContain(root);
-  });
-});
-
-describe('QUERY_ROOTS_CHANGED_BY', () => {
-  it('refreshes every screen a finished, edited or deleted workout changes', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toEqual(
-      expect.arrayContaining([
-        'history',
-        'standing',
-        'collection',
-        'items',
-        'loadout',
-        'exercise-progress',
-        'last-logged-weights',
-        'weekly-goal',
-        'bodyweight-trend',
-        'profile-preview',
-        'feed',
-        'hiscores',
-      ]),
-    );
-  });
-
-  it('refreshes the profile, its friend preview and the bodyweight trend after a profile save', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['profile-saved']).toEqual(
-      expect.arrayContaining(['profile', 'profile-preview', 'bodyweight-trend']),
-    );
-  });
-
-  it('refreshes the weekly goal weeks after a time zone change', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['timezone-changed']).toContain('weekly-goal');
-  });
-
-  it('refreshes the loadout and the items after equipping, unequipping or crafting gear', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['gear-changed']).toEqual(expect.arrayContaining(['loadout', 'items']));
-  });
-
-  it('refreshes the weekly goal after a goal change and the Collection tab after pinning', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['weekly-goal-saved']).toContain('weekly-goal');
-    expect(QUERY_ROOTS_CHANGED_BY['pins-changed']).toContain('collection');
-  });
-
-  it('refreshes the What friends see preview after pinning, because pinned lifts count toward its Collection share', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['pins-changed']).toContain('profile-preview');
-  });
-
-  it('refreshes every exercise list and the Collection tab after a custom exercise is saved or archived', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toEqual(
-      expect.arrayContaining(['exercises', 'collection', 'enroll-choices', 'exercise-progress', 'history']),
-    );
-  });
-
-  it('refreshes the program list after a program is saved, copied or deleted', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['programs-changed']).toEqual(['programs']);
-  });
-
-  it('refreshes the strength the workout preview uses after a workout changes', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('strength');
-  });
-
-  it('refreshes lift goals after a goal change and after a workout sets new rep maxes', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['lift-goals-saved']).toEqual(['lift-goals']);
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('lift-goals');
-    expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toContain('lift-goals');
-  });
-
-  it('refreshes the quest log after a quest starts and after a workout moves a quest along', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['quest-started']).toEqual(['quests']);
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('quests');
-  });
-
-  it('refreshes the training calendar and month compare after a workout is finished, edited or deleted', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('training-days');
-  });
-
-  it('refreshes the volume history after a workout changes, and after a time zone change moves its weeks', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('weekly-exercise-sets');
-    expect(QUERY_ROOTS_CHANGED_BY['timezone-changed']).toContain('weekly-exercise-sets');
-  });
-
-  it('refreshes the record timeline after a workout is finished, edited or deleted', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('record-timeline');
-  });
-
-  it('refreshes the loot stats after a workout rolls loot, is edited or deleted, like the luck panel', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('loot-stats');
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('items');
-  });
-
-  it('refreshes relative strength after a workout, a bodyweight save or an exercise edit changes its e1RM or bodyweight', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('relative-strength');
-    expect(QUERY_ROOTS_CHANGED_BY['profile-saved']).toContain('relative-strength');
-    expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toContain('relative-strength');
-  });
-
-  it('refreshes the DOTS history after a workout, a bodyweight save or an exercise edit', () => {
-    expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain('dots-history');
-    expect(QUERY_ROOTS_CHANGED_BY['profile-saved']).toContain('dots-history');
-    expect(QUERY_ROOTS_CHANGED_BY['exercise-saved']).toContain('dots-history');
-  });
-
-  it('refreshes every query that holds account data after an account reset', () => {
-    const accountRoots = QUERY_ROOTS.filter((root) => !CATALOG_ROOTS.includes(root));
-    expect([...QUERY_ROOTS_CHANGED_BY['account-reset']].sort()).toEqual([...new Set(accountRoots)].sort());
-  });
-
-  it('names only real query keys', () => {
-    for (const roots of Object.values(QUERY_ROOTS_CHANGED_BY))
-      for (const root of roots) expect(QUERY_ROOTS).toContain(root);
-    for (const root of ALWAYS_STALE_QUERY_ROOTS) expect(QUERY_ROOTS).toContain(root);
-  });
-
-  it('accounts for every query: changed by an event here, always refetched, or a catalog', () => {
-    const accounted = new Set([
-      ...Object.values(QUERY_ROOTS_CHANGED_BY).flat(),
-      ...ALWAYS_STALE_QUERY_ROOTS,
-      ...CATALOG_ROOTS,
-    ]);
-    for (const root of QUERY_ROOTS) expect(accounted).toContain(root);
-  });
-});
-
-describe('queryRootsToInvalidate', () => {
-  it('leaves out what the writing tab already put into its cache, so a refetch cannot undo an optimistic write', () => {
-    expect(queryRootsToInvalidate('profile-saved', 'this-tab')).not.toContain('profile');
-    expect(queryRootsToInvalidate('profile-saved', 'this-tab')).toContain('profile-preview');
-    expect(queryRootsToInvalidate('weekly-goal-saved', 'this-tab')).toEqual([]);
-    expect(queryRootsToInvalidate('pins-changed', 'this-tab')).toEqual(['profile-preview']);
-  });
-
-  it('refreshes everything the change touched in another tab', () => {
-    for (const change of DATA_CHANGES)
-      expect(queryRootsToInvalidate(change, 'other-tab')).toEqual(QUERY_ROOTS_CHANGED_BY[change]);
-  });
-
-  it('refreshes every workout root in this tab too, since the draft engine writes no query', () => {
-    expect(queryRootsToInvalidate('workout-changed', 'this-tab')).toEqual(QUERY_ROOTS_CHANGED_BY['workout-changed']);
   });
 });
 
@@ -234,11 +68,8 @@ describe('staleTimeFor', () => {
     ]);
     for (const root of HOME_QUERY_ROOTS) {
       expect(staleTimeFor([root, USER_ID], live, online)).toBe(HOME_FRESH_FOR_MS);
-      expect(QUERY_ROOTS_CHANGED_BY['workout-changed']).toContain(root);
       expect(ALWAYS_STALE_QUERY_ROOTS).not.toContain(root);
     }
-    expect(QUERY_ROOTS_CHANGED_BY['gear-changed']).toContain('loadout');
-    expect(QUERY_ROOTS_CHANGED_BY['quest-started']).toContain('quests');
   });
 
   it('still reloads the home reads offline or after a saved copy, like every other read', () => {

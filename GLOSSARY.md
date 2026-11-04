@@ -135,3 +135,9 @@ _Avoid_: level, phase
 **Retest**:
 A single heavy set a Slot asks for after its last Stage fails, which resets its Reference from the reps done.
 _Avoid_: test set, max-out
+
+## App
+
+**Write**:
+A change this device saves to the server that the app reads back, such as a profile save, a pin or a craft. After each Write, the tab that made it shows what changed and refreshes the rest, and every other tab refreshes all of it.
+_Avoid_: data change, mutation, announcement

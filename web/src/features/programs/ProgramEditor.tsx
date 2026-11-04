@@ -3,7 +3,7 @@ import { useId, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { exerciseLabels, isLiftExercise, isPlannableExercise } from '../../lib/exercises/catalog-rules.ts';
-import { cachedPrograms, type ProgramDoc, saveProgram } from '../../lib/programs/programs.ts';
+import { cachedPrograms, type ProgramDoc, publishProgram, saveProgram } from '../../lib/programs/programs.ts';
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/programs/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
 import { BackLink } from '../../components/BackLink.tsx';
@@ -16,7 +16,8 @@ import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { exerciseListQuery, programsQuery, publishForEnroll, showChangedPrograms } from '../../lib/query/queries.ts';
+import { exerciseListQuery, programsQuery } from '../../lib/query/queries.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import type { PlannedExercise, ProgressionKind } from '../../offline/draft-starts.ts';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { useFocusAfterRemoval } from '../workout/use-focus-after-removal.ts';
@@ -202,7 +203,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
-      showChangedPrograms(queryClient, userId);
+      void wrote(queryClient, { change: 'programs-changed', userId });
       unsaved.allowLeaving();
       leaveEditor();
     } catch (error) {
@@ -227,8 +228,9 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     setProblem(null);
     try {
       await saveProgram(userId, trimmedDoc(doc));
-      showChangedPrograms(queryClient, userId);
-      const { key } = await publishForEnroll(queryClient, userId, doc.id);
+      void wrote(queryClient, { change: 'programs-changed', userId });
+      const { key } = await publishProgram(doc.id);
+      void wrote(queryClient, { change: 'program-published', userId });
       unsaved.allowLeaving();
       void navigate(`/programs/enroll/${key}`, { state: { carried } });
     } catch (error) {

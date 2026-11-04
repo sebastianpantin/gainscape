@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { RESET_CONFIRMATION, resetMyData } from '../../../lib/profile/account.ts';
-import { announceDataChange } from '../../../lib/query/data-changes.ts';
+import { wrote } from '../../../lib/query/writes.ts';
 import { forgetUserProgressData } from '../../../offline/user-device-data.ts';
 import { ConfirmDialog } from '../../../components/ConfirmDialog.tsx';
 import { forgetOnThisDevice, UNSYNCED_DRAFT_LOSS_TEXT, useDraftLossGuard } from './device-data.ts';
@@ -14,7 +14,7 @@ export function ResetDataForm({ userId, onDone }: { userId: string; onDone: (tex
     perform: resetMyData,
     afterPerform: async () => {
       await forgetOnThisDevice(forgetUserProgressData, userId).catch(() => undefined);
-      await announceDataChange(queryClient, 'account-reset');
+      await wrote(queryClient, { change: 'account-reset' });
       onDone('Your data was reset. You start again from level 1.');
     },
   });

@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useState } from 'react';
-import { announceDataChange } from '../../../lib/query/data-changes.ts';
+import { wrote } from '../../../lib/query/writes.ts';
 import { messageOf } from '../../../lib/error-text.ts';
 import { weeklyGoalQuery } from '../../../lib/query/queries.ts';
-import { fetchWeeklyGoalStatus, setWeeklyGoal } from '../../../lib/progress/weekly-goal.ts';
+import { setWeeklyGoal } from '../../../lib/progress/weekly-goal.ts';
 import { type WeeklyGoalStatus } from '../../../lib/progress/weekly-goal-rules.ts';
 
 type LoadedGoal =
@@ -32,10 +32,7 @@ export function useWeeklyGoalSetting() {
     setProblem(null);
     try {
       await setWeeklyGoal(goal);
-      const saved = await fetchWeeklyGoalStatus(new AbortController().signal);
-      await queryClient.cancelQueries({ queryKey: weeklyGoalQuery.queryKey });
-      queryClient.setQueryData(weeklyGoalQuery.queryKey, saved);
-      void announceDataChange(queryClient, 'weekly-goal-saved');
+      await wrote(queryClient, { change: 'weekly-goal-saved' });
     } catch (error) {
       setProblem(messageOf(error, 'Could not save your weekly goal.'));
     } finally {

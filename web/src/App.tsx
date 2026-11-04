@@ -12,7 +12,7 @@ import { AuthScreen } from './features/auth/AuthScreen.tsx';
 import { WhatsNewSheet } from './features/whats-new/WhatsNewSheet.tsx';
 import { ActiveWorkoutBar } from './features/workout/ActiveWorkoutBar.tsx';
 import { WorkoutScreen } from './features/workout/WorkoutScreen.tsx';
-import { useDataChangeInvalidation } from './lib/query/data-changes.ts';
+import { useBroadcastWrites } from './lib/query/writes.ts';
 import { createQueryClient } from './lib/query/query-client.ts';
 import { parseAuthCallback } from './lib/platform/auth-links.ts';
 import { activeTabPath } from './lib/platform/tab-rules.ts';
@@ -179,7 +179,7 @@ function RouteView({ children }: { children: ReactNode }) {
 function Screens() {
   const auth = useAuthSession();
   const queryClient = useQueryClient();
-  useDataChangeInvalidation();
+  useBroadcastWrites();
   const signedInUserId = auth.status === 'signed-in' ? auth.session.user.id : null;
   useEffect(() => setUpdateUser(signedInUserId), [signedInUserId]);
   useEffect(() => {

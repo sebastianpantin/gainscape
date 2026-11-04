@@ -3,12 +3,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { Skill } from '../../lib/exercises/catalog-rules.ts';
 import { isUuid } from '../../lib/history/history-rules.ts';
-import {
-  FEED_QUERY_PREFIX,
-  type FriendProfileLoad,
-  friendProfileQuery,
-  FRIENDS_QUERY_PREFIX,
-} from '../../lib/query/queries.ts';
+import { type FriendProfileLoad, friendProfileQuery } from '../../lib/query/queries.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import {
@@ -78,9 +74,7 @@ function FriendProfile({ friendId }: { friendId: string }) {
     setRemoving(true);
     try {
       await removeFriend(friendId);
-      queryClient.removeQueries({ queryKey: FRIENDS_QUERY_PREFIX });
-      queryClient.removeQueries({ queryKey: FEED_QUERY_PREFIX });
-      queryClient.removeQueries({ queryKey: friendProfileQuery(friendId).queryKey });
+      void wrote(queryClient, { change: 'friend-removed', friendId });
       navigate('/friends', { replace: true });
     } catch (error) {
       setProblem(messageOf(error, 'Could not remove this friend.'));

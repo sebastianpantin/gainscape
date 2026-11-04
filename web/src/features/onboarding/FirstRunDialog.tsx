@@ -5,7 +5,7 @@ import { ItemIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { useModalDialog } from '../../components/use-modal-dialog.ts';
-import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { TIER_COLORS } from '../../lib/collection/item-rules.ts';
 import {
@@ -22,7 +22,6 @@ import { usePreferences } from '../../lib/profile/preferences.ts';
 import { UNIT_OPTIONS, updatePrivateProfile, type UnitPref } from '../../lib/profile/profile.ts';
 import { templateListEntries } from '../../lib/programs/program-enroll-rules.ts';
 import { programTemplatesQuery } from '../../lib/query/queries.ts';
-import { patchSavedProfile } from '../profile/use-profile.ts';
 
 interface TrainStepProps {
   userId: string;
@@ -86,8 +85,10 @@ function UnitsStep({ userId }: { userId: string }) {
     applyPreferences({ unitPref: next });
     try {
       await updatePrivateProfile(userId, { unitPref: next });
-      patchSavedProfile(queryClient, userId, (profile) => ({ ...profile, unitPref: next }));
-      void announceDataChange(queryClient, 'profile-saved');
+      void wrote(queryClient, {
+        change: 'profile-saved',
+        profile: { userId, update: (profile) => ({ ...profile, unitPref: next }) },
+      });
     } catch (error) {
       applyPreferences({ unitPref: previous });
       setProblem(messageOf(error, 'Could not save your units.'));

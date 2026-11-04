@@ -5,7 +5,7 @@ import { FieldProblem } from '../../components/FieldProblem.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
-import { announceDataChange } from '../../lib/query/data-changes.ts';
+import { wrote } from '../../lib/query/writes.ts';
 import { characterCount, nameProblem, trimmedName } from '../../lib/names.ts';
 import {
   BADGE_COLORS,
@@ -150,7 +150,7 @@ function EditForm({ userId, profile, onSaved }: EditFormProps) {
           shownWeight(profile.bodyweightKg, unitPref) === shownWeight(typedKg, unitPref);
         if (!unchanged) await updatePrivateProfile(userId, { bodyweightKg: typedKg });
       }
-      void announceDataChange(queryClient, 'profile-saved');
+      void wrote(queryClient, { change: 'profile-saved' });
       await onSaved();
       unsaved.allowLeaving();
       void navigate('/profile');

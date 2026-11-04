@@ -77,7 +77,7 @@ describe('saveBodyweight', () => {
 
     await saveBodyweight({ userId: USER_ID, bodyweightKg: 81.5, storage: new MemoryStorage(), queryClient });
 
-    expect(queryClient.getQueryState(['profile', USER_ID])?.isInvalidated).toBe(true);
+    await vi.waitFor(() => expect(queryClient.getQueryState(['profile', USER_ID])?.isInvalidated).toBe(true));
   });
 
   it('marks the bodyweight trend stale so the Profile chart shows the new weight', async () => {
@@ -86,7 +86,7 @@ describe('saveBodyweight', () => {
 
     await saveBodyweight({ userId: USER_ID, bodyweightKg: 81.5, storage: new MemoryStorage(), queryClient });
 
-    expect(queryClient.getQueryState(['bodyweight-trend', USER_ID])?.isInvalidated).toBe(true);
+    await vi.waitFor(() => expect(queryClient.getQueryState(['bodyweight-trend', USER_ID])?.isInvalidated).toBe(true));
   });
 
   it('keeps the device and the loaded profile unchanged when the server refuses', async () => {
