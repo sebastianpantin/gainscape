@@ -67,7 +67,7 @@ export interface SessionEditorPorts<Fresh> {
   ) => Promise<InvokeOutcome<ChangedSessions>>;
   loadSession: () => Promise<Fresh | null>;
   latestExercises: () => Promise<readonly Exercise[]>;
-  rememberedSummaryId: () => string | undefined;
+  rememberedSummaryIds: () => readonly string[];
   forgetSummaries: (sessionIds: string[]) => void;
   forgetDeletedSession: () => void;
   describeRevoked: (drops: readonly RevokedDrop[]) => string;
@@ -142,7 +142,7 @@ export function createSessionEditor<Fresh>(ports: SessionEditorPorts<Fresh>): Se
     apply({ kind: 'busy', busy: IDLE });
     if (outcome.kind === 'ok') {
       const { revision, replayedSessionIds, revokedDrops } = outcome.data;
-      ports.forgetSummaries(summariesToForget(sessionId, replayedSessionIds, retried, ports.rememberedSummaryId()));
+      ports.forgetSummaries(summariesToForget(sessionId, replayedSessionIds, retried, ports.rememberedSummaryIds()));
       apply({ kind: 'saved', saved: savedEdit(toSend, revision) });
       apply({ kind: 'notice', notice: withRemoved('Changes saved.', ports.describeRevoked(revokedDrops)) });
       return reloadSession(signal, SAVED_RELOAD_FAILED_TEXT, (fresh) => {

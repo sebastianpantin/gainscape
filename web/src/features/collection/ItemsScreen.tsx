@@ -60,7 +60,7 @@ import { announceDataChange } from '../../lib/query/data-changes.ts';
 import { itemsQuery, loadoutQuery } from '../../lib/query/queries.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
-import { recallLastSummary } from '../../offline/last-summary.ts';
+import { recallFinishOutcome } from '../../offline/finish-outcome.ts';
 import { challengeStartNoticeText } from '../workout/workout-rules.ts';
 import { CollectionTabs } from './CollectionScreen.tsx';
 import { CollectionHeading } from './CollectionHeading.tsx';
@@ -320,7 +320,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const [chosenPetId, setChosenPetId] = useState(() => companionPetStore.read(deviceStorage(), userId));
   const { showToast } = useToast();
   const [refetchProblem, setRefetchProblem] = useState<string | null>(null);
-  const [newIds] = useState(() => newItemIds(recallLastSummary(userId)?.drops));
+  const [newIds] = useState(() => newItemIds(recallFinishOutcome(userId)?.summary.drops));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { unitPref } = usePreferences();

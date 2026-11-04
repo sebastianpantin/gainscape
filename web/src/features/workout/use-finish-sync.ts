@@ -4,11 +4,13 @@ import type { WorkoutDraft } from '../../offline/draft-format.ts';
 import type { SyncedChange } from '../../offline/draft-session.ts';
 import type { DraftStore } from '../../offline/draft-store.ts';
 import { retryDelayMs } from '../../lib/platform/function-client-rules.ts';
-import { deviceStorage } from '../../lib/platform/keyed-store.ts';
+import { deviceStorage, tabStorage } from '../../lib/platform/keyed-store.ts';
 import { attemptFinish } from '../../offline/finish-lock.ts';
+import { completeFinishedDraft, type FinishIo, type FinishSummary } from '../../offline/finish-outcome.ts';
+import { REQUEST_TIMEOUT_MS } from '../../lib/platform/auth-restore.ts';
+import { invokeAsOwner } from '../../lib/platform/function-client.ts';
 import { type FinishStatus, startFinishRetries } from '../../offline/finish-retries.ts';
 import { signOutKeepingDrafts } from '../../lib/platform/sign-out.ts';
-import { syncFinishedWorkout } from '../../offline/sync-workout.ts';
 import { FINISH_WINDOW_OVERRIDE_KEY, finishSyncDelayMs, finishWindowMs } from './workout-rules.ts';
 
 interface FinishSyncOptions {
@@ -24,6 +26,14 @@ interface FinishSyncOptions {
 
 const IDLE: FinishStatus = { kind: 'idle' };
 const FIRST_ATTEMPT: FinishStatus = { kind: 'syncing', attempt: 0, lastProblem: null };
+
+function liveFinishIo(userId: string): FinishIo {
+  return {
+    completeSession: (payload) => invokeAsOwner<FinishSummary>(userId, 'complete-session', payload, REQUEST_TIMEOUT_MS),
+    device: localStorage,
+    tab: tabStorage(),
+  };
+}
 
 function readFinishWindowMs(): number {
   try {
@@ -74,7 +84,7 @@ export function useFinishSync({
             store,
             flush,
             markSynced,
-            send: (storedDraft) => syncFinishedWorkout(userId, storedDraft),
+            send: (storedDraft) => completeFinishedDraft(userId, storedDraft, liveFinishIo(userId)),
             signal,
           }),
         retryDelayMs,

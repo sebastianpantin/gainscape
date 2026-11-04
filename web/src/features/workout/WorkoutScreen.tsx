@@ -21,7 +21,7 @@ import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { useOnboarding } from '../onboarding/use-onboarding.ts';
 import { useActiveProgram } from '../programs/use-active-program.ts';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
-import { recallLastSummary, summarySessionIds } from '../../offline/last-summary.ts';
+import { finishOutcomeCovers } from '../../offline/finish-outcome.ts';
 import { CardioExerciseCard } from './CardioExerciseCard.tsx';
 import { ChallengeBanner } from './ChallengeBanner.tsx';
 import { liftEquipment } from './exercise-card-rules.ts';
@@ -193,8 +193,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     markSynced,
     onSynced: (summary) => navigate('/reveal', { state: summary }),
     onSuperseded: (sessionId) => {
-      const remembered = recallLastSummary(userId);
-      if (remembered && summarySessionIds(remembered).includes(sessionId)) navigate('/reveal');
+      if (finishOutcomeCovers(userId, sessionId)) navigate('/reveal');
       else void reload();
     },
     onDeleted: () => void reload('deleted'),

@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHUNK_RELOAD_KEY } from '../../web/src/pwa/chunk-reload.ts';
 import { FINISH_WINDOW_OVERRIDE_KEY } from '../../web/src/features/workout/workout-rules.ts';
-import { rememberLastSummary } from '../../web/src/offline/last-summary.ts';
 import { saveCachedExercises } from '../../web/src/lib/exercises/catalog-cache.ts';
 import { type Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import { saveCachedExerciseNotes } from '../../web/src/lib/exercises/exercise-note-cache.ts';
@@ -89,6 +88,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function rememberSummary(userId: string): void {
+  session.setItem('gainscape.last-summary', JSON.stringify({ userId, summary: SUMMARY }));
+}
+
 async function writeEveryStore(userId: string): Promise<void> {
   saveCachedExercises(local, userId, [EXERCISE]);
   local.setItem(`gainscape.exercises.v1.${userId}`, JSON.stringify({ v: 1, userId, exercises: [] }));
@@ -119,7 +122,7 @@ async function writeEveryStore(userId: string): Promise<void> {
   companionPetStore.save(local, userId, 'pet-item');
   local.setItem(installCardKey(userId), 'due');
   await createLocalDraftStore(local).put(userId, 10, workout(`session-of-${userId}`));
-  rememberLastSummary(userId, SUMMARY);
+  rememberSummary(userId);
 }
 
 function entriesOf(storage: Storage): [string, string][] {
@@ -155,7 +158,7 @@ describe('forgetting a user on this device', () => {
     await writeEveryStore(LEAVING_USER);
     await writeEveryStore(STAYING_USER);
     const stayingBefore = entriesMentioning(local, STAYING_USER);
-    rememberLastSummary(LEAVING_USER, SUMMARY);
+    rememberSummary(LEAVING_USER);
 
     await forgetUserDeviceData(
       { localStorage: local, sessionStorage: session, draftStore: createLocalDraftStore(local) },
@@ -170,7 +173,7 @@ describe('forgetting a user on this device', () => {
   });
 
   it('keeps the remembered summary of another user in this tab', async () => {
-    rememberLastSummary(STAYING_USER, SUMMARY);
+    rememberSummary(STAYING_USER);
     await forgetUserDeviceData(
       { localStorage: local, sessionStorage: session, draftStore: createLocalDraftStore(local) },
       LEAVING_USER,

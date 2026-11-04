@@ -16,7 +16,7 @@
   - The base set and exercise types and the edits shared with history edit (`addSetTo`, `addExerciseTo`, `swapLoadedExercise`, `updateSet`, the set limit, `withLoadType`, ...) live in `../lib/workout/exercise-edit-rules.ts`. `../features/history/AGENTS.md` lists which shapes differ on purpose.
 - Storage: `draft-store.ts` defines the `DraftStore` contract with an IndexedDB store and a `localStorage` store. `draft-boot.ts` opens and migrates them.
 - Per-tab state machine: `draft-session.ts`, wrapped by the thin hook `use-workout-draft.ts` (`useWorkoutDraft`).
-- Finish pipeline: `session-payload.ts` builds the request, `finish-lock.ts` (`attemptFinish`, `sendOutcomeFrom`) sends it, `finish-retries.ts` (`startFinishRetries`) retries it, and `sync-workout.ts` does the real I/O.
+- Finish pipeline: `session-payload.ts` builds the request, `finish-lock.ts` (`attemptFinish`) guards it with the lock and the stored draft, `finish-retries.ts` (`startFinishRetries`) retries it, and `finish-outcome.ts` (`completeFinishedDraft`) sends it and turns the reply into the Finish outcome. Its I/O comes in through `FinishIo` (live in `../features/workout/use-finish-sync.ts`).
 - Device cleanup: `local-drafts.ts` holds the draft checks and forgets across both stores. `user-device-data.ts` has `forgetUserDeviceData` (account deletion) and `forgetUserProgressData` (Reset all data).
 - Screen caches: `*-cache.ts`, each a per-user `Storage` cache, mostly built with `userCache` from `cache-first.ts`. Screens load them through `loadCacheFirstWhenOffline`. Program state is in `program-cache.ts`, `program-facts-cache.ts` (pure facts merge) and `program-refresh.ts`. `stats-cache.ts` keeps each Stats family (`STAT_FAMILIES`) in its own per-user key, so a save rewrites one small record, with its own entry cap in `SAVED_STAT_ENTRIES`: browsing months (`training-days`) cannot evict another family. Relative strength saves only the derived per-day points, never raw sets. `forgetStatsCache` clears every family and the retired single-record `gainscape.stats.v1.` key, which a save also removes; `loadStatCacheFirst` saves after each live load.
 
@@ -58,7 +58,7 @@
 
 - Every server send goes through `attemptFinish`. It holds `navigator.locks` `gainscape.finish.<userId>` so two tabs never send one session twice, and it re-reads the store inside the lock (`superseded` when another tab already synced or replaced the draft). Without `navigator.locks` it sends unlocked.
 - Do not rename the lock (`finishLockName`). The service worker update flow in `src/pwa` and `src/sw` waits on it before reloading.
-- Sync outcomes are a closed set in `sendOutcomeFrom`:
+- Sync outcomes are a closed set, mapped in `finish-outcome.ts`:
   - `deleted` on 410.
   - `retryable` on 429, 5xx, and 404/408/425 (function missing mid-deploy, gateway timeout).
   - `serverFault` on every 5xx except the `rebuild_required` 503.
@@ -68,7 +68,8 @@
 - The session id is the idempotency key, and set ids come from the draft. A `session-payload.ts` change needs the matching `complete-session` schema change and an integration test. `ci-changes` treats `session-payload.ts` as backend input for this reason.
 - The payload sends only done sets, renumbered. Supersets are display only and never sent. An interval bout never sends `durationS`, because the server derives it.
 - When the server already holds the session with other content, the summary carries `storedContentDiffers`. The draft is still marked synced, and the reveal says the local copy was not applied.
-- After a synced challenge, `syncFinishedWorkout` lowers the scroll count in the items cache (`spendCachedScroll`, never below 0 and never removing the entry, matching `user_items`, which keeps the row at quantity 0), so an offline Items tab does not offer a used scroll.
+- Ask the Finish outcome which Sessions a Finish saved (`sessionIds`, `finishOutcomeCovers`, `forgetFinishOutcomeCovering`); `summary.sessionId` alone misses the second Day. It keeps the old `{ userId, summary }` shape under `gainscape.last-summary`, so a stored summary still reads.
+- After a synced challenge, `completeFinishedDraft` lowers the scroll count in the items cache (`spendCachedScroll`, never below 0 and never removing the entry, matching `user_items`, which keeps the row at quantity 0), so an offline Items tab does not offer a used scroll.
 
 ### Screen caches
 
@@ -91,9 +92,9 @@
 
 - Stack-free: `make test-web`, or `npx vitest run tests/web/<file>`. Tests are mostly `tests/web/<module>.test.ts`. The non-obvious ones:
   - Store behaviour goes in the shared contract `tests/web/draft-store.contract.ts`, run by `draft-store.idb.test.ts` (fake-indexeddb) and `draft-store.local.test.ts` (`memory-storage.ts`). Never test only one store.
-  - `finish-lock.ts` is tested in `finish-sync.test.ts`.
+  - `finish-lock.ts` is tested in `finish-sync.test.ts`; `finish-outcome.ts` in `finish-outcome.test.ts` with a fake `FinishIo`.
   - Program draft fields and `startDraftFromPrescription` are in `program-draft.test.ts`. `boutPayload` is in `session-payload.test.ts`. The online cache saves are in `screen-cache-saves.test.ts` (mocked `supabase`).
-- `sync-workout.ts` and `use-workout-draft.ts` have no unit tests. E2E covers them: `e2e/drafts.spec.ts`, `e2e/multi-tab.spec.ts`, `e2e/challenges.spec.ts` and `e2e/pwa/*.spec.ts` (`make e2e`, `make e2e-pwa`).
+- `use-workout-draft.ts` has no unit tests. E2E covers them: `e2e/drafts.spec.ts`, `e2e/multi-tab.spec.ts`, `e2e/challenges.spec.ts` and `e2e/pwa/*.spec.ts` (`make e2e`, `make e2e-pwa`).
 - A payload change also needs an integration test against `complete-session` in `tests/integration/`.
 
 ## Second Day

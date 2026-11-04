@@ -13,7 +13,7 @@ The Train tab at `/`. It logs a workout as an offline-first draft (`../../offlin
 - Commands: `use-workout-commands.ts` and `use-finish-workout.ts`; `use-workout-previews.ts` builds the XP and record previews and set feedback. Per-workout state goes through `useSessionState`, which resets when `sessionId` changes.
 - Lift cards: `LiftExerciseCard.tsx` (one lift), `LiftSupersetCard.tsx` (a group, around `SupersetCard`), both built from `LiftExerciseIntro.tsx` and `LiftSetRow.tsx`. They read everything from one `LiftCardContext` prop (`lift-card-context.ts`), as the cardio and hold cards read `ExerciseCardActions`.
 - Pure rules: `*-rules.ts`, `workout-help.ts`, `xp-preview.ts` and `record-preview.ts`, each tested in `tests/web/<name>.test.ts`. `workout-rules.ts` holds the finish and saving text, counts and steps.
-- Hooks are `use-*.ts`. `use-finish-sync.ts` is a thin adapter over `offline/finish-retries.ts` and `finish-lock.ts`.
+- Hooks are `use-*.ts`. `use-finish-sync.ts` is a thin adapter over `offline/finish-retries.ts`, `finish-lock.ts` and `finish-outcome.ts`, and wires the live `FinishIo`.
 - Rows: `SetRow.tsx` (lifts), `HoldSetRow.tsx`, `CardioSetRow.tsx` with `BoutFields.tsx`; history reuses their field exports. `SupersetCard.tsx` is presentational (the screen passes `renderCell`).
 - `ActiveWorkoutBar.tsx` is mounted by `App.tsx` on every route except `/` and `/reveal`.
 - `WorkoutClock.tsx` (the elapsed time in `.finish-bar`) ticks itself once a second so the screen does not re-render; its `timer` name changes once a minute and nothing announces the ticks.

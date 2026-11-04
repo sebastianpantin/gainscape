@@ -1,4 +1,4 @@
-import { forgetLastSummaryOf } from './last-summary.ts';
+import { forgetFinishOutcomeOf } from './finish-outcome.ts';
 import { forgetCachedExercises } from '../lib/exercises/catalog-cache.ts';
 import { companionPetStore } from '../lib/collection/companion-pet-store.ts';
 import { forgetCachedExerciseNotes } from '../lib/exercises/exercise-note-cache.ts';
@@ -47,7 +47,7 @@ export async function forgetUserProgressData(device: UserDevice, userId: string)
   forgetStatsCache(storage, userId);
   forgetSessionBaseline(storage, userId);
   forgetDismissedSummaries(storage, userId);
-  forgetLastSummaryOf(device.sessionStorage, userId);
+  forgetFinishOutcomeOf(device.sessionStorage, userId);
   await forgetDraftOnDevice(device.draftStore, storage, userId, device.draftChannel ?? null);
 }
 

@@ -8,7 +8,7 @@ import {
   storableSnapshots,
 } from '@domain/index.ts';
 import { type WorkoutDraft } from './draft-format.ts';
-import { type SavedDay } from './last-summary.ts';
+import { type SavedDay } from './draft-days.ts';
 
 interface LocalSessionAppend {
   fact: SessionFact;

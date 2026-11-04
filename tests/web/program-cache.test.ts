@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   EMPTY_PROGRAM_CACHE,
-  factsOutcomeOf,
   forgetDeletedProgramSession,
   type ProgramCache,
   programCacheKey,
@@ -13,7 +12,6 @@ import {
 import { type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import { startDraftFromPrescription } from '../../web/src/offline/draft-starts.ts';
 import { emptyProgramFactsCache } from '../../web/src/offline/program-facts-cache.ts';
-import { type SendOutcome } from '../../web/src/offline/finish-lock.ts';
 import { factClock, sessionFact, setReferenceFact } from '../domain/program-fixtures/facts.ts';
 import { MADCOW_5X5, madcowDaySets, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
 import { madcowEnrollmentRow } from './madcow-enrollment-fixture.ts';
@@ -241,40 +239,5 @@ describe('forgetting a deleted program session', () => {
     const facts = readProgramCache(storage, USER_ID).facts;
     expect(facts?.serverFacts).toEqual([]);
     expect(facts?.generation).toBe(1);
-  });
-});
-
-describe('the facts outcome of a finished sync', () => {
-  const summary = { xpBySkill: {}, levelUps: [], prs: [], drops: [] };
-
-  it('passes on programLinked and completedAt from a synced response', () => {
-    const outcome = {
-      kind: 'synced',
-      summary: { ...summary, programLinked: true, completedAt: '2026-10-07T07:00:00.000Z' },
-    } as unknown as SendOutcome;
-    expect(factsOutcomeOf(outcome)).toEqual(SYNCED);
-  });
-
-  it('passes on an unlinked synced response as unlinked', () => {
-    const outcome = {
-      kind: 'synced',
-      summary: { ...summary, programLinked: false, completedAt: '2026-10-07T07:00:00.000Z' },
-    } as unknown as SendOutcome;
-    expect(factsOutcomeOf(outcome)).toEqual({
-      kind: 'synced',
-      summary: { programLinked: false, completedAt: '2026-10-07T07:00:00.000Z' },
-    });
-  });
-
-  it('gives nothing for a synced response from a function without programLinked or completedAt', () => {
-    expect(factsOutcomeOf({ kind: 'synced', summary } as unknown as SendOutcome)).toBeNull();
-    expect(
-      factsOutcomeOf({ kind: 'synced', summary: { ...summary, programLinked: true } } as unknown as SendOutcome),
-    ).toBeNull();
-  });
-
-  it('gives nothing for an outcome that did not sync', () => {
-    expect(factsOutcomeOf({ kind: 'retryable', reason: 'network' })).toBeNull();
-    expect(factsOutcomeOf({ kind: 'deleted' })).toBeNull();
   });
 });

@@ -70,7 +70,7 @@ function harness(overrides: Partial<SessionEditorPorts<Fresh>> = {}) {
     deleteSession: async () => ({ kind: 'ok', data: { replayedSessionIds: [], revokedDrops: [] } }),
     loadSession: async () => ({ revision: 9 }),
     latestExercises: async () => [dip],
-    rememberedSummaryId: () => undefined,
+    rememberedSummaryIds: () => [],
     forgetSummaries: (ids) => forgotten.push(ids),
     forgetDeletedSession: () => forgotten.push(['program']),
     describeRevoked: (drops) => (drops && drops.length > 0 ? 'Removed a ring from your collection.' : ''),
@@ -99,7 +99,7 @@ describe('createSessionEditor save', () => {
         onRetry('timeout');
         return { kind: 'ok', data: { revision: 4, replayedSessionIds: [], revokedDrops: [{} as never] } };
       },
-      rememberedSummaryId: () => 'remembered',
+      rememberedSummaryIds: () => ['remembered'],
     });
     await editor.save(edit());
     expect(changes).toContainEqual({ kind: 'busy', busy: { kind: 'saving', retrying: 'timeout' } });

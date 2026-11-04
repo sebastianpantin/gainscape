@@ -8,7 +8,6 @@ import {
 } from '../lib/programs/program-facts-rules.ts';
 import { type ProgramTemplateRow, programTemplateRowSchema } from '../lib/programs/program-enroll-rules.ts';
 import { type WorkoutDraft } from './draft-format.ts';
-import { type SendOutcome } from './finish-lock.ts';
 import {
   appendFinishedSession,
   emptyProgramFactsCache,
@@ -99,14 +98,4 @@ export function forgetDeletedProgramSession(storage: Storage, userId: string, se
   updateProgramCache(storage, userId, (cache) =>
     cache.facts ? { ...cache, facts: forgetDeletedSession(cache.facts, sessionId) } : cache,
   );
-}
-
-export function factsOutcomeOf(outcome: SendOutcome): FinishOutcomeForFacts | null {
-  if (outcome.kind !== 'synced') return null;
-  const { programLinked, completedAt, days } = outcome.summary;
-  if (typeof programLinked !== 'boolean' || typeof completedAt !== 'string') return null;
-  return {
-    kind: 'synced',
-    summary: days === undefined ? { programLinked, completedAt } : { programLinked, completedAt, days },
-  };
 }

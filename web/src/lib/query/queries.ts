@@ -1,6 +1,7 @@
 import { type LastLoggedWeights } from '@domain/index.ts';
 import { infiniteQueryOptions, type QueryClient, queryOptions } from '@tanstack/react-query';
 import { type CacheFirstLoad } from '../../offline/cache-first.ts';
+import { finishOutcomeLoot } from '../../offline/finish-outcome.ts';
 import { savedExerciseList } from '../../offline/collection-cache.ts';
 import { fetchBodyweightTrend } from '../progress/bodyweight-trend.ts';
 import { fetchExercises, fetchSkills } from '../exercises/catalog.ts';
@@ -9,7 +10,7 @@ import { type Exercise, type Skill } from '../exercises/catalog-rules.ts';
 import { type Collection, fetchExerciseStrength, loadCollectionCacheFirst } from '../collection/collection-data.ts';
 import { collectionPercent, countCollection } from '../collection/collection-rules.ts';
 import { fetchExerciseProgress } from '../progress/exercise-progress.ts';
-import { fetchSessionPage } from '../history/history.ts';
+import { fetchSession, fetchSessionPage } from '../history/history.ts';
 import { HISTORY_PAGE_SIZE, type HistorySession, isUuid } from '../history/history-rules.ts';
 import {
   fetchLoadout,
@@ -187,6 +188,18 @@ export function recentSetsQuery(userId: string) {
   return queryOptions({
     queryKey: ['history', userId, 'recent-sets'] as const,
     queryFn: () => fetchRecentSets(Date.now()),
+  });
+}
+
+export function finishLootQuery(userId: string, sessionIds: readonly string[]) {
+  return queryOptions({
+    queryKey: ['history', userId, 'finish-loot', ...sessionIds] as const,
+    queryFn: () =>
+      finishOutcomeLoot(
+        (sessionId) => fetchSession(sessionId).then((stored) => stored && (stored.summary.drops ?? [])),
+        userId,
+        sessionIds,
+      ),
   });
 }
 
@@ -420,6 +433,7 @@ export const EVERY_QUERY = [
   ownedPetsQuery,
   rarestDropQuery,
   recentSetsQuery,
+  finishLootQuery,
   historyQuery,
   hiscoresQuery,
   friendProfileQuery,

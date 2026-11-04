@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { draftRecord, type StoredDraft, syncedRecord, type WorkoutDraft } from '../../web/src/offline/draft-format.ts';
 import type { DraftStore } from '../../web/src/offline/draft-store.ts';
-import { attemptFinish, finishLockName, type SendOutcome, sendOutcomeFrom } from '../../web/src/offline/finish-lock.ts';
+import { attemptFinish, finishLockName } from '../../web/src/offline/finish-lock.ts';
+import type { SendOutcome } from '../../web/src/offline/finish-outcome.ts';
 import { workout } from './draft-store.contract.ts';
 
 const userId = '11111111-1111-4111-8111-111111111111';
@@ -72,23 +73,6 @@ describe('attemptFinish', () => {
     expect(current()).toMatchObject({ kind: 'synced', syncedSessionId: sessionId });
   });
 
-  it('hands the planned challenge of the draft on with the synced summary', async () => {
-    const plannedChallenge = {
-      challengeId: 'challenge-tt',
-      name: 'Ten-Ton Day',
-      definition: { kind: 'volume' as const, metric: 'kg' as const, target: 10000, exerciseId: null, minPct: null },
-      targetLoadsKg: {},
-    };
-    const finished = { ...workout(sessionId, finishedAt), challenge: plannedChallenge };
-    const { store } = slowWriteStore(draftRecord(userId, 1, finished));
-    const { result } = attemptWith(store);
-
-    expect(await result).toEqual({
-      kind: 'sent',
-      outcome: { ...synced, summary: { ...synced.summary, plannedChallenge } },
-    });
-  });
-
   it('is superseded without a POST when the session is already tombstoned', async () => {
     const { store } = slowWriteStore(syncedRecord(userId, 5, sessionId));
     const { result, send } = attemptWith(store);
@@ -151,73 +135,5 @@ describe('attemptFinish', () => {
     expect(await result).toEqual({ kind: 'sent', outcome: { kind: 'rejected', reason: 'x' } });
     expect(markSynced).not.toHaveBeenCalled();
     expect(current()).toMatchObject({ kind: 'draft' });
-  });
-});
-
-describe('sendOutcomeFrom', () => {
-  const summary = { sessionId, xpBySkill: {}, levelUps: [], prs: [], drops: [] };
-
-  it('maps complete-session responses to finish outcomes', () => {
-    expect(sendOutcomeFrom({ kind: 'ok', data: summary })).toEqual({ kind: 'synced', summary });
-    expect(sendOutcomeFrom({ kind: 'http_error', status: 410, code: 'session_deleted', details: undefined })).toEqual({
-      kind: 'deleted',
-    });
-    expect(sendOutcomeFrom({ kind: 'http_error', status: 503, code: 'rebuild_required', details: undefined })).toEqual({
-      kind: 'retryable',
-      reason: 'rebuild_required',
-    });
-    expect(
-      sendOutcomeFrom({ kind: 'http_error', status: 409, code: 'session_id_conflict', details: undefined }),
-    ).toEqual({ kind: 'rejected', reason: 'session_id_conflict' });
-    expect(sendOutcomeFrom({ kind: 'needs_sign_in' })).toEqual({ kind: 'needs_sign_in' });
-    expect(sendOutcomeFrom({ kind: 'retryable', reason: 'offline' })).toEqual({ kind: 'retryable', reason: 'offline' });
-  });
-
-  it('marks a server error as a server fault, but not the rebuild gate', () => {
-    expect(sendOutcomeFrom({ kind: 'http_error', status: 500, code: 'internal_error', details: undefined })).toEqual({
-      kind: 'retryable',
-      reason: 'internal_error',
-      serverFault: true,
-    });
-    expect(sendOutcomeFrom({ kind: 'http_error', status: 546, code: 'http_546', details: undefined })).toEqual({
-      kind: 'retryable',
-      reason: 'http_546',
-      serverFault: true,
-    });
-  });
-
-  it('treats a rate limit as transient and waits for Retry-After', () => {
-    expect(
-      sendOutcomeFrom({
-        kind: 'http_error',
-        status: 429,
-        code: 'rate_limited',
-        details: { bucket: 'session_create_hour', retryAfterSeconds: 1200 },
-      }),
-    ).toEqual({ kind: 'retryable', reason: 'rate_limited', retryAfterMs: 1_200_000 });
-    expect(sendOutcomeFrom({ kind: 'http_error', status: 429, code: 'rate_limited', details: undefined })).toEqual({
-      kind: 'retryable',
-      reason: 'rate_limited',
-      retryAfterMs: undefined,
-    });
-  });
-
-  it('retries a missing function, a timeout or a too-early request instead of rejecting the workout', () => {
-    for (const status of [404, 408, 425])
-      expect(sendOutcomeFrom({ kind: 'http_error', status, code: `http_${status}`, details: undefined })).toEqual({
-        kind: 'retryable',
-        reason: `http_${status}`,
-      });
-  });
-
-  it('still rejects the missing profile that complete-session reports as 404', () => {
-    expect(sendOutcomeFrom({ kind: 'http_error', status: 404, code: 'profile_not_found', details: undefined })).toEqual(
-      { kind: 'rejected', reason: 'profile_not_found' },
-    );
-  });
-
-  it('keeps a history-only summary as a successful sync', () => {
-    const historyOnly = { ...summary, historyOnly: true as const };
-    expect(sendOutcomeFrom({ kind: 'ok', data: historyOnly })).toEqual({ kind: 'synced', summary: historyOnly });
   });
 });

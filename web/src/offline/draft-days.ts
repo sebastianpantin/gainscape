@@ -8,10 +8,16 @@ import {
   programLabelFor,
 } from './draft-starts.ts';
 import { type DraftExercise, type DraftSecondDay, isInSecondDay, type WorkoutDraft } from './draft-format.ts';
-import { type SavedDay } from './last-summary.ts';
 import { roomForSets } from '../lib/workout/exercise-edit-rules.ts';
 
 export type DraftDay = 'first' | 'second';
+
+export interface SavedDay {
+  sessionId: string;
+  programLinked: boolean;
+  completedAt: string;
+  label?: string;
+}
 
 export interface DraftDays {
   exercises: readonly DraftExercise[];

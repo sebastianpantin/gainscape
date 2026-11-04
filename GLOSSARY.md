@@ -16,6 +16,10 @@ _Avoid_: workout (when you mean the stored record), log
 A change to the sets of a Session after it was accepted; it makes the server recompute what the Session and every later Session earned.
 _Avoid_: update, correction
 
+**Finish outcome**:
+What one Finish of a Draft saved: the server's summary, merged over its Days, and the Sessions it covers, one per Day the server stored. The Reveal shows it, and it is forgotten when any of its Sessions is edited or deleted.
+_Avoid_: last summary, finish result
+
 **Preview**:
 The XP and Records the app estimates for a Draft's sets before the server accepts it. Only a hint; the server decides.
 _Avoid_: estimate, prediction

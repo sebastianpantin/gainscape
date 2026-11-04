@@ -198,10 +198,9 @@ export function summariesToForget(
   sessionId: string,
   replayedSessionIds: readonly string[],
   retried: boolean,
-  rememberedSessionId: string | undefined,
+  rememberedSessionIds: readonly string[],
 ): string[] {
-  const possiblyReplayed = retried && rememberedSessionId !== undefined ? [rememberedSessionId] : [];
-  return [sessionId, ...replayedSessionIds, ...possiblyReplayed];
+  return [sessionId, ...replayedSessionIds, ...(retried ? rememberedSessionIds : [])];
 }
 
 export function removeEditSet(edit: SessionEdit, exerciseIndex: number, setId: string): SessionEdit {

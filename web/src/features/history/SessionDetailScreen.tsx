@@ -35,7 +35,7 @@ import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { useUnsavedChangesGuard } from '../../components/UnsavedChangesGuard.tsx';
 import { ExerciseProgressLink } from '../collection/ExerciseProgressLink.tsx';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
-import { forgetLastSummary, recallLastSummary } from '../../offline/last-summary.ts';
+import { forgetFinishOutcomeCovering, recallFinishOutcome } from '../../offline/finish-outcome.ts';
 import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
 import { ExercisePicker } from '../workout/ExercisePicker.tsx';
 import { HistoryBoutRow, HistoryHoldRow, HistorySetRow } from './HistorySetRow.tsx';
@@ -175,8 +175,8 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
           (latest) => (latest.fromCache ? loaded.exercises : latest.loaded),
           () => loaded.exercises,
         ),
-      rememberedSummaryId: () => recallLastSummary(userId)?.sessionId,
-      forgetSummaries: forgetLastSummary,
+      rememberedSummaryIds: () => recallFinishOutcome(userId)?.sessionIds ?? [],
+      forgetSummaries: forgetFinishOutcomeCovering,
       forgetDeletedSession: () => forgetDeletedProgramSession(localStorage, userId, sessionId),
       describeRevoked: (drops) => removedText(drops, items),
       apply: (change: SessionEditorChange<Loaded>) => {
