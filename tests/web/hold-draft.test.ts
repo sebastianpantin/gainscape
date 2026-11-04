@@ -111,7 +111,7 @@ describe('hold drafts', () => {
     const draft = withCarry();
     const [set] = holdOf(draft).sets;
     const failed = updateHoldSet(draft, 0, set.id, { distanceM: 50, effort: { type: 'level', level: 'failure' } });
-    const [[preview]] = previewDraft(failed.exercises, {
+    const [[preview]] = previewDraft(failed, {
       isBuiltIn: () => true,
       strength: {},
       bodyweightKg: null,
@@ -119,9 +119,7 @@ describe('hold drafts', () => {
     }).previews;
     expect(preview).toMatchObject({ xp: 6 * DEFAULT_BALANCE.xpPerEffectiveRep, basis: 'cardio_or_hold' });
     const unrated = updateHoldSet(draft, 0, set.id, { distanceM: 50 });
-    expect(previewDraft(unrated.exercises, HOLD_PREVIEW_CONTEXT).previews[0][0].xp).toBe(
-      3 * DEFAULT_BALANCE.xpPerEffectiveRep,
-    );
+    expect(previewDraft(unrated, HOLD_PREVIEW_CONTEXT).previews[0][0].xp).toBe(3 * DEFAULT_BALANCE.xpPerEffectiveRep);
   });
 });
 

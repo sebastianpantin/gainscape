@@ -243,6 +243,10 @@ function withUsableSessionRpe(draft: WorkoutDraft): WorkoutDraft {
   return { ...draft, sessionRpe: null };
 }
 
+export function isInSecondDay(exercise: DraftExercise): boolean {
+  return exercise.inSecondDay === true;
+}
+
 function supersetIdOf(exercise: DraftExercise): string | null {
   return exercise.modality === 'lift' && typeof exercise.supersetId === 'string' ? exercise.supersetId : null;
 }
@@ -255,9 +259,7 @@ function validSupersetIds(exercises: readonly DraftExercise[]): Set<string> {
     const runs = runLengths.get(id) ?? [];
     const previous = exercises[index - 1];
     const continuesRun =
-      previous !== undefined &&
-      supersetIdOf(previous) === id &&
-      (previous.inSecondDay === true) === (exercise.inSecondDay === true);
+      previous !== undefined && supersetIdOf(previous) === id && isInSecondDay(previous) === isInSecondDay(exercise);
     if (continuesRun) runs[runs.length - 1] += 1;
     else runs.push(1);
     runLengths.set(id, runs);
@@ -282,7 +284,7 @@ function omitted<Value extends object>(value: Value, key: keyof Value): Value {
 }
 
 function withDayOf(exercise: DraftExercise, hasSecondDay: boolean): DraftExercise {
-  return hasSecondDay && exercise.inSecondDay === true ? exercise : omitted(exercise, 'inSecondDay');
+  return hasSecondDay && isInSecondDay(exercise) ? exercise : omitted(exercise, 'inSecondDay');
 }
 
 function normalisedDraft(draft: WorkoutDraft, fromV2: boolean): WorkoutDraft {

@@ -16,6 +16,7 @@ import {
   recordChipText,
   recordForSet,
 } from '../../web/src/features/workout/record-preview.ts';
+import { placedInDay } from '../../web/src/offline/draft-days.ts';
 import { previewDraft } from '../../web/src/features/workout/xp-preview.ts';
 
 const NO_RECORD_BASELINE: RecordBaseline = Object.freeze({ repMaxKg: {}, maxReps: {} });
@@ -25,7 +26,7 @@ function recordPreviews(
   strength: Record<string, ExerciseStrength> | null,
   recordBaseline: RecordBaseline | null,
 ) {
-  return previewDraft(exercises, { isBuiltIn: () => true, strength, bodyweightKg: null, recordBaseline }).records;
+  return previewDraft({ exercises }, { isBuiltIn: () => true, strength, bodyweightKg: null, recordBaseline }).records;
 }
 
 let setCounter = 0;
@@ -138,7 +139,7 @@ describe('previewDraft records', () => {
     const dips = [exercise('dip', [draftSet(20, 5)], 'bodyweight_plus')];
     const recordBaseline = repMaxes('dip', { 5: 15 });
     const context = { isBuiltIn: () => true, strength: trained('dip'), recordBaseline };
-    const records = previewDraft(dips, { ...context, bodyweightKg: 80 }).records;
+    const records = previewDraft({ exercises: dips }, { ...context, bodyweightKg: 80 }).records;
     expect(records[0][0]).toEqual({ kind: 'rep_max', reps: 5, loadKg: 20, previousLoadKg: 15 });
   });
 
@@ -336,6 +337,33 @@ describe('previewDraft records for holds', () => {
     expect([recordChipText(farthest), recordChipLabel(farthest)]).toEqual([
       'Farthest carry!',
       'Predicted farthest carry: 40 m',
+    ]);
+  });
+});
+
+describe('previewDraft records with two Days', () => {
+  it('judges second-Day records against the records the first Day set', () => {
+    const secondDay = {
+      sessionId: 'second-day',
+      program: { enrollmentId: 'enrollment', position: { week: 1, day: 'wed' }, templateKey: 'template' },
+      programLabel: 'Program — Wed',
+    };
+    const exercises = [
+      exercise('bench', [draftSet(102.5, 5)]),
+      placedInDay({ exercises: [], secondDay }, exercise('bench', [draftSet(102.5, 5), draftSet(105, 5)]), 'second'),
+    ];
+    const { records } = previewDraft(
+      { exercises, secondDay },
+      {
+        isBuiltIn: () => true,
+        strength: trained('bench'),
+        bodyweightKg: null,
+        recordBaseline: repMaxes('bench', { 5: 100 }),
+      },
+    );
+    expect(records).toEqual([
+      [{ kind: 'rep_max', reps: 5, loadKg: 102.5, previousLoadKg: 100 }],
+      [null, { kind: 'rep_max', reps: 5, loadKg: 105, previousLoadKg: 102.5 }],
     ]);
   });
 });

@@ -7,11 +7,16 @@ import {
   type PrescribedDayStart,
   programLabelFor,
 } from './draft-starts.ts';
-import { type DraftExercise, type DraftSecondDay, type WorkoutDraft } from './draft-format.ts';
+import { type DraftExercise, type DraftSecondDay, isInSecondDay, type WorkoutDraft } from './draft-format.ts';
 import { type SavedDay } from './last-summary.ts';
 import { roomForSets } from '../lib/workout/exercise-edit-rules.ts';
 
 export type DraftDay = 'first' | 'second';
+
+export interface DraftDays {
+  exercises: readonly DraftExercise[];
+  secondDay?: DraftSecondDay | null;
+}
 
 export interface RemovedSecondDay {
   fromSessionId: string;
@@ -19,17 +24,45 @@ export interface RemovedSecondDay {
   exercises: DraftExercise[];
 }
 
-export function isInSecondDay(exercise: DraftExercise): boolean {
-  return exercise.inSecondDay === true;
-}
-
 export function canAddSecondDay(draft: WorkoutDraft): boolean {
   return draft.program != null && draft.secondDay == null && draft.challenge == null && draft.finishedAt === null;
 }
 
-export function exerciseDay(draft: WorkoutDraft, exerciseIndex: number): DraftDay {
+function lastDayOf(draft: DraftDays): DraftDay {
+  return draft.secondDay == null ? 'first' : 'second';
+}
+
+export function daysOf(draft: DraftDays): DraftDay[] {
+  return lastDayOf(draft) === 'first' ? ['first'] : ['first', 'second'];
+}
+
+function dayOf(draft: DraftDays, exercise: DraftExercise): DraftDay {
+  return draft.secondDay != null && isInSecondDay(exercise) ? 'second' : 'first';
+}
+
+export function exerciseDay(draft: DraftDays, exerciseIndex: number): DraftDay {
   const exercise = draft.exercises[exerciseIndex];
-  return draft.secondDay != null && exercise !== undefined && isInSecondDay(exercise) ? 'second' : 'first';
+  return exercise === undefined ? 'first' : dayOf(draft, exercise);
+}
+
+export function sameDay(draft: DraftDays, exerciseIndex: number, otherIndex: number): boolean {
+  return exerciseDay(draft, exerciseIndex) === exerciseDay(draft, otherIndex);
+}
+
+export function exerciseIndexesOf(draft: DraftDays, day: DraftDay): number[] {
+  return draft.exercises.flatMap((exercise, index) => (dayOf(draft, exercise) === day ? [index] : []));
+}
+
+export function exercisesOf(draft: DraftDays, day: DraftDay): DraftExercise[] {
+  return exerciseIndexesOf(draft, day).map((index) => draft.exercises[index]);
+}
+
+export function placedInDay<Exercise extends DraftExercise>(
+  draft: DraftDays,
+  exercise: Exercise,
+  day: DraftDay = lastDayOf(draft),
+): Exercise {
+  return day === 'second' && draft.secondDay != null ? { ...exercise, inSecondDay: true } : exercise;
 }
 
 export function withSecondDay(
@@ -48,26 +81,22 @@ export function withSecondDay(
   const { exercises, skippedExerciseIds } = prescribedDayExercises(day, exercisesById);
   if (exercises.reduce((count, exercise) => count + exercise.sets.length, 0) > roomForSets(draft))
     return { draft, skippedExerciseIds: [] };
-  return {
-    draft: {
-      ...draft,
-      secondDay: {
-        sessionId,
-        program: draftProgramOf(day),
-        programLabel: programLabelFor(day.programName, day.dayName),
-      },
-      exercises: [...draft.exercises, ...exercises.map((exercise) => ({ ...exercise, inSecondDay: true }))],
-    },
-    skippedExerciseIds,
+  const secondDay = {
+    sessionId,
+    program: draftProgramOf(day),
+    programLabel: programLabelFor(day.programName, day.dayName),
   };
-}
-
-function exercisesOf(draft: WorkoutDraft, day: DraftDay): DraftExercise[] {
-  return draft.exercises.filter((exercise) => isInSecondDay(exercise) === (day === 'second'));
+  const withDay = { ...draft, secondDay };
+  const added = exercises.map((exercise) => placedInDay(withDay, exercise, 'second'));
+  return { draft: { ...withDay, exercises: [...draft.exercises, ...added] }, skippedExerciseIds };
 }
 
 export function canRemoveSecondDay(draft: WorkoutDraft): boolean {
   return draft.secondDay != null && draft.secondDay.sent !== true && draft.finishedAt === null;
+}
+
+export function withDaysSent(draft: WorkoutDraft): WorkoutDraft {
+  return draft.secondDay == null ? draft : { ...draft, secondDay: { ...draft.secondDay, sent: true } };
 }
 
 export function withoutSecondDay(draft: WorkoutDraft): { draft: WorkoutDraft; removed: RemovedSecondDay | null } {

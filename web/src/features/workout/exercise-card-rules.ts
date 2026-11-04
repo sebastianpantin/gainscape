@@ -8,7 +8,7 @@ import { fatigueAdvice, nextWeightHint, progressionStep } from '../../lib/workou
 import type { DraftBarbellSetup } from '../../lib/programs/program-set-rules.ts';
 import { REST_OFF, restClock, startsRest } from '../../lib/workout/rest-timer-rules.ts';
 import { groupOf, restsAfter } from '../../lib/workout/superset-rules.ts';
-import { exerciseDay } from '../../offline/draft-days.ts';
+import { sameDay } from '../../offline/draft-days.ts';
 import { shownWeight, unitToKg } from '../../lib/units.ts';
 import {
   routineDrills,
@@ -73,8 +73,11 @@ export function exerciseMenuChoices(draft: WorkoutDraft, exerciseIndex: number):
   const group = groupOf(draft, exerciseIndex);
   const groupedWithNext = group !== undefined && group.exerciseIndexes.includes(exerciseIndex + 1);
   const choices: ExerciseMenuChoice[] = [];
-  const nextInSameDay = exerciseDay(draft, exerciseIndex + 1) === exerciseDay(draft, exerciseIndex);
-  if (draft.exercises[exerciseIndex + 1]?.modality === 'lift' && !groupedWithNext && nextInSameDay)
+  if (
+    draft.exercises[exerciseIndex + 1]?.modality === 'lift' &&
+    !groupedWithNext &&
+    sameDay(draft, exerciseIndex, exerciseIndex + 1)
+  )
     choices.push('superset_with_next');
   if (group !== undefined) choices.push('ungroup');
   if (canSwapExercise(draft, exerciseIndex)) choices.push('swap');

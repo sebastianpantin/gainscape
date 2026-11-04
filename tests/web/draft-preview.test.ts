@@ -219,38 +219,38 @@ describe('previewDraft', () => {
 
   it('predicts the records the server awards for the same sets', () => {
     const server = serverRecords([bench, pullUps, pinch], draft);
-    const { records } = previewDraft(draft, context());
+    const { records } = previewDraft({ exercises: draft }, context());
     const expected = draft.map((exercise) => exercise.sets.map((set) => server.get(set.id) ?? null));
     expect(records).toEqual(expected);
     expect(records.flat().filter((record) => record !== null)).toHaveLength(4);
   });
 
   it('predicts XP and records together, one grid each per exercise and set', () => {
-    const { previews, records } = previewDraft(draft, context());
+    const { previews, records } = previewDraft({ exercises: draft }, context());
     expect(previews.map((sets) => sets.length)).toEqual([4, 2, 2]);
     expect(records.map((sets) => sets.length)).toEqual([4, 2, 2]);
   });
 
   it('predicts no record before the record baseline has loaded', () => {
-    const { records } = previewDraft(draft, context({ recordBaseline: null }));
+    const { records } = previewDraft({ exercises: draft }, context({ recordBaseline: null }));
     expect(records.flat().every((record) => record === null)).toBe(true);
   });
 
   it('predicts no record for a set not logged yet', () => {
     const planned = [lift('bench', 'external', [liftSet(120, 5, { done: false })])];
-    expect(previewDraft(planned, context()).records).toEqual([[null]]);
+    expect(previewDraft({ exercises: planned }, context()).records).toEqual([[null]]);
   });
 
   it('predicts no record for a set the server would refuse', () => {
     const tooLongHold = hold('pinch', [holdSet(24, 3601)]);
     const badEffort = lift('bench', 'external', [liftSet(120, 5, { effort: { type: 'rir', value: -1 } })]);
-    expect(previewDraft([tooLongHold], context()).records).toEqual([[null]]);
-    expect(previewDraft([badEffort], context()).records).toEqual([[null]]);
+    expect(previewDraft({ exercises: [tooLongHold] }, context()).records).toEqual([[null]]);
+    expect(previewDraft({ exercises: [badEffort] }, context()).records).toEqual([[null]]);
   });
 
   it('predicts the cardio bests the server awards for a bout', () => {
     const bout = run(6000);
-    const [[record]] = previewDraft([bout], context()).records;
+    const [[record]] = previewDraft({ exercises: [bout] }, context()).records;
     expect(record).toEqual({ kind: 'cardio', gains: serverCardioGains(bout) });
     expect(record?.kind === 'cardio' && record.gains.map((gain) => gain.kind)).toEqual([
       'distance',
@@ -260,14 +260,14 @@ describe('previewDraft', () => {
   });
 
   it('predicts no pace best for a bout shorter than the activity’s record distance', () => {
-    const [[record]] = previewDraft([run(800)], context()).records;
+    const [[record]] = previewDraft({ exercises: [run(800)] }, context()).records;
     expect(record?.kind === 'cardio' && record.gains.map((gain) => gain.kind)).not.toContain('pace');
   });
 
   it('predicts no pace best for an activity from a draft saved before the record distance was known', () => {
     const savedBefore: CardioActivity = { ...running };
     delete savedBefore.recordMinDistanceM;
-    const [[record]] = previewDraft([run(6000, savedBefore)], context()).records;
+    const [[record]] = previewDraft({ exercises: [run(6000, savedBefore)] }, context()).records;
     expect(record?.kind === 'cardio' && record.gains.map((gain) => gain.kind)).toEqual(['distance', 'duration']);
   });
 });

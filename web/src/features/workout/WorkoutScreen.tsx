@@ -61,7 +61,7 @@ import {
   type DraftDay,
   dayNameOf,
   draftTitle,
-  exerciseDay,
+  exerciseIndexesOf,
 } from '../../offline/draft-days.ts';
 import { useWorkoutPreviews } from './use-workout-previews.ts';
 import { useWorkoutStart } from './use-workout-start.ts';
@@ -155,7 +155,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const start = useWorkoutStart({ userId, exercises, startWorkout, programCache, showProgramCache });
   const { previews, records, feedbackFor } = useWorkoutPreviews({
     exercises,
-    draftExercises: draft?.exercises ?? null,
+    draft,
     baseline: sessionBaseline,
     bodyweightKg,
   });
@@ -355,9 +355,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     return <LiftExerciseCard key={exercise.clientId} exercise={exercise} exerciseIndex={exerciseIndex} lift={lift} />;
   };
   const exercisesOfDay = (day: DraftDay) =>
-    draft.exercises.flatMap((exercise, exerciseIndex) =>
-      exerciseDay(draft, exerciseIndex) === day ? [renderCard(exercise, exerciseIndex)] : [],
-    );
+    exerciseIndexesOf(draft, day).map((exerciseIndex) => renderCard(draft.exercises[exerciseIndex], exerciseIndex));
 
   return (
     <main className="screen stack">

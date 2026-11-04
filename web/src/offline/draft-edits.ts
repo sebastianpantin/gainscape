@@ -13,6 +13,7 @@ import {
   withSets,
 } from '../lib/workout/exercise-edit-rules.ts';
 import { ROUTINE_DRILL_DURATION_S } from '../lib/workout/warmup-routine-rules.ts';
+import { exerciseDay, placedInDay } from './draft-days.ts';
 import {
   type CardioDraftExercise,
   type CardioDraftSet,
@@ -35,7 +36,7 @@ export function withSessionRpe(draft: WorkoutDraft, sessionRpe: number | null): 
 }
 
 function appendExercise(draft: WorkoutDraft, added: DraftExercise): WorkoutDraft {
-  return addExerciseTo(draft, draft.secondDay == null ? added : { ...added, inSecondDay: true });
+  return addExerciseTo(draft, placedInDay(draft, added));
 }
 
 export function addExercise(draft: WorkoutDraft, exerciseId: string, name: string, loadType: LoadType): WorkoutDraft {
@@ -126,9 +127,8 @@ export function insertWarmupDrills(
   drills: readonly Pick<CardioExercise, 'id' | 'name' | 'activity'>[],
 ): WorkoutDraft {
   if (!routineDrillsFit(draft, drills.length)) return draft;
-  const inSecondDay = draft.exercises[exerciseIndex]?.inSecondDay === true;
+  const day = exerciseDay(draft, exerciseIndex);
   const drillCards = drills.map(({ id, name, activity }): CardioDraftExercise => ({
-    ...(inSecondDay ? { inSecondDay } : {}),
     clientId: crypto.randomUUID(),
     exerciseId: id,
     name,
@@ -148,7 +148,11 @@ export function insertWarmupDrills(
   }));
   return {
     ...draft,
-    exercises: [...draft.exercises.slice(0, exerciseIndex), ...drillCards, ...draft.exercises.slice(exerciseIndex)],
+    exercises: [
+      ...draft.exercises.slice(0, exerciseIndex),
+      ...drillCards.map((card) => placedInDay(draft, card, day)),
+      ...draft.exercises.slice(exerciseIndex),
+    ],
   };
 }
 

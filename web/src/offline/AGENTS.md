@@ -98,7 +98,7 @@
 
 ## Second Day
 
-- `draft-days.ts`: a Draft started from a Day can take one more Day (`secondDay`, exercises marked `inSecondDay`, exercises added later join it). The payload lists the second Day's set ids; after sync `dayDrafts` turns each stored Day into its own local Program fact. See ADR 0001.
+- `draft-days.ts`: a Draft started from a Day can take one more Day (`secondDay`, exercises marked `inSecondDay`, exercises added later join it). It is the only owner of Day membership: callers ask it (`exerciseDay`, `sameDay`, `exercisesOf`, `placedInDay`, `withDaysSent`) and never read `inSecondDay` or `secondDay.sent`; `draft-format.ts` reads the flag only to parse and repair stored drafts. A superset never spans Days. The payload lists the second Day's set ids; after sync `dayDrafts` turns each stored Day into its own local Program fact. See ADR 0001.
 
 ## Manual Notes
 

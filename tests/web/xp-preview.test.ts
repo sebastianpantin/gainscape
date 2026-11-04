@@ -25,6 +25,7 @@ import {
   previewNote,
   previewXpLabel,
 } from '../../web/src/features/workout/xp-preview.ts';
+import { placedInDay } from '../../web/src/offline/draft-days.ts';
 
 const failure = { type: 'level', level: 'failure' } as const;
 
@@ -65,7 +66,7 @@ function xpPreviews(
   strength: Record<string, ExerciseStrength> | null,
   bodyweightKg: number | null = null,
 ) {
-  return previewDraft(exercises, { isBuiltIn, strength, bodyweightKg, recordBaseline: null }).previews;
+  return previewDraft({ exercises }, { isBuiltIn, strength, bodyweightKg, recordBaseline: null }).previews;
 }
 
 const RATED_NOTE = 'Effort counts toward 1RM estimate';
@@ -528,5 +529,29 @@ describe('donePreviewTotal', () => {
       ),
     ).toBe(111);
     expect(donePreviewTotal([], [])).toBe(0);
+  });
+});
+
+describe('previewDraft XP with two Days', () => {
+  const strength = strengthOf([['bench', epley(100, 6)]]);
+  const secondDay = {
+    sessionId: 'second-day',
+    program: { enrollmentId: 'enrollment', position: { week: 1, day: 'wed' }, templateKey: 'template' },
+    programLabel: 'Program — Wed',
+  };
+
+  it('previews each second-Day set as if that Day were its own Session', () => {
+    const firstDay = exercise('bench', [draftSet(100, 6, null), draftSet(100, 6, null), draftSet(100, 6, null)]);
+    const secondDaySets = [draftSet(100, 6, null), draftSet(100, 6, null, false)];
+    const both = previewDraft(
+      {
+        exercises: [firstDay, placedInDay({ exercises: [], secondDay }, exercise('bench', secondDaySets), 'second')],
+        secondDay,
+      },
+      { isBuiltIn: builtIn, strength, bodyweightKg: null, recordBaseline: null },
+    ).previews;
+    const alone = xpPreviews([exercise('bench', secondDaySets)], builtIn, strength);
+    expect(both[1]).toEqual(alone[0]);
+    expect(both[0]).toEqual(xpPreviews([firstDay], builtIn, strength)[0]);
   });
 });

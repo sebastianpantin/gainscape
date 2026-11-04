@@ -11,7 +11,9 @@ import {
   labelledDays,
   draftTitle,
   exerciseDay,
+  exercisesOf,
   restoreSecondDay,
+  withDaysSent,
   withoutSecondDay,
   withSecondDay,
 } from '../../web/src/offline/draft-days.ts';
@@ -23,6 +25,7 @@ import {
 } from '../../web/src/offline/draft-starts.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 import { exerciseMenuChoices } from '../../web/src/features/workout/exercise-card-rules.ts';
+import { groupOf, groupWithNext } from '../../web/src/lib/workout/superset-rules.ts';
 
 const enrollment = madcowEnrollment();
 const STARTED_AT = new Date('2026-10-05T06:00:00.000Z');
@@ -231,8 +234,7 @@ describe('dayDrafts', () => {
       [both.sessionId, weekDay(1, 'mon'), { programLinked: true, completedAt: 'first-at' }],
       [SECOND_SESSION_ID, weekDay(1, 'wed'), { programLinked: false, completedAt: 'second-at' }],
     ]);
-    expect(days[0].draft.exercises.every((exercise) => !exercise.inSecondDay)).toBe(true);
-    expect(days[1].draft.exercises.every((exercise) => exercise.inSecondDay)).toBe(true);
+    expect(days.map(({ draft }) => draft.exercises)).toEqual([exercisesOf(both, 'first'), exercisesOf(both, 'second')]);
   });
 
   it('keeps a one-Day Draft as it is', () => {
@@ -277,6 +279,15 @@ describe('labelledDays', () => {
 });
 
 describe('supersets across Days', () => {
+  it('refuses to join the last exercise of the first Day to a superset in the second Day', () => {
+    const both = mondayAndWednesday();
+    const boundary = both.exercises.findIndex((_, index) => exerciseDay(both, index) === 'second');
+    const paired = groupWithNext(both, boundary);
+    expect(groupOf(paired, boundary)?.exerciseIndexes).toEqual([boundary, boundary + 1]);
+    expect(groupWithNext(paired, boundary - 1)).toBe(paired);
+    expect(groupWithNext(both, boundary - 1)).toBe(both);
+  });
+
   it('drops a stored superset that spans both Days', () => {
     const both = mondayAndWednesday();
     const boundary = both.exercises.findIndex((_, index) => exerciseDay(both, index) === 'second');
@@ -294,7 +305,7 @@ describe('supersets across Days', () => {
 
 describe('guards on the second Day', () => {
   it('keeps a second Day that was already sent to the server', () => {
-    const sent = { ...mondayAndWednesday(), secondDay: { ...mondayAndWednesday().secondDay!, sent: true as const } };
+    const sent = withDaysSent(mondayAndWednesday());
     expect(withoutSecondDay(sent).removed).toBeNull();
     expect(canRemoveSecondDay(sent)).toBe(false);
     expect(canRemoveSecondDay(mondayAndWednesday())).toBe(true);
