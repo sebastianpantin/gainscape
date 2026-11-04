@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { type FeaturedProgram } from '../../lib/programs/program-discovery-rules.ts';
+import { type FeaturedProgram } from '../../lib/programs/follow-card.ts';
 
 interface FollowProgramCardProps {
   programs: readonly FeaturedProgram[];

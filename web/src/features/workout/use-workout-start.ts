@@ -2,8 +2,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { type Position } from '@domain/index.ts';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
-import { adjustEnrollment, refreshProgramFactsOrCached } from '../../lib/programs/program-enrollment.ts';
-import { skipDayEvent } from '../../lib/programs/program-skip-rules.ts';
+import { type EnrollmentAdjustment } from '../../lib/programs/enrollment.ts';
+import { skipDayEvent } from '../../lib/programs/program-today-rules.ts';
 import { fetchLastLoggedSets, type Program, type ProgramDay } from '../../lib/programs/programs.ts';
 import { fetchLatestExerciseList } from '../../lib/query/queries.ts';
 import { type WorkoutDraft } from '../../offline/draft-format.ts';
@@ -13,7 +13,6 @@ import {
   startDraftFromDay,
   startDraftFromPrescription,
 } from '../../offline/draft-starts.ts';
-import { type ProgramCache } from '../../offline/program-cache.ts';
 import { type WorkoutDraftHandle } from '../../offline/use-workout-draft.ts';
 import { startNoticeText } from './workout-rules.ts';
 
@@ -21,17 +20,10 @@ interface WorkoutStartInput {
   userId: string;
   exercises: Exercise[];
   startWorkout: WorkoutDraftHandle['startWorkout'];
-  programCache: ProgramCache;
-  showProgramCache: (cache: ProgramCache) => void;
+  adjustProgram: (adjustments: readonly EnrollmentAdjustment[]) => Promise<void>;
 }
 
-export function useWorkoutStart({
-  userId,
-  exercises,
-  startWorkout,
-  programCache,
-  showProgramCache,
-}: WorkoutStartInput) {
+export function useWorkoutStart({ userId, exercises, startWorkout, adjustProgram }: WorkoutStartInput) {
   const queryClient = useQueryClient();
   const [startingDay, setStartingDay] = useState(false);
   const [startNotice, setStartNotice] = useState<string | null>(null);
@@ -71,12 +63,7 @@ export function useWorkoutStart({
     await openStartedDraft(started);
   };
 
-  const skipProgramDay = async (position: Position) => {
-    const enrollment = programCache.enrollment;
-    if (!enrollment) return;
-    await adjustEnrollment(enrollment.id, skipDayEvent(position));
-    showProgramCache(await refreshProgramFactsOrCached(userId, enrollment));
-  };
+  const skipProgramDay = (position: Position) => adjustProgram([skipDayEvent(position)]);
 
   const startFreestyle = () => {
     if (startingDay) return;

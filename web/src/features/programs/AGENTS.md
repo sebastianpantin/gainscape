@@ -11,7 +11,7 @@ Training programs: list, copy from templates, create and edit own programs (days
 
 - Routes: `ProgramsScreen.tsx` (`/programs`, with `FollowablePrograms.tsx`), `ProgramEditor.tsx` (`/programs/:programId` and `/programs/new`), `ProgramEnrollScreen.tsx` (`/programs/enroll/:key`), `ActiveProgramScreen.tsx` (`/programs/active`), `ProgramPlanScreen.tsx` (`/programs/active/plan`). `ProgramStatusScreen.tsx` stands in when there is no ready program.
 - `program-edit.ts`: pure editor logic (day and exercise edits, limits, validation, progression and increments). Put new editor rules here and test them first.
-- `use-active-program.ts`: the followed program from the saved cache; shared with `workout/WorkoutScreen.tsx`.
+- The followed program comes from `useActiveProgram` and `savedEnrollment` in `../../lib/programs/enrollment.ts`, shared with `workout/WorkoutScreen.tsx`. Screens never read program storage directly.
 - Enrollment and prescription rules live in `../../lib/programs/program-*-rules.ts`; persistence in `../../lib/programs/programs.ts`.
 
 ## Rules and gotchas

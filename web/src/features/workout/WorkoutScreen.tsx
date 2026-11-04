@@ -8,6 +8,7 @@ import { formatCount, formatXp } from '../../lib/format.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { useIsOffline, useOnlineSignal } from '../../lib/platform/use-online.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
+import { useActiveProgram } from '../../lib/programs/enrollment.ts';
 import { barbellSetupFor, draftBar } from '../../lib/programs/program-set-rules.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
 import { BOUTS_FULL_TEXT } from '../../lib/workout/cardio-rules.ts';
@@ -19,7 +20,6 @@ import { readTrainingDeviceSettings } from '../../lib/workout/training-device-st
 import { doneSetCount, withSessionRpe } from '../../offline/draft-edits.ts';
 import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { useOnboarding } from '../onboarding/use-onboarding.ts';
-import { useActiveProgram } from '../programs/use-active-program.ts';
 import { saveBodyweight } from '../profile/save-bodyweight.ts';
 import { finishOutcomeCovers } from '../../offline/finish-outcome.ts';
 import { CardioExerciseCard } from './CardioExerciseCard.tsx';
@@ -107,12 +107,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const onlineSignal = useOnlineSignal();
   const queryClient = useQueryClient();
   const standing = useStanding(userId);
-  const {
-    cache: programCache,
-    program: activeProgram,
-    loadStatus: programLoadStatus,
-    showCache: showProgramCache,
-  } = useActiveProgram(userId);
+  const { program: activeProgram, loadStatus: programLoadStatus, adjust: adjustProgram } = useActiveProgram(userId);
   const rest = useRestTimer(userId);
   useRestAlert(userId, rest.timer);
   const [keepAwake] = useState(() => readTrainingDeviceSettings(deviceStorage(), userId).keepAwake);
@@ -152,7 +147,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
   const strength = useExerciseStrength(userId);
   const sessionBaseline = useSessionBaseline(userId, draft?.startedAt ?? null, onlineSignal);
   const bodyweightKg = useLatestBodyweight(userId);
-  const start = useWorkoutStart({ userId, exercises, startWorkout, programCache, showProgramCache });
+  const start = useWorkoutStart({ userId, exercises, startWorkout, adjustProgram });
   const { previews, records, feedbackFor } = useWorkoutPreviews({
     exercises,
     draft,

@@ -13,14 +13,20 @@ import {
   dayChoices,
   dayStartFrom,
   hasProgramDayToStart,
+  offlineRefreshState,
   pickedDay,
+  programLoadStatus,
+  programStatusText,
   secondDayChoices,
   positionLabel,
   type PrescriptionCard,
   prescriptionCards,
+  skipDayEvent,
+  skipDialogTitle,
+  skipLabel,
   startLabel,
 } from '../../web/src/lib/programs/program-today-rules.ts';
-import { factClock, sessionFact, snapshot } from '../domain/program-fixtures/facts.ts';
+import { factClock, sessionFact, skipDayFact, snapshot } from '../domain/program-fixtures/facts.ts';
 import {
   cyclePosition,
   FIVE_THREE_ONE,
@@ -387,5 +393,114 @@ describe('hasProgramDayToStart', () => {
   it('is false without a startable program day, so freestyle is the main action', () => {
     expect(hasProgramDayToStart({ kind: 'none' })).toBe(false);
     expect(hasProgramDayToStart({ kind: 'needs_update', name: 'Old', message: 'Update the app.' })).toBe(false);
+  });
+});
+
+function choiceLabelsAfter(facts: ProgramFact[]) {
+  return dayChoices(MADCOW_5X5, programStateAt(MADCOW_5X5, madcowEnrollment(), facts)).map((choice) => [
+    choice.label,
+    choice.suggested,
+  ]);
+}
+
+function skippedAs(stamp: { id: string; at: string }, position: Position): ProgramFact {
+  return skipDayFact(stamp, skipDayEvent(position).position);
+}
+
+describe('skip day labels', () => {
+  it('names the action after the picked day: "Skip W1 Day 1"', () => {
+    expect(skipLabel(MADCOW_5X5, weekDay(1, 'mon'))).toBe('Skip W1 Day 1');
+  });
+
+  it('names a 5/3/1 day with its cycle: "Skip C1 W2 Day 3"', () => {
+    expect(skipLabel(FIVE_THREE_ONE, cyclePosition(1, 2, 'deadlift'))).toBe('Skip C1 W2 Day 3');
+  });
+
+  it('asks in the confirm dialog title: "Skip W1 Day 2?"', () => {
+    expect(skipDialogTitle(MADCOW_5X5, weekDay(1, 'wed'))).toBe('Skip W1 Day 2?');
+  });
+});
+
+describe('skip day event', () => {
+  it('sends adjust_enrollment a skip_day for the picked position', () => {
+    expect(skipDayEvent(weekDay(1, 'mon'))).toEqual({ kind: 'skip_day', position: { week: 1, day: 'mon' } });
+  });
+
+  it('sends a cycle position whole: cycle, week and day', () => {
+    expect(skipDayEvent(cyclePosition(2, 3, 'press'))).toEqual({
+      kind: 'skip_day',
+      position: { cycle: 2, week: 3, day: 'press' },
+    });
+  });
+
+  it('takes the skipped Day 1 out of the day picker and suggests Day 2 next', () => {
+    expect(choiceLabelsAfter([skippedAs(factClock().next(), weekDay(1, 'mon'))])).toEqual([
+      ['W1 Day 2', true],
+      ['W1 Day 3', false],
+    ]);
+  });
+
+  it('skipping the last open day of the week moves the picker to week 2 Day 1', () => {
+    const clock = factClock();
+    const facts = [
+      sessionFact(clock.next(), weekDay(1, 'mon'), madcowDaySets('mon')),
+      sessionFact(clock.next(), weekDay(1, 'wed'), madcowDaySets('wed')),
+      skippedAs(clock.next(), weekDay(1, 'fri')),
+    ];
+    expect(choiceLabelsAfter(facts)[0]).toEqual(['W2 Day 1', true]);
+  });
+});
+
+describe('program load status', () => {
+  it('shows the cache while a refresh runs when an enrollment is cached', () => {
+    expect(programLoadStatus({ hasCachedEnrollment: true, refresh: 'pending' })).toBe('cached');
+  });
+
+  it('is refreshing while a refresh runs with nothing cached', () => {
+    expect(programLoadStatus({ hasCachedEnrollment: false, refresh: 'pending' })).toBe('refreshing');
+  });
+
+  it('is cached after a refresh that found an enrollment', () => {
+    expect(programLoadStatus({ hasCachedEnrollment: true, refresh: 'done' })).toBe('cached');
+  });
+
+  it('is none after a refresh that found no enrollment', () => {
+    expect(programLoadStatus({ hasCachedEnrollment: false, refresh: 'done' })).toBe('none');
+  });
+
+  it('keeps showing the cache when a refresh fails with an enrollment cached', () => {
+    expect(programLoadStatus({ hasCachedEnrollment: true, refresh: 'failed' })).toBe('cached');
+  });
+
+  it('is failed when a refresh fails with nothing cached', () => {
+    expect(programLoadStatus({ hasCachedEnrollment: false, refresh: 'failed' })).toBe('failed');
+  });
+});
+
+describe('program status text', () => {
+  it('reads "Loading program…" while refreshing', () => {
+    expect(programStatusText('refreshing')).toBe('Loading program…');
+  });
+
+  it('reads "You\'re not following a program." when there is none', () => {
+    expect(programStatusText('none')).toBe("You're not following a program.");
+  });
+
+  it('asks to reconnect when loading failed', () => {
+    expect(programStatusText('failed')).toBe("Couldn't load your program. Check your connection.");
+  });
+
+  it('shows no status text for a cached program', () => {
+    expect(programStatusText('cached')).toBeNull();
+  });
+});
+
+describe('program refresh state while offline', () => {
+  it('trusts the saved cache as done when it was refreshed online before', () => {
+    expect(offlineRefreshState({ refreshed: true })).toBe('done');
+  });
+
+  it('is failed when the saved cache was never refreshed online', () => {
+    expect(offlineRefreshState({ refreshed: false })).toBe('failed');
   });
 });

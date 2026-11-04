@@ -28,7 +28,7 @@ import { useToast } from '../../lib/ui/toast.ts';
 import { type Program } from '../../lib/programs/programs.ts';
 import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { signOutKeepingDrafts } from '../../lib/platform/sign-out.ts';
-import { forgetDeletedProgramSession } from '../../offline/program-cache.ts';
+import { forgetDeletedProgramSession } from '../../lib/programs/enrollment.ts';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { ScreenProblem } from '../../components/ScreenProblem.tsx';
 import { ScreenSkeleton } from '../../components/ScreenSkeleton.tsx';
@@ -177,7 +177,7 @@ export function SessionDetailScreen({ userId }: SessionDetailScreenProps) {
         ),
       rememberedSummaryIds: () => recallFinishOutcome(userId)?.sessionIds ?? [],
       forgetSummaries: forgetFinishOutcomeCovering,
-      forgetDeletedSession: () => forgetDeletedProgramSession(localStorage, userId, sessionId),
+      forgetDeletedSession: () => forgetDeletedProgramSession(userId, sessionId),
       describeRevoked: (drops) => removedText(drops, items),
       apply: (change: SessionEditorChange<Loaded>) => {
         switch (change.kind) {

@@ -20,12 +20,12 @@ import {
   recallFinishOutcome,
 } from '../../web/src/offline/finish-outcome.ts';
 import { type ItemsCache, readItemsCache, saveItemsCache } from '../../web/src/offline/items-cache.ts';
-import { readProgramCache, saveProgramCache } from '../../web/src/offline/program-cache.ts';
-import { emptyProgramFactsCache } from '../../web/src/offline/program-facts-cache.ts';
+import { storedEnrollment } from '../../web/src/offline/enrollment-store.ts';
 import { completeSessionPayload } from '../../web/src/offline/session-payload.ts';
 import { MADCOW_5X5, madcowEnrollment, weekDay } from '../domain/program-fixtures/madcow_5x5.ts';
 import { madcowEnrollmentRow } from './madcow-enrollment-fixture.ts';
 import { MemoryStorage, throwingStorage } from './memory-storage.ts';
+import { storeRecord } from './stored-enrollment-fixture.ts';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
@@ -106,18 +106,14 @@ function oneDaySummary(sessionId: string): FinishSummary {
 function fakeIo(reply: InvokeOutcome<FinishSummary>) {
   const device = new MemoryStorage();
   const tab = new MemoryStorage();
-  saveProgramCache(device, USER_ID, {
-    templates: [{ key: 'madcow_5x5', version: 1, name: 'Madcow 5x5', definition: MADCOW_5X5 }],
-    enrollment: madcowEnrollmentRow(),
-    facts: emptyProgramFactsCache(ENROLLMENT_ID),
-  });
+  storeRecord(device, USER_ID, { enrollment: madcowEnrollmentRow() });
   const completeSession = vi.fn<FinishIo['completeSession']>(async () => reply);
   const io: FinishIo = { completeSession, device, tab };
   return { io, device, tab, completeSession };
 }
 
-function rememberedFacts(device: Storage): string[] | undefined {
-  return readProgramCache(device, USER_ID).facts?.localAppends.map((append) => append.fact.id);
+function rememberedFacts(device: Storage): string[] {
+  return storedEnrollment(device, USER_ID).facts.map((fact) => fact.id);
 }
 
 const httpError = (status: number, code: string, details?: unknown): InvokeOutcome<FinishSummary> => ({

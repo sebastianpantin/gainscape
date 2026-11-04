@@ -22,7 +22,7 @@ import {
 import { fetchTrainingHistory } from '../profile/onboarding.ts';
 import { loadProfileCacheFirst, type Profile } from '../profile/profile.ts';
 import { type Preferences } from '../profile/preferences.ts';
-import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from '../programs/program-enrollment.ts';
+import { loadEnrollChoicesCacheFirst, loadProgramTemplatesCacheFirst } from '../programs/enrollment.ts';
 import { fetchLastLoggedSets, loadProgramsCacheFirst } from '../programs/programs.ts';
 import {
   FEED_PAGE_SIZE,

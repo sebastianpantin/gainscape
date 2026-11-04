@@ -15,7 +15,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `query/`: the TanStack Query client, every query definition, freshness and state rules, and `writes.ts`.
 - `exercises/`: the exercise catalog and its device cache, custom exercises, exercise notes, search, swap substitutes and repeat keys.
 - `workout/`: live-workout rules and stores: set editing, cardio, effort labels, supersets, warm-ups, plates, rest timer, training device, session timing and baseline, progression hints, the active workout bar, record text.
-- `programs/`: program persistence, enrollment and every `program-*-rules.ts`.
+- `programs/`: program persistence, the Enrollment (`enrollment.ts`), `program-*-rules.ts`.
 - `history/`: past sessions, the history overview and the last session of an exercise.
 - `progress/`: standing, the skill map, recovery, weekly goal, weekly muscle volume, bodyweight trend and exercise progress.
 - `collection/`: items, gear, challenges, the companion pet and the records collection.
@@ -92,7 +92,7 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
   - program templates and enroll choices, because their cache-first loaders drop `fromCache`;
   - the first-run training history check, so the intro never comes back after a first workout.
 - `programs-changed` shows the saved program list and still refetches it; a deleted workout leaves History at once and History still refetches, as later Sessions are recomputed. Program publishing and removing a friend drop their queries in this tab, so no stale list flashes.
-- Enrollment writes need no `wrote` call: no query reads enrollments. Gz and friend requests other than removal need none either: those reads are always stale.
+- Enrollment writes need no `wrote`: `programs/enrollment.ts` tells its own hooks. Nor do Gz and friend requests other than removal: those reads are always stale.
 - A finished workout refreshes every tab, this one too, through `useBroadcastWrites`, which listens for `synced` and `deleted` on the `gainscape.drafts` channel. The finish flow calls no `wrote`.
 - Query keys carry the user id, and `App.tsx` clears the client when the user changes.
 - Some keys sit under another key on purpose, so invalidating or removing the parent covers them too:

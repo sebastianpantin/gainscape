@@ -4,10 +4,10 @@ import type { InvokeOutcome } from '../lib/platform/function-client-rules.ts';
 import { tabStorage } from '../lib/platform/keyed-store.ts';
 import { RATE_LIMITED_STATUS, retryAfterSeconds } from '../lib/platform/rate-limit.ts';
 import type { RememberedTiming } from '../lib/workout/session-timing-rules.ts';
-import { dayDrafts, labelledDays, type SavedDay } from './draft-days.ts';
+import { labelledDays, type SavedDay } from './draft-days.ts';
+import { recordFinishedWorkout } from './enrollment-store.ts';
 import type { DraftChallenge, WorkoutDraft } from './draft-format.ts';
 import { spendCachedScroll } from './items-cache.ts';
-import { rememberFinishedSession } from './program-cache.ts';
 import { completeSessionPayload } from './session-payload.ts';
 
 export interface FinishSummary extends SessionSummary, RememberedTiming {
@@ -66,13 +66,6 @@ function completedSummary(draft: WorkoutDraft, summary: FinishSummary): FinishSu
   return { ...summary, ...days, ...plannedChallenge };
 }
 
-function rememberFinishedDays(device: Storage, userId: string, draft: WorkoutDraft, summary: FinishSummary): void {
-  const { programLinked, completedAt, days } = summary;
-  if (typeof programLinked !== 'boolean' || typeof completedAt !== 'string') return;
-  const synced = { kind: 'synced' as const, summary: { programLinked, completedAt, days } };
-  for (const day of dayDrafts(draft, synced)) rememberFinishedSession(device, userId, day.draft, day.outcome);
-}
-
 function rememberSummary(tab: Storage | null, userId: string, summary: FinishSummary): void {
   try {
     tab?.setItem(LAST_SUMMARY_KEY, JSON.stringify({ userId, summary }));
@@ -85,7 +78,7 @@ export async function completeFinishedDraft(userId: string, draft: WorkoutDraft,
   const sent = sendOutcomeFrom(await io.completeSession(completeSessionPayload(draft)));
   if (sent.kind !== 'synced') return sent;
   const summary = completedSummary(draft, sent.summary);
-  rememberFinishedDays(io.device, userId, draft, summary);
+  recordFinishedWorkout(io.device, userId, draft, summary);
   if (summary.challenge) spendCachedScroll(io.device, userId, summary.challenge.challengeId);
   rememberSummary(io.tab, userId, summary);
   return { kind: 'synced', summary };

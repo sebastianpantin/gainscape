@@ -46,9 +46,9 @@ const { programListCache } = await import('../../web/src/offline/program-list-ca
 const { standingCache } = await import('../../web/src/offline/standing-cache.ts');
 const { collectionCache } = await import('../../web/src/offline/collection-cache.ts');
 const { loadItemsCacheFirst } = await import('../../web/src/lib/collection/items.ts');
-const { loadProgramTemplatesCacheFirst } = await import('../../web/src/lib/programs/program-enrollment.ts');
+const { loadProgramTemplatesCacheFirst } = await import('../../web/src/lib/programs/enrollment.ts');
 const { readItemsCache, saveItemsCache } = await import('../../web/src/offline/items-cache.ts');
-const { readProgramCache } = await import('../../web/src/offline/program-cache.ts');
+const { storedEnrollment } = await import('../../web/src/offline/enrollment-store.ts');
 const { loadQuestsCacheFirst } = await import('../../web/src/lib/quests/quests.ts');
 const { questsCache } = await import('../../web/src/offline/quests-cache.ts');
 
@@ -288,7 +288,7 @@ describe('saving the items and program templates after an online load', () => {
     const template = { key: 'starter', version: 1, name: 'Starter', definition: {} };
     server.tables = { program_templates: [template] };
     expect(await loadProgramTemplatesCacheFirst(USER_ID)).toEqual([template]);
-    expect(readProgramCache(storage, USER_ID).templates).toEqual([template]);
+    expect(storedEnrollment(storage, USER_ID).templates).toEqual([template]);
   });
 });
 

@@ -56,7 +56,7 @@ import {
 } from './program-edit.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { exerciseKeys } from '../../lib/exercises/exercise-key-rules.ts';
-import { useActiveProgram } from './use-active-program.ts';
+import { useActiveProgram } from '../../lib/programs/enrollment.ts';
 
 const ADD_DAY_FOCUS_KEY = 'add-day';
 
@@ -95,7 +95,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
   const fieldId = useId();
   const { unitPref } = usePreferences();
   const offline = useIsOffline();
-  const { cache: programCache, program: followed } = useActiveProgram(userId);
+  const { enrollment: followedEnrollment, templates: followedTemplates, program: followed } = useActiveProgram(userId);
   const { showToast } = useToast();
   const { focusTarget, focusAfterNextChange } = useFocusAfterRemoval(doc?.days);
   const exerciseList = useQuery(exerciseListQuery(userId));
@@ -214,14 +214,13 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
 
   const outdated =
     !creating &&
-    followStatus(trimmedDoc(doc), programCache.enrollment, programCache.templates, exercises ? loadTypeOf : null) ===
-      'outdated';
+    followStatus(trimmedDoc(doc), followedEnrollment, followedTemplates, exercises ? loadTypeOf : null) === 'outdated';
 
   const followChanges = async () => {
     if (issue) return refuse(issue);
-    if (!programCache.enrollment) return;
+    if (!followedEnrollment) return;
     const carried: CarriedFollow = {
-      unit: programCache.enrollment.unit,
+      unit: followedEnrollment.unit,
       workingWeights: followed.kind === 'ready' ? workingWeights(followed.state) : {},
     };
     setSaving(true);
