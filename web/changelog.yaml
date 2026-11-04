@@ -1,3 +1,11 @@
+- prs: [208]
+  version: 0.26.1
+  date: 2026-11-04
+  title: Second day, fresh legs
+  items:
+    - The XP shown for a second program day's sets no longer counts tiredness from the first day, so it matches what you get when you finish.
+    - Two exercises from different days can no longer be grouped into one superset.
+    - A bio that ends in a space or a new line no longer shows a too-long error. Height in feet and inches takes a decimal comma like 5,5 and rejects odd entries like 1e1.
 - prs: [205, 206]
   version: 0.26.0
   date: 2026-11-03
