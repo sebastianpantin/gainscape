@@ -390,7 +390,7 @@ export function hmacRngFor(userId: string): (setId: string, kind: RollKind) => R
 
 export async function lootTablesFromDb(): Promise<LootTables> {
   const rows = await db`
-    select t.id as table_id, t.key as table_key, i.id as item_id, i.key as item_key,
+    select t.id as table_id, t.key as table_key, i.id as item_id, i.key as item_key, i.skill_id,
            e.weight, e.min_quantity, e.max_quantity
     from public.drop_tables t
     join public.drop_entries e on e.drop_table_id = t.id
@@ -409,7 +409,16 @@ export async function lootTablesFromDb(): Promise<LootTables> {
       }));
     return { id: rows.find((row) => row.table_key === key)!.table_id as string, key, entries };
   };
-  return { regular: tableOf('regular'), rare: tableOf('rare') };
+  const pets = rows.filter((row) => row.table_key === 'pets' && row.skill_id !== null);
+  return {
+    regular: tableOf('regular'),
+    rare: tableOf('rare'),
+    pets: {
+      id: pets[0].table_id as string,
+      key: 'pets',
+      entries: pets.map((row) => ({ itemId: row.item_id, itemKey: row.item_key, skillId: row.skill_id })),
+    },
+  };
 }
 
 export async function activeDropSummaries(sessionId: string): Promise<DropSummary[]> {
@@ -462,6 +471,8 @@ interface GrantedDrop {
   itemId: string;
 }
 
+const DROP_TABLE_FOR_SOURCE: Record<RollKind, string> = { regular: 'regular', pr: 'rare', pet: 'pets' };
+
 export async function grantDrop(
   userId: string,
   sessionId: string,
@@ -476,13 +487,13 @@ export async function grantDrop(
     const [session] = await tx`select local_date::text as local_date from public.sessions where id = ${sessionId}`;
     const date = localDate ?? session.local_date;
     const [table] = await tx`
-      select id from public.drop_tables where key = ${source === 'pr' ? 'rare' : 'regular'}`;
+      select id from public.drop_tables where key = ${DROP_TABLE_FOR_SOURCE[source]}`;
     const [item] = await tx`select id from public.items where key = ${itemKey}`;
     const [roll] = await tx`
       insert into public.loot_rolls
         (user_id, session_id, set_id, kind, local_date, roll_index, drop_table_id, chance, hit, loot_version)
       select ${userId}, ${sessionId}, ${setId}, ${source}, ${date}::date, coalesce(max(roll_index) + 1, 0),
-             ${table.id}, ${source === 'pr' ? 1 : 0.1}, true, ${lootVersion}
+             ${table.id}, ${source === 'regular' ? 0.1 : 1}, true, ${lootVersion}
       from public.loot_rolls where user_id = ${userId} and local_date = ${date}::date and kind = ${source}
       returning id`;
     const [drop] = await tx`

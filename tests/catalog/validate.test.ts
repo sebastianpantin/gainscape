@@ -288,6 +288,39 @@ describe('catalog validation', () => {
       /drop table "regular" is required/,
     ],
     ['the rare table exists', (c) => (find(c.dropTables, 'rare').retired = true), /drop table "rare" is required/],
+    ['the pets table exists', (c) => (find(c.dropTables, 'pets').retired = true), /drop table "pets" is required/],
+    ['every skill has a pet', (c) => (find(c.items, 'pec_pelican').retired = true), /skill "chest" has no pet/],
+    ['a skill has at most one pet', (c) => (find(c.items, 'grip_gecko').skill = 'chest'), /skill "chest" has 2 pets/],
+    [
+      'a pet belongs to a known skill',
+      (c) => (find(c.items, 'grip_gecko').skill = 'neck'),
+      /item "grip_gecko" belongs to unknown skill "neck"/,
+    ],
+    [
+      'only a pet belongs to a skill',
+      (c) => (find(c.items, 'scroll_z_press').skill = 'shoulders'),
+      /item "scroll_z_press" belongs to a skill but is not a pet/,
+    ],
+    [
+      'a retired item that belongs to a skill is still a pet',
+      (c) => Object.assign(find(c.items, 'scroll_z_press'), { skill: 'shoulders', retired: true }),
+      /item "scroll_z_press" belongs to a skill but is not a pet/,
+    ],
+    [
+      'the pets table lists only skill pets',
+      (c) => find(c.dropTables, 'pets').entries.push({ item: 'spotter_pup', weight: 1, min: 1, max: 1 }),
+      /drop table "pets" lists "spotter_pup", which belongs to no skill/,
+    ],
+    [
+      'the pets table lists every skill pet',
+      (c) => (find(c.dropTables, 'pets').entries = find(c.dropTables, 'pets').entries.slice(1)),
+      /drop table "pets" misses skill pet "pec_pelican"/,
+    ],
+    [
+      'a skill pet drops only from the pets table',
+      (c) => find(c.dropTables, 'rare').entries.push({ item: 'squat_frog', weight: 1, min: 1, max: 1 }),
+      /drop table "rare" lists skill pet "squat_frog"/,
+    ],
     [
       'icons are known icon kinds',
       (c) => (find(c.items, 'plate_crab').icon = 'crab'),

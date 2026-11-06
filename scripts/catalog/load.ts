@@ -73,6 +73,7 @@ export interface CatalogItem {
   icon: string;
   description: string;
   grants: string | null;
+  skill: string | null;
   sortOrder: number;
   retired: boolean;
 }
@@ -347,6 +348,7 @@ const itemsSchema = z.array(
     icon: z.string(),
     description: z.string().optional(),
     grants: z.string().optional(),
+    skill: z.string().optional(),
     retired: z.boolean().optional(),
   }),
 );
@@ -406,6 +408,7 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
         icon: slot.icon,
         description: '',
         grants: null,
+        skill: null,
         retired: false,
       });
     }
@@ -421,6 +424,7 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
       icon: 'scraps',
       description: '',
       grants: null,
+      skill: null,
       retired: false,
     });
   }
@@ -435,6 +439,7 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
       icon: item.icon,
       description: item.description ?? '',
       grants: item.grants ?? null,
+      skill: item.skill ?? null,
       retired: item.retired ?? false,
     });
   }

@@ -26,7 +26,8 @@ const MAX_PROGRAM_REPS = 100;
 const MAX_DAY_EXERCISES = 20;
 const MAX_PROGRAM_DAYS = 14;
 const MAX_DAY_NAME_LENGTH = 40;
-const REQUIRED_TABLES = ['regular', 'rare'];
+const PETS_TABLE = 'pets';
+const REQUIRED_TABLES = ['regular', 'rare', PETS_TABLE];
 const MAX_QUEST_DESCRIPTION_LENGTH = 280;
 const MAX_QUEST_POINTS = 10;
 const MIN_REQUIRED_LEVEL = 2;
@@ -224,6 +225,40 @@ function checkItems(catalog: CatalogData, problems: string[]): void {
   const iconKinds = new Set<string>(ITEM_ICON_KINDS);
   for (const item of catalog.items) {
     if (!iconKinds.has(item.icon)) problems.push(`item "${item.key}" has unknown icon "${item.icon}"`);
+  }
+  checkSkillPets(catalog, problems);
+}
+
+function checkSkillPets(catalog: CatalogData, problems: string[]): void {
+  const skillKeys = new Set(catalog.skills.map((skill) => skill.key));
+  const withSkill = catalog.items.filter((item) => item.skill !== null);
+  for (const item of withSkill) {
+    if (item.kind !== 'pet') problems.push(`item "${item.key}" belongs to a skill but is not a pet`);
+    else if (!skillKeys.has(item.skill!)) problems.push(`item "${item.key}" belongs to unknown skill "${item.skill}"`);
+  }
+  const skillPets = withSkill.filter((item) => !item.retired);
+  const petsPerSkill = new Map<string, number>();
+  for (const pet of skillPets) petsPerSkill.set(pet.skill!, (petsPerSkill.get(pet.skill!) ?? 0) + 1);
+  for (const skill of catalog.skills) {
+    const pets = petsPerSkill.get(skill.key) ?? 0;
+    if (pets === 0) problems.push(`skill "${skill.key}" has no pet`);
+    if (pets > 1) problems.push(`skill "${skill.key}" has ${pets} pets`);
+  }
+  const skillPetKeys = new Set(skillPets.map((pet) => pet.key));
+  for (const table of catalog.dropTables.filter((candidate) => !candidate.retired)) {
+    const listed = new Set(table.entries.map((entry) => entry.item));
+    if (table.key !== PETS_TABLE) {
+      for (const key of [...listed].filter((entry) => skillPetKeys.has(entry))) {
+        problems.push(`drop table "${table.key}" lists skill pet "${key}"`);
+      }
+      continue;
+    }
+    for (const key of [...listed].filter((entry) => !skillPetKeys.has(entry))) {
+      problems.push(`drop table "${table.key}" lists "${key}", which belongs to no skill`);
+    }
+    for (const key of [...skillPetKeys].filter((pet) => !listed.has(pet))) {
+      problems.push(`drop table "${table.key}" misses skill pet "${key}"`);
+    }
   }
 }
 

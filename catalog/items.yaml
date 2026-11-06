@@ -238,3 +238,73 @@
   rarity: rare
   icon: scroll
   grants: curl_century
+- key: pec_pelican
+  name: Pec Pelican
+  kind: pet
+  rarity: legendary
+  icon: pelican
+  skill: chest
+  description: The Chest pet. Puffs its chest out further with every press.
+- key: lat_bat
+  name: Lat Bat
+  kind: pet
+  rarity: legendary
+  icon: bat
+  skill: back
+  description: The Back pet. Spreads its wings like a fresh pair of lats.
+- key: boulder_owl
+  name: Boulder Owl
+  kind: pet
+  rarity: legendary
+  icon: owl
+  skill: shoulders
+  description: The Shoulders pet. Perches on the broadest shoulders in the room.
+- key: curl_squirrel
+  name: Curl Squirrel
+  kind: pet
+  rarity: legendary
+  icon: squirrel
+  skill: arms
+  description: The Arms pet. Curls an acorn for twelve strict reps, then eats it.
+- key: squat_frog
+  name: Squat Frog
+  kind: pet
+  rarity: legendary
+  icon: frog
+  skill: legs
+  description: The Legs pet. Sinks into the deepest squat in the gym and springs back up.
+- key: crunch_armadillo
+  name: Crunch Armadillo
+  kind: pet
+  rarity: legendary
+  icon: armadillo
+  skill: core
+  description: The Core pet. Rolls into a ball at the top of every crunch.
+- key: grip_gecko
+  name: Grip Gecko
+  kind: pet
+  rarity: legendary
+  icon: gecko
+  skill: grip
+  description: The Grip pet. Hangs from the pull-up bar long after you let go.
+- key: tempo_hare
+  name: Tempo Hare
+  kind: pet
+  rarity: legendary
+  icon: hare
+  skill: endurance
+  description: The Endurance pet. Keeps an even pace for the whole long run.
+- key: hurdle_fox
+  name: Hurdle Fox
+  kind: pet
+  rarity: legendary
+  icon: fox
+  skill: agility
+  description: The Agility pet. Clears every hurdle with a flick of its tail.
+- key: stretch_cat
+  name: Stretch Cat
+  kind: pet
+  rarity: legendary
+  icon: cat
+  skill: mobility
+  description: The Mobility pet. Holds every stretch longer than you and makes it look easy.

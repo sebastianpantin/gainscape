@@ -1,4 +1,4 @@
-import type { ItemIconKey } from '@domain/crafting.ts';
+import type { ItemIconKey, SkillPetIconKey } from '@domain/crafting.ts';
 
 export interface Pixel {
   x: number;
@@ -35,6 +35,10 @@ const TEXT = '#f0e6d0';
 const DANGER = '#e8827a';
 const DANGER_FILL = '#e0554b';
 const XP_DARK = '#4e8f3f';
+const PANEL_BORDER = '#5c4f3d';
+const CONTROL_BORDER = '#958468';
+const INPUT_ICON = '#6b5f4b';
+const PLATE_STEEL = '#9a9488';
 
 type SkillKey =
   'chest' | 'back' | 'shoulders' | 'arms' | 'legs' | 'core' | 'grip' | 'endurance' | 'agility' | 'mobility';
@@ -304,11 +308,189 @@ export const TROPHY: Sprite = {
   ],
 };
 
+const SKILL_PET_SPRITES: Record<SkillPetIconKey, Sprite> = {
+  pelican: fromRows(
+    [
+      '............',
+      '..KKKK......',
+      '.KWWWWK.....',
+      '.KWKWWGGGGK.',
+      '.KWWWWGAAAK.',
+      '..KWWWKGAK..',
+      '.KWWWWWKK...',
+      'KWWWWWWWK...',
+      'KWSWWWWWK...',
+      '.KWSSWWK....',
+      '..KKGKGK....',
+      '............',
+    ],
+    { K: INK, W: TEXT, S: PARCHMENT_SHADE, G: GOLD, A: ACCENT_DARK },
+  ),
+  bat: fromRows(
+    [
+      '............',
+      '....K..K....',
+      'K..KBKKBK..K',
+      'KK.KBBBBK.KK',
+      'KDKKBRBRKKDK',
+      'KDDKBBBBKDDK',
+      'KDDDKBBKDDDK',
+      '.KDDDBBDDDK.',
+      '..KDKBBKDK..',
+      '...K.KK.K...',
+      '............',
+      '............',
+    ],
+    { K: INK, B: CONTROL_BORDER, D: PANEL_BORDER, R: DANGER },
+  ),
+  owl: fromRows(
+    [
+      '............',
+      '..K......K..',
+      '..KK....KK..',
+      '..KBBBBBBK..',
+      '.KBWWBBWWBK.',
+      '.KBWKBBKWBK.',
+      '.KBBBGGBBBK.',
+      'KBBSBBBBSBBK',
+      'KBSSSBBSSSBK',
+      '.KBSSSSSSBK.',
+      '..KGGKKGGK..',
+      '............',
+    ],
+    { K: INK, B: CONTROL_BORDER, W: TEXT, S: PARCHMENT_SHADE, G: GOLD },
+  ),
+  squirrel: fromRows(
+    [
+      '............',
+      '.KKK....K.K.',
+      'KBBBK..KBKBK',
+      'KBLLBK.KBBBK',
+      'KBLLBKKBKBBK',
+      '.KBLBKBBBBBK',
+      '..KBBKBGGBK.',
+      '..KBBBGAAGK.',
+      '...KBBBGGBK.',
+      '...KBBBBBBK.',
+      '....KBKKBK..',
+      '............',
+    ],
+    { K: INK, B: ACCENT_DARK, L: ACCENT_LIGHT, G: GOLD, A: PANEL_BORDER },
+  ),
+  frog: fromRows(
+    [
+      '............',
+      '..KKK..KKK..',
+      '.KWKWKKWKWK.',
+      '.KGGGGGGGGK.',
+      'KGGKGGGGKGGK',
+      'KGGGKKKKGGGK',
+      '.KGLLLLLLGK.',
+      'KGGLLLLLLGGK',
+      'KGDKLLLLKDGK',
+      'KGDDKKKKDDGK',
+      '.KKKK..KKKK.',
+      '............',
+    ],
+    { K: INK, G: XP, L: XP_LIGHT, D: XP_DARK, W: TEXT },
+  ),
+  armadillo: fromRows(
+    [
+      '............',
+      '....KKKK....',
+      '..KKSBSBKK..',
+      '.KSBSBSBSBK.',
+      '.KSBSBSBSBK.',
+      'KSBSBSBSBSBK',
+      'KSBSBSBSKPPK',
+      'KSBSBSBSKKPK',
+      '.KSBSBSBKPPK',
+      '.KSBSBSBSKK.',
+      '..KKKKKKKK..',
+      '............',
+    ],
+    { K: INK, B: PLATE_STEEL, S: INPUT_ICON, P: DANGER },
+  ),
+  gecko: fromRows(
+    [
+      '....KKKK....',
+      '...KGGGGK...',
+      '...KYGGYK...',
+      'GG.KGGGGK.GG',
+      '.GGKGLLGKGG.',
+      '..KGGLLGGK..',
+      '..KGGLLGGK..',
+      '...KGLLGK...',
+      '.GGKGGGGKGG.',
+      'GG.KGGGGK.GG',
+      '....KGGK....',
+      '.....KGK....',
+    ],
+    { K: INK, G: XP, L: XP_LIGHT, Y: GOLD },
+  ),
+  hare: fromRows(
+    [
+      '...KK.KK....',
+      '..KWPKWPK...',
+      '..KWPKWPK...',
+      '...KWKWK....',
+      '..KWWWWWK...',
+      '.KWWKWWWWK..',
+      'KPWWWWWWWWK.',
+      '.KKWWWWWWWWK',
+      '...KWWWWWWSK',
+      '..KSWWKKWWK.',
+      '.KKKK..KKKK.',
+      '............',
+    ],
+    { K: INK, W: PARCHMENT, P: DANGER, S: PARCHMENT_SHADE },
+  ),
+  fox: fromRows(
+    [
+      'K..K........',
+      'KOKOK.......',
+      'KOOOOK....KK',
+      'KOKOOK...KOK',
+      'KWWOOK..KOOK',
+      '.KWOOKKKKOWK',
+      '.KOOOOOOOKWK',
+      '..KOOOOOOK.K',
+      '..KOKKKKOK..',
+      '..KK....KK..',
+      '............',
+      '............',
+    ],
+    { K: INK, O: ACCENT_DARK, W: TEXT },
+  ),
+  cat: fromRows(
+    [
+      '............',
+      '.K.K........',
+      'KCKCK.......',
+      'KYKYKK......',
+      'KCCCCK.....K',
+      '.KCCCCKKKKCK',
+      '..KCCCCCCCK.',
+      '..KCCCCCCCK.',
+      '.KCKK..KKCK.',
+      'KCK.....KCK.',
+      'KK......KK..',
+      '............',
+    ],
+    { K: INK, C: PLATE_STEEL, Y: GOLD },
+  ),
+};
+
+function isSkillPetIcon(kind: ItemIconKind): kind is SkillPetIconKey {
+  return Object.hasOwn(SKILL_PET_SPRITES, kind);
+}
+
 export function itemSprite(kind: ItemIconKind, color: string): Sprite {
+  if (isSkillPetIcon(kind)) return SKILL_PET_SPRITES[kind];
   return { cols: 12, rows: 12, pixels: itemPixels(kind, color) };
 }
 
-function itemPixels(kind: ItemIconKind, color: string): Pixel[] {
+function itemPixels(kind: Exclude<ItemIconKind, SkillPetIconKey>, color: string): Pixel[] {
   switch (kind) {
     case 'belt':
       return [

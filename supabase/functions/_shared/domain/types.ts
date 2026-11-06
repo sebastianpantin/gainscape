@@ -301,7 +301,7 @@ export interface LevelUp {
   to: number;
 }
 
-export type RollKind = 'regular' | 'pr';
+export type RollKind = 'regular' | 'pr' | 'pet';
 
 export interface Rng {
   next(): number;

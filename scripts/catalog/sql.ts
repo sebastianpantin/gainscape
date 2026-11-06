@@ -189,6 +189,7 @@ const ITEM_COLUMNS = [
   'icon_key',
   'description',
   'grants_challenge_id',
+  'skill_id',
   'sort_order',
   'retired_at',
 ] as const;
@@ -323,6 +324,7 @@ export function renderStatements(catalog: CatalogData): string[] {
         item.icon,
         item.description,
         item.grants === null ? null : challengeId(item.grants),
+        item.skill === null ? null : skillId(item.skill),
         item.sortOrder,
         retiredAtFor(item.retired),
       ]),

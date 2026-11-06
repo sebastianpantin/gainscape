@@ -7,6 +7,7 @@ import {
   pickEntry,
   quantityFor,
   rollSessionLoot,
+  type RollKind,
 } from '@domain/index.ts';
 import {
   aBout,
@@ -36,12 +37,16 @@ import {
   rowCounts,
 } from './local-stack.ts';
 
+const CAPPED_KINDS: readonly RollKind[] = ['regular', 'pr'];
+
 const lootTablesCounted = ['loot_rolls', 'drops', 'item_ledger', 'user_items', 'drop_luck'] as const;
 
 async function storedCandidates(sessionId: string): Promise<LootCandidate[]> {
   const rows = await db`
     select st.id, st.position, st.effective_reps, st.counted_work_s, st.interval_rounds,
-           e.owner_user_id is null as built_in
+           e.owner_user_id is null as built_in,
+           coalesce((select jsonb_agg(jsonb_build_object('skillId', x.skill_id, 'xp', x.xp) order by x.skill_id)
+                     from public.set_skill_xp x where x.set_id = st.id), '[]'::jsonb) as skill_xp
     from public.sets st join public.exercises e on e.id = st.exercise_id
     where st.session_id = ${sessionId} order by st.position`;
   return rows.map((row) => ({
@@ -53,6 +58,7 @@ async function storedCandidates(sessionId: string): Promise<LootCandidate[]> {
     interval: row.interval_rounds !== null,
     personalRecord: false,
     builtIn: row.built_in,
+    skillXp: row.skill_xp,
   }));
 }
 
@@ -111,12 +117,14 @@ describe('the roll pass through the stack', () => {
     const expected = rollSessionLoot(
       await storedCandidates(payload.id),
       tables,
-      { regularUsed: 0, prUsed: 0, dryRolls: 0, alreadyRolled: new Set() },
+      { regularUsed: 0, prUsed: 0, petUsed: 0, dryRolls: 0, alreadyRolled: new Set(), ownedPetItemIds: new Set() },
       DEFAULT_LOOT,
       hmacRngFor(user.id),
     );
-    expect(expected.rolls.length).toBe(3);
+    expect(expected.rolls.filter((roll) => roll.kind === 'regular')).toHaveLength(3);
+    expect(expected.rolls.filter((roll) => roll.kind === 'pet')).toHaveLength(3);
     const rolls = await rollsOf(user.id);
+    const kindOrder: readonly RollKind[] = ['regular', 'pr', 'pet'];
     expect(
       rolls.map((row) => ({
         setId: row.set_id,
@@ -127,21 +135,24 @@ describe('the roll pass through the stack', () => {
         hit: row.hit,
       })),
     ).toEqual(
-      expected.rolls.map((roll) => ({
-        setId: roll.setId,
-        kind: roll.kind,
-        tableId: roll.tableId,
-        rollIndex: roll.rollIndex,
-        chance: roll.chance,
-        hit: roll.hit,
-      })),
+      [...expected.rolls]
+        .sort((a, b) => kindOrder.indexOf(a.kind) - kindOrder.indexOf(b.kind) || a.rollIndex - b.rollIndex)
+        .map((roll) => ({
+          setId: roll.setId,
+          kind: roll.kind,
+          tableId: roll.tableId,
+          rollIndex: roll.rollIndex,
+          chance: roll.chance,
+          hit: roll.hit,
+        })),
     );
     expect(
       rolls.every((row) => row.local_date === localDateOf(start) && row.loot_version === DEFAULT_LOOT.version),
     ).toBe(true);
 
     const drops = await db`
-      select set_id, item_id, quantity, source from public.drops where session_id = ${payload.id} order by set_id`;
+      select set_id, item_id, quantity, source from public.drops where session_id = ${payload.id}
+      order by set_id, source`;
     expect(drops).toEqual(
       expected.rolls
         .filter((roll) => roll.drop !== null)
@@ -151,7 +162,7 @@ describe('the roll pass through the stack', () => {
           quantity: roll.drop!.quantity,
           source: roll.kind,
         }))
-        .sort((a, b) => a.set_id.localeCompare(b.set_id)),
+        .sort((a, b) => a.set_id.localeCompare(b.set_id) || kindOrder.indexOf(a.source) - kindOrder.indexOf(b.source)),
     );
     const [luck] = await db`select dry_rolls from public.drop_luck where user_id = ${user.id}`;
     expect(luck.dry_rolls).toBe(expected.dryRolls);
@@ -168,12 +179,12 @@ describe('daily caps by the session local date', () => {
     const sevenSets = () => Array.from({ length: 7 }, (_, position) => aSet(benchId, position, 50 + position));
     const firstPayload = payloadAt(first, sevenSets());
     await post(user, firstPayload);
-    const afterFirst = await rollsOf(user.id);
+    const afterFirst = await rollsOf(user.id, CAPPED_KINDS);
     expect(afterFirst.filter((row) => row.kind === 'regular').map((row) => row.roll_index)).toEqual([0, 1, 2, 3, 4]);
     expect(afterFirst.map((row) => row.set_id)).toEqual(firstPayload.sets.slice(0, 5).map((set) => set.id));
 
     await post(user, payloadAt(second, sevenSets()));
-    expect(await rollsOf(user.id)).toEqual(afterFirst);
+    expect(await rollsOf(user.id, CAPPED_KINDS)).toEqual(afterFirst);
 
     const earlier = payloadAt(new Date(Date.now() - 2 * DAY_MS), sevenSets());
     await post(user, earlier);
@@ -193,7 +204,7 @@ describe('daily caps by the session local date', () => {
       Array.from({ length: 5 }, (_, position) => aSet(benchId, position, 60)),
     );
     await post(user, doomed);
-    const rollsBefore = await rollsOf(user.id);
+    const rollsBefore = await rollsOf(user.id, CAPPED_KINDS);
     expect(rollsBefore).toHaveLength(5);
     const luckBefore = await db`select * from public.drop_luck where user_id = ${user.id}`;
 
@@ -206,7 +217,7 @@ describe('daily caps by the session local date', () => {
       ),
     );
 
-    expect(await rollsOf(user.id)).toEqual(rollsBefore);
+    expect(await rollsOf(user.id, CAPPED_KINDS)).toEqual(rollsBefore);
     expect(await db`select * from public.drop_luck where user_id = ${user.id}`).toEqual(luckBefore);
   });
 });
@@ -256,7 +267,7 @@ describe('PR rolls', () => {
     const prSession = payloadAt(heavier, [aSet(customId, 0, 60)]);
     const response = await post(user, prSession);
     expect(response.body.prs).toHaveLength(1);
-    const rolls = (await rollsOf(user.id)).filter((row) => row.session_id === prSession.id);
+    const rolls = (await rollsOf(user.id, CAPPED_KINDS)).filter((row) => row.session_id === prSession.id);
     expect(rolls.map((row) => row.kind)).toEqual(['regular']);
   });
 });
@@ -269,7 +280,10 @@ describe('cardio rolls', () => {
     const session = payloadAt(start, [aBout(runId, 0, { durationS: 600 }), aBout(runId, 1, { durationS: 540 })]);
     await post(user, session);
     const rolls = (await rollsOf(user.id)).filter((row) => row.session_id === session.id);
-    expect(rolls.map((row) => [row.set_id, row.kind])).toEqual([[session.sets[0].id, 'regular']]);
+    expect(rolls.map((row) => [row.set_id, row.kind])).toEqual([
+      [session.sets[0].id, 'regular'],
+      [session.sets[0].id, 'pet'],
+    ]);
   });
 
   it('gives an interval bout with 4 work minutes a regular roll and a shorter one none', async () => {
@@ -282,7 +296,7 @@ describe('cardio rolls', () => {
     ]);
     await post(user, session);
     const rolls = (await rollsOf(user.id)).filter((row) => row.session_id === session.id);
-    expect(rolls.map((row) => row.set_id)).toEqual([session.sets[0].id]);
+    expect(new Set(rolls.map((row) => row.set_id))).toEqual(new Set([session.sets[0].id]));
   });
 });
 
@@ -310,7 +324,7 @@ describe('sessions that never roll', () => {
     const payload = payloadAt(start, [aSet(benchId, 0, 60), aSet(benchId, 1, 60), aSet(benchId, 2, 60)]);
     const first = await post(user, payload);
     const countsAfterFirst = await rowCounts(user.id, lootTablesCounted);
-    expect(countsAfterFirst.loot_rolls).toBe(3);
+    expect(countsAfterFirst.loot_rolls).toBe(6);
     const retry = await post(user, payload);
     expect(retry.rawBody).toBe(first.rawBody);
     expect(await rowCounts(user.id, lootTablesCounted)).toEqual(countsAfterFirst);
@@ -419,7 +433,7 @@ describe('immutability', () => {
     await expect(db`update public.loot_rolls set hit = true where user_id = ${user.id}`).rejects.toThrow('append_only');
     await expect(db`delete from public.loot_rolls where user_id = ${user.id}`).rejects.toThrow('append_only');
     expect(await rollsOf(user.id)).toEqual(before);
-    expect(before).toHaveLength(5);
+    expect(before.filter((row) => row.kind === 'regular')).toHaveLength(5);
   });
 
   it('rejects updating or deleting a ledger entry', async () => {
@@ -458,8 +472,8 @@ describe('out-of-order sync', () => {
     await post(user, earlier);
     const rolls = await rollsOf(user.id);
     expect(rolls.filter((row) => row.session_id === later.id)).toEqual(rollsBefore);
-    expect(rolls.filter((row) => row.session_id === earlier.id).map((row) => row.set_id)).toEqual(
-      earlier.sets.map((set) => set.id),
-    );
+    expect(
+      rolls.filter((row) => row.session_id === earlier.id && row.kind === 'regular').map((row) => row.set_id),
+    ).toEqual(earlier.sets.map((set) => set.id));
   });
 });

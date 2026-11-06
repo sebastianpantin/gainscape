@@ -52,7 +52,7 @@ describe('groupItems', () => {
     expect(groups.map((group) => [group.title, group.slots, group.found])).toEqual([
       ['Gear', 42, 0],
       ['Materials', 6, 0],
-      ['Pets', 4, 0],
+      ['Pets', 14, 0],
       ['Scrolls', 36, 0],
     ]);
   });

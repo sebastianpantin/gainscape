@@ -59,3 +59,17 @@ test('the newest pet follows you on Today until you pick another one', async ({ 
   await companion(page, 'Spotter Pup').click();
   await expect(page.getByRole('heading', { name: 'Pets' })).toBeVisible();
 });
+
+test('a skill pet names its skill and can follow you on Today', async ({ page }) => {
+  const username = uniqueUsername('skillpet');
+  await register(page, username);
+  await grantItems(username, { squat_frog: 1 });
+  await page.reload();
+  await expect(companion(page, 'Squat Frog')).toBeVisible();
+
+  await openItems(page);
+  await page.getByRole('main').getByRole('button', { name: 'Squat Frog', exact: true }).click();
+  const details = page.getByRole('region', { name: 'Item details' });
+  await expect(details).toContainText('The Legs pet.');
+  await expect(details.getByRole('button', { name: 'Shown on Train' })).toBeDisabled();
+});

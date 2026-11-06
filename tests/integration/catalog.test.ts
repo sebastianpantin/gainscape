@@ -63,7 +63,7 @@ describe('catalog ids', () => {
       select (select count(*) from public.items where retired_at is null)::int as items,
              (select count(*) from public.recipes where retired_at is null)::int as recipes,
              (select count(*) from public.drop_tables where retired_at is null)::int as tables`;
-    expect(counts).toEqual({ items: 88, recipes: 36, tables: 2 });
+    expect(counts).toEqual({ items: 98, recipes: 36, tables: 3 });
   });
 
   it('seeds 36 challenges, each granted by exactly one scroll', async () => {

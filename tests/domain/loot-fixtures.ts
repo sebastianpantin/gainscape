@@ -4,6 +4,7 @@ import {
   type LootDayState,
   type LootTable,
   type LootTables,
+  type PetTable,
   type Rng,
   type RollKind,
   sfc32FromSeed,
@@ -29,9 +30,24 @@ const RARE_FIXTURE: LootTable = {
   entries: [entry('scroll', 5), entry('pet', 1), entry('ingot', 20, 2, 4)],
 };
 
-export const FIXTURE_TABLES: LootTables = { regular: REGULAR_FIXTURE, rare: RARE_FIXTURE };
+const pet = (skillId: string) => ({ itemId: `item-${skillId}-pet`, itemKey: `${skillId}_pet`, skillId });
 
-export const FRESH_DAY: LootDayState = { regularUsed: 0, prUsed: 0, dryRolls: 0, alreadyRolled: new Set() };
+export const PETS_FIXTURE: PetTable = {
+  id: 'table-pets',
+  key: 'pets',
+  entries: [pet('legs'), pet('chest'), pet('back')],
+};
+
+export const FIXTURE_TABLES: LootTables = { regular: REGULAR_FIXTURE, rare: RARE_FIXTURE, pets: PETS_FIXTURE };
+
+export const FRESH_DAY: LootDayState = {
+  regularUsed: 0,
+  prUsed: 0,
+  petUsed: 0,
+  dryRolls: 0,
+  alreadyRolled: new Set(),
+  ownedPetItemIds: new Set(),
+};
 
 export function candidate(setId: string, position: number, overrides: Partial<LootCandidate> = {}): LootCandidate {
   return {
@@ -43,6 +59,7 @@ export function candidate(setId: string, position: number, overrides: Partial<Lo
     interval: false,
     personalRecord: false,
     builtIn: true,
+    skillXp: [],
     ...overrides,
   };
 }
