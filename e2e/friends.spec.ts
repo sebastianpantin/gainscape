@@ -19,9 +19,9 @@ async function logRun(page: Page, minutes: number, distance: number) {
   await logWorkout(page, () => logCardio(page, 'running', 'Running', [{ minutes, distance, effort: 'Moderate' }]));
 }
 
-test('Friends shows your own username to share, and copies it', async ({ page, context }) => {
+test('Friends shows your own username to share, and copies it', async ({ page, context, browserName }) => {
   const username = uniqueUsername('fr_own');
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await context.grantPermissions(browserName === 'webkit' ? ['clipboard-read'] : ['clipboard-read', 'clipboard-write']);
   await register(page, username);
   await openTab(page, 'Friends');
 
