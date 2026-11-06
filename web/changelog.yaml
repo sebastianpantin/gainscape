@@ -1,3 +1,10 @@
+- prs: [211]
+  version: 0.27.0
+  date: 2026-11-06
+  title: Skill pets
+  items:
+    - Every skill now has its own legendary pet, from the Pec Pelican to the Stretch Cat. Each one can drop only while you train its skill, and the more XP a set earns in that skill, the better your odds.
+    - You never get the same skill pet twice. Once found, it joins your Pets collection and can follow you on the Train tab.
 - prs: [208]
   version: 0.26.1
   date: 2026-11-04
