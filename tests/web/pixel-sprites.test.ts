@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ITEM_ICON_KINDS } from '../../supabase/functions/_shared/domain/crafting.ts';
+import { ITEM_ICON_KINDS, SKILL_PET_ICON_KINDS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import {
   itemSprite,
   LEVEL_UP,
@@ -83,5 +83,20 @@ describe('pixel sprites', () => {
   ])('draws the %s art at 12x12 in palette colours', (_name, sprite) => {
     expect([sprite.cols, sprite.rows]).toEqual([12, 12]);
     for (const fill of fills(sprite)) expect(fill === '#000' || tokenColours.has(fill), fill).toBe(true);
+  });
+
+  it.each([...SKILL_PET_ICON_KINDS])('draws the %s pet as its own 12x12 art in palette colours', (kind) => {
+    const sprite = itemSprite(kind, '#ffb000');
+    expect([sprite.cols, sprite.rows]).toEqual([12, 12]);
+    expect(itemSprite(kind, '#6fa8dc')).toEqual(sprite);
+    expect(sprite).not.toEqual(itemSprite('pet', '#ffb000'));
+    const used = fills(sprite);
+    expect(used.size).toBeLessThanOrEqual(6);
+    for (const fill of used) expect(fill === '#000' || tokenColours.has(fill), fill).toBe(true);
+  });
+
+  it('gives every skill pet a different sprite', () => {
+    const drawn = SKILL_PET_ICON_KINDS.map((kind) => JSON.stringify(itemSprite(kind, '#ffb000')));
+    expect(new Set(drawn).size).toBe(SKILL_PET_ICON_KINDS.length);
   });
 });

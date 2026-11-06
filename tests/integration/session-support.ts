@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect } from 'vitest';
-import type { CardioSetInput } from '@domain/index.ts';
+import type { CardioSetInput, RollKind } from '@domain/index.ts';
 import {
   createTestUser,
   db,
@@ -162,10 +162,13 @@ export async function editSession(
   return response;
 }
 
-export async function rollsOf(userId: string) {
+const ALL_ROLL_KINDS: readonly RollKind[] = ['regular', 'pr', 'pet'];
+
+export async function rollsOf(userId: string, kinds: readonly RollKind[] = ALL_ROLL_KINDS) {
   return await db`
     select session_id, set_id, kind, local_date::text, roll_index, drop_table_id, chance::float, hit, loot_version
-    from public.loot_rolls where user_id = ${userId} order by local_date, kind, roll_index`;
+    from public.loot_rolls where user_id = ${userId} and kind::text = any(${kinds as RollKind[]})
+    order by local_date, kind, roll_index`;
 }
 
 export async function expectLedgerMatchesItems(userId: string): Promise<void> {

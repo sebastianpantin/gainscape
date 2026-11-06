@@ -6,7 +6,22 @@ export const GEAR_SLOTS = ['belt', 'chalk', 'straps', 'sleeves', 'shoes', 'glove
 
 export type GearSlot = (typeof GEAR_SLOTS)[number];
 
-export const ITEM_ICON_KINDS = [...GEAR_SLOTS, 'scraps', 'pet', 'scroll'] as const;
+export const SKILL_PET_ICON_KINDS = [
+  'pelican',
+  'bat',
+  'owl',
+  'squirrel',
+  'frog',
+  'armadillo',
+  'gecko',
+  'hare',
+  'fox',
+  'cat',
+] as const;
+
+export type SkillPetIconKey = (typeof SKILL_PET_ICON_KINDS)[number];
+
+export const ITEM_ICON_KINDS = [...GEAR_SLOTS, 'scraps', 'pet', 'scroll', ...SKILL_PET_ICON_KINDS] as const;
 
 export type ItemIconKey = (typeof ITEM_ICON_KINDS)[number];
 

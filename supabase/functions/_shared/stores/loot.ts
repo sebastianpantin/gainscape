@@ -9,7 +9,6 @@ import {
   type LootDayState,
   type LootEntry,
   lootRollKey,
-  type LootTable,
   type LootTables,
   type RevokeReason,
   rollSessionLoot,
@@ -25,34 +24,48 @@ function sumByItem(entries: readonly (readonly [string, number])[]): Map<string,
   return totals;
 }
 
+type StoredEntry = LootEntry & { skillId: string | null };
+
 async function loadLootTables(tx: Transaction): Promise<LootTables> {
   const rows = await tx`
-    select t.id as table_id, t.key as table_key, i.id as item_id, i.key as item_key,
+    select t.id as table_id, t.key as table_key, i.id as item_id, i.key as item_key, i.skill_id,
            e.weight, e.min_quantity, e.max_quantity
     from public.drop_tables t
     join public.drop_entries e on e.drop_table_id = t.id
     join public.items i on i.id = e.item_id
-    where t.key in ('regular', 'rare')
+    where t.key in ('regular', 'rare', 'pets')
       and t.retired_at is null and i.retired_at is null
     order by t.key, i.key`;
-  const tables = new Map<string, { id: string; key: string; entries: LootEntry[] }>();
+  const tables = new Map<string, { id: string; key: string; entries: StoredEntry[] }>();
   for (const row of rows) {
-    const table = tables.get(row.table_key) ?? { id: row.table_id, key: row.table_key, entries: [] as LootEntry[] };
+    const table = tables.get(row.table_key) ?? { id: row.table_id, key: row.table_key, entries: [] as StoredEntry[] };
     table.entries.push({
       itemId: row.item_id,
       itemKey: row.item_key,
+      skillId: row.skill_id,
       weight: row.weight,
       minQuantity: row.min_quantity,
       maxQuantity: row.max_quantity,
     });
     tables.set(row.table_key, table);
   }
-  const tableFor = (key: string): LootTable => {
+  const tableFor = (key: string) => {
     const table = tables.get(key);
     if (table === undefined) throw new Error(`drop table ${key} is missing or empty`);
     return table;
   };
-  return { regular: tableFor('regular'), rare: tableFor('rare') };
+  const pets = tableFor('pets');
+  return {
+    regular: tableFor('regular'),
+    rare: tableFor('rare'),
+    pets: {
+      id: pets.id,
+      key: pets.key,
+      entries: pets.entries.flatMap(({ itemId, itemKey, skillId }) =>
+        skillId === null ? [] : [{ itemId, itemKey, skillId }],
+      ),
+    },
+  };
 }
 
 async function loadLootDayState(
@@ -62,7 +75,7 @@ async function loadLootDayState(
   regularTableId: string,
   setIds: readonly string[],
 ): Promise<LootDayState> {
-  const [used, [luck], rolled] = await Promise.all([
+  const [used, [luck], rolled, ownedPets] = await Promise.all([
     tx`
       select kind, count(*)::int as count from public.loot_rolls
       where user_id = ${userId} and local_date = ${localDate}::date
@@ -71,13 +84,19 @@ async function loadLootDayState(
     tx`
       select set_id, kind from public.loot_rolls
       where user_id = ${userId} and set_id = any(${setIds as string[]}::uuid[])`,
+    tx`
+      select u.item_id from public.user_items u
+      join public.items i on i.id = u.item_id
+      where u.user_id = ${userId} and u.quantity > 0 and i.skill_id is not null`,
   ]);
   const usedOf = (kind: RollKind) => used.find((row) => row.kind === kind)?.count ?? 0;
   return {
     regularUsed: usedOf('regular'),
     prUsed: usedOf('pr'),
+    petUsed: usedOf('pet'),
     dryRolls: luck?.dry_rolls ?? 0,
     alreadyRolled: new Set(rolled.map((row) => lootRollKey(row.set_id, row.kind))),
+    ownedPetItemIds: new Set(ownedPets.map((row) => row.item_id as string)),
   };
 }
 

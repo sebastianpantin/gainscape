@@ -102,6 +102,7 @@ export interface LootConfig {
   readonly baseChance: number;
   readonly badLuckStep: number;
   readonly maxChance: number;
+  readonly petExpectedXp: number;
 }
 
 export const DEFAULT_LOOT: LootConfig = Object.freeze({
@@ -114,6 +115,7 @@ export const DEFAULT_LOOT: LootConfig = Object.freeze({
   baseChance: 0.1,
   badLuckStep: 0.03,
   maxChance: 0.4,
+  petExpectedXp: 350_000,
 });
 
 export type ItemRarityRank = 'common' | 'uncommon' | 'rare' | 'legendary';

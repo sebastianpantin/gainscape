@@ -45,7 +45,8 @@ Pipeline:
 Loot determinism (changing any of these silently changes existing players' drops):
 
 - Production RNG: HMAC-SHA256 of `lootSeedMessage(userId, setId, kind)` keyed by `LOOT_SECRET` (`../loot-seeds.ts`) fed to `sfc32FromSeed` (16 seed bytes, 12 discarded outputs). Do not change `lootSeedMessage`, the sfc32 constants, the order of `rng.next()` calls in `rollSessionLoot`, `pickEntry`'s key-sorted order or `quantityFor`.
-- The same set always rolls the same result, so replays and edits never re-roll; recorded rolls are skipped through `LootDayState.alreadyRolled` and `lootRollKey`. `eligibleRolls` (regular before pr, position order) is exactly what the store seeds.
+- The same set always rolls the same result, so replays and edits never re-roll; recorded rolls are skipped through `LootDayState.alreadyRolled` and `lootRollKey`. `eligibleRolls` (regular, pr, pet, position order) is what the store seeds; a pet roll may skip its seed when no missing pet's skill earned XP.
+- Pet rolls: chance is XP in skills whose pet the user lacks over `petExpectedXp`, the pet is picked by that XP, owned pets never roll, and there is no daily cap.
 - Revocation: `revocationReason` never revokes an `edited_unchanged` or `later` drop rolled under an older `LOOT_VERSION` or in a session completed under an older `BALANCE_VERSION`, so a rule change keeps existing drops (`rebuild-caches` never revokes). Drops on changed sets of the edited session are judged under current rules; removed sets and deleted sessions always revoke. `unchangedSetIds` uses the same test as the web `dropsAtRisk`, so that warning stays exact.
 
 Balance and versioning:

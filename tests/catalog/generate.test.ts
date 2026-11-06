@@ -58,15 +58,15 @@ describe('catalog generator', () => {
     expect(seed).not.toContain('\r');
   });
 
-  it('expands 88 items, 36 recipes with 72 inputs and 2 drop tables with 62 entries', () => {
+  it('expands 98 items, 36 recipes with 72 inputs and 3 drop tables with 72 entries', () => {
     const catalog = loadCatalogData();
-    expect(catalog.items).toHaveLength(88);
+    expect(catalog.items).toHaveLength(98);
     expect(catalog.recipes).toHaveLength(36);
     expect(catalog.recipes.flatMap((recipe) => recipe.inputs)).toHaveLength(72);
-    expect(catalog.dropTables.flatMap((table) => table.entries)).toHaveLength(62);
-    expect(catalog.dropTables.map((table) => table.key)).toEqual(['regular', 'rare']);
+    expect(catalog.dropTables.flatMap((table) => table.entries)).toHaveLength(72);
+    expect(catalog.dropTables.map((table) => table.key)).toEqual(['regular', 'rare', 'pets']);
     const countOf = (kind: string) => catalog.items.filter((item) => item.kind === kind).length;
-    expect([countOf('gear'), countOf('material'), countOf('pet'), countOf('scroll')]).toEqual([42, 6, 4, 36]);
+    expect([countOf('gear'), countOf('material'), countOf('pet'), countOf('scroll')]).toEqual([42, 6, 14, 36]);
     expect(catalog.items.map((item) => item.sortOrder)).toEqual(catalog.items.map((_, index) => index + 1));
   });
 
@@ -287,7 +287,10 @@ describe('catalog generator', () => {
     expect(items).toContain('grants_challenge_id');
     expect(items).not.toContain('grants_exercise_id');
     expect(items).toContain(
-      `'scroll_deficit_deadlift', 'Scroll: Deadlift and Pull-up', 'scroll', 'rare', null, null, 'scroll', '', ${idFor(catalogNames.challenge('deadlift_and_pull_up')).raw},`,
+      `'scroll_deficit_deadlift', 'Scroll: Deadlift and Pull-up', 'scroll', 'rare', null, null, 'scroll', '', ${idFor(catalogNames.challenge('deadlift_and_pull_up')).raw}, null,`,
+    );
+    expect(items).toContain(
+      `'squat_frog', 'Squat Frog', 'pet', 'legendary', null, null, 'frog', 'The Legs pet. Sinks into the deepest squat in the gym and springs back up.', null, ${idFor(catalogNames.skill('legs')).raw},`,
     );
     expect(retireStatement(statements, 'challenges').match(/extensions\.uuid_generate_v5\([^)]*\)/g)).toEqual(
       catalog.challenges.map((challenge) => idFor(catalogNames.challenge(challenge.key)).raw),

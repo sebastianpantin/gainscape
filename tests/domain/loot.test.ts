@@ -113,7 +113,7 @@ describe('daily caps', () => {
           const { rolls } = rollSessionLoot(
             candidates,
             FIXTURE_TABLES,
-            { regularUsed, prUsed, dryRolls: 0, alreadyRolled },
+            { ...FRESH_DAY, regularUsed, prUsed, alreadyRolled },
             DEFAULT_LOOT,
             fixedRngFor('caps'),
           );
@@ -336,7 +336,7 @@ describe('golden session', () => {
     candidate('work-2', 5, { effectiveReps: 1 }),
     candidate('custom-pr', 6, { personalRecord: true, builtIn: false }),
   ];
-  const goldenDay = { regularUsed: 1, prUsed: 0, dryRolls: 6, alreadyRolled: new Set<string>() };
+  const goldenDay = { ...FRESH_DAY, regularUsed: 1, dryRolls: 6 };
   const roll = () =>
     rollSessionLoot(goldenCandidates, FIXTURE_TABLES, goldenDay, DEFAULT_LOOT, fixedRngFor('golden-3'));
 

@@ -9,10 +9,12 @@ import {
   type RollKind,
   type SetKind,
   type SetResult,
+  type SkillXp,
   setKind,
 } from './types.ts';
 
 const CHANCE_DECIMALS = 5;
+const PET_CHANCE_DECIMALS = 10;
 const GUARANTEED_CHANCE = 1;
 
 export interface LootEntry {
@@ -29,9 +31,22 @@ export interface LootTable {
   entries: readonly LootEntry[];
 }
 
+export interface PetEntry {
+  itemId: string;
+  itemKey: string;
+  skillId: string;
+}
+
+export interface PetTable {
+  id: string;
+  key: string;
+  entries: readonly PetEntry[];
+}
+
 export interface LootTables {
   regular: LootTable;
   rare: LootTable;
+  pets: PetTable;
 }
 
 export interface LootCandidate {
@@ -43,13 +58,16 @@ export interface LootCandidate {
   interval: boolean;
   personalRecord: boolean;
   builtIn: boolean;
+  skillXp: readonly SkillXp[];
 }
 
 export interface LootDayState {
   regularUsed: number;
   prUsed: number;
+  petUsed: number;
   dryRolls: number;
   alreadyRolled: ReadonlySet<string>;
+  ownedPetItemIds: ReadonlySet<string>;
 }
 
 interface LootDrop {
@@ -94,6 +112,7 @@ export function lootCandidates(sets: readonly SetResult[], catalog: Catalog): Lo
         (result.cardio?.records.length ?? 0) > 0 ||
         (result.holdRecords?.length ?? 0) > 0,
       builtIn: catalog.exercises.get(result.set.exerciseId)?.builtIn ?? false,
+      skillXp: result.skillXp,
     }));
 }
 
@@ -106,30 +125,44 @@ function qualifiesForRegular(candidate: LootCandidate, cfg: LootConfig): boolean
 export function qualifies(kind: RollKind, candidate: LootCandidate, cfg: LootConfig): boolean {
   const regular = qualifiesForRegular(candidate, cfg);
   if (kind === 'regular') return regular;
+  if (kind === 'pet') return regular && candidate.skillXp.some(({ xp }) => xp > 0);
   return regular && candidate.personalRecord && candidate.builtIn;
+}
+
+export function petChance(xp: number, cfg: LootConfig): number {
+  return Math.min(GUARANTEED_CHANCE, roundTo(PET_CHANCE_DECIMALS, xp / cfg.petExpectedXp));
 }
 
 export function chance(dryRolls: number, cfg: LootConfig): number {
   return Math.min(cfg.maxChance, roundTo(CHANCE_DECIMALS, cfg.baseChance + dryRolls * cfg.badLuckStep));
 }
 
-export function pickEntry(table: LootTable, u: number): LootEntry {
-  const entries = [...table.entries].sort((a, b) => compareStrings(a.itemKey, b.itemKey));
-  const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
+interface WeightedEntry {
+  itemKey: string;
+  weight: number;
+}
+
+function pickWeighted<Entry extends WeightedEntry>(entries: readonly Entry[], u: number, tableKey: string): Entry {
+  const sorted = [...entries].sort((a, b) => compareStrings(a.itemKey, b.itemKey));
+  const total = sorted.reduce((sum, entry) => sum + entry.weight, 0);
   const target = Math.floor(u * total);
   let cumulative = 0;
-  for (const entry of entries) {
+  for (const entry of sorted) {
     cumulative += entry.weight;
     if (cumulative > target) return entry;
   }
-  throw new RangeError(`loot table ${table.key} has no entry for ${u}`);
+  throw new RangeError(`loot table ${tableKey} has no entry for ${u}`);
+}
+
+export function pickEntry(table: LootTable, u: number): LootEntry {
+  return pickWeighted(table.entries, u, table.key);
 }
 
 export function quantityFor(entry: LootEntry, u: number): number {
   return entry.minQuantity + Math.floor(u * (entry.maxQuantity - entry.minQuantity + 1));
 }
 
-const ROLL_KINDS: readonly RollKind[] = Object.freeze(['regular', 'pr']);
+const ROLL_KINDS: readonly RollKind[] = Object.freeze(['regular', 'pr', 'pet']);
 
 interface EligibleRoll {
   candidate: LootCandidate;
@@ -155,6 +188,19 @@ function dropFrom(table: LootTable, rng: Rng): LootDrop {
   return { itemId: entry.itemId, itemKey: entry.itemKey, quantity: quantityFor(entry, rng.next()) };
 }
 
+function missingPetsTrained(
+  candidate: LootCandidate,
+  pets: PetTable,
+  owned: ReadonlySet<string>,
+): (PetEntry & WeightedEntry)[] {
+  const xpBySkill = new Map<string, number>();
+  for (const { skillId, xp } of candidate.skillXp) xpBySkill.set(skillId, (xpBySkill.get(skillId) ?? 0) + xp);
+  return pets.entries
+    .filter((pet) => !owned.has(pet.itemId))
+    .map((pet) => ({ ...pet, weight: xpBySkill.get(pet.skillId) ?? 0 }))
+    .filter((pet) => pet.weight > 0);
+}
+
 export function rollSessionLoot(
   candidates: readonly LootCandidate[],
   tables: LootTables,
@@ -163,7 +209,8 @@ export function rollSessionLoot(
   rngFor: LootRngFor,
 ): LootPassResult {
   const rolls: LootRollResult[] = [];
-  let { regularUsed, prUsed, dryRolls } = dayState;
+  let { regularUsed, prUsed, petUsed, dryRolls } = dayState;
+  const ownedPets = new Set(dayState.ownedPetItemIds);
 
   for (const { candidate, kind } of eligibleRolls(candidates, dayState, cfg)) {
     if (kind === 'regular' && regularUsed < cfg.regularRollsPerDay) {
@@ -195,6 +242,27 @@ export function rollSessionLoot(
         drop: dropFrom(tables.rare, rng),
       });
       prUsed += 1;
+    }
+    if (kind === 'pet') {
+      const pets = missingPetsTrained(candidate, tables.pets, ownedPets);
+      const rollChance = petChance(
+        pets.reduce((sum, pet) => sum + pet.weight, 0),
+        cfg,
+      );
+      if (rollChance === 0) continue;
+      const rng = rngFor(candidate.setId, 'pet');
+      const pet = rng.next() < rollChance ? pickWeighted(pets, rng.next(), tables.pets.key) : null;
+      if (pet !== null) ownedPets.add(pet.itemId);
+      rolls.push({
+        setId: candidate.setId,
+        kind: 'pet',
+        tableId: tables.pets.id,
+        rollIndex: petUsed,
+        chance: rollChance,
+        hit: pet !== null,
+        drop: pet === null ? null : { itemId: pet.itemId, itemKey: pet.itemKey, quantity: 1 },
+      });
+      petUsed += 1;
     }
   }
   return { rolls, dryRolls };
@@ -280,7 +348,7 @@ export function revokedInReplayOrder(
   const positionOf = new Map(sets.map((set) => [set.setId, set.position]));
   const rank = (drop: RevokedDrop & { sessionId: string }) => sessionRank.get(drop.sessionId) ?? -1;
   const position = (drop: RevokedDrop) => positionOf.get(drop.setId) ?? Number.MAX_SAFE_INTEGER;
-  const sourceOrder = (drop: RevokedDrop) => (drop.source === 'regular' ? 0 : 1);
+  const sourceOrder = (drop: RevokedDrop) => ROLL_KINDS.indexOf(drop.source);
   return [...drops]
     .sort((a, b) => rank(a) - rank(b) || position(a) - position(b) || sourceOrder(a) - sourceOrder(b))
     .map((drop) => ({
