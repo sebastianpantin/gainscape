@@ -38,7 +38,7 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 | `docs/`     | Go-live documentation (see `docs/AGENTS.md`)                                                               |
 | `.github/`  | CI workflow (see `.github/AGENTS.md`)                                                                      |
 
-Generated or ignored directories: `node_modules/`, `web/dist/`, `test-results/`, `playwright-report/`, `ci-logs/`, `supabase/.temp/`, `supabase/.branches/`, `.omc/`, `.wrangler/`. Never edit or document them.
+Generated or ignored directories: `node_modules/`, `web/dist/`, `test-results/`, `playwright-report/`, `ci-logs/`, `supabase/.temp/`, `supabase/.branches/`, `.omc/`, `.wrangler/`, `.trail/cache/`. Never edit or document them.
 
 ## For AI Agents
 

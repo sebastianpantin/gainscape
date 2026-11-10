@@ -5,3 +5,5 @@ playwright-report/
 package-lock.json
 supabase/.temp/
 supabase/.branches/
+.trail/
+.claude/settings.local.json

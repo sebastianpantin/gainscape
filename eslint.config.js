@@ -53,7 +53,15 @@ const NO_LINK_BACK_LINK = {
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/', 'web/dist/', 'test-results/', 'playwright-report/', 'supabase/.temp/', '.wrangler/'],
+    ignores: [
+      'node_modules/',
+      'web/dist/',
+      'test-results/',
+      'playwright-report/',
+      'supabase/.temp/',
+      '.wrangler/',
+      '.trail/',
+    ],
   },
   js.configs.recommended,
   tseslint.configs.strict,
