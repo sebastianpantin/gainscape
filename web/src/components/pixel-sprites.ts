@@ -267,6 +267,24 @@ export const LOOT_CHEST: Sprite = fromRows(
   { K: INK, L: ACCENT_LIGHT, D: ACCENT_DARK, G: GOLD, Y: '#ffe27a' },
 );
 
+export const LOOT_CHEST_OPEN: Sprite = fromRows(
+  [
+    '..KKKKKKKK..',
+    '.KLLLLLLLLK.',
+    '.KDDDDDDDDK.',
+    'KYYYYYYYYYYK',
+    'KYLLLLLLLLYK',
+    'KKKKKYYKKKKK',
+    'KDDDKYYKDDDK',
+    'KDDDDKKDDDDK',
+    'KDDDDDDDDDDK',
+    'KGGGGGGGGGGK',
+    'KDDDDDDDDDDK',
+    'KKKKKKKKKKKK',
+  ],
+  { K: INK, L: ACCENT_LIGHT, D: ACCENT_DARK, G: GOLD, Y: '#ffe27a' },
+);
+
 export function isSkillKey(key: string): key is SkillKey {
   return Object.hasOwn(SKILL_SPRITES, key);
 }

@@ -7,6 +7,7 @@ import {
   LEVEL_UP,
   LOGO,
   LOOT_CHEST,
+  LOOT_CHEST_OPEN,
   SKILL_SPRITES,
   type Sprite,
   TROPHY,
@@ -32,6 +33,7 @@ const allSprites: [string, Sprite][] = [
   ['trophy', TROPHY],
   ['level up', LEVEL_UP],
   ['loot chest', LOOT_CHEST],
+  ['open loot chest', LOOT_CHEST_OPEN],
   ...Object.entries(SKILL_SPRITES),
   ...ITEM_KINDS.map((kind): [string, Sprite] => [kind, itemSprite(kind, '#ffb000')]),
 ];
@@ -80,9 +82,15 @@ describe('pixel sprites', () => {
   it.each([
     ['level-up', LEVEL_UP],
     ['loot chest', LOOT_CHEST],
+    ['open loot chest', LOOT_CHEST_OPEN],
   ])('draws the %s art at 12x12 in palette colours', (_name, sprite) => {
     expect([sprite.cols, sprite.rows]).toEqual([12, 12]);
     for (const fill of fills(sprite)) expect(fill === '#000' || tokenColours.has(fill), fill).toBe(true);
+  });
+
+  it('draws the open chest as a different picture of the same chest', () => {
+    expect(LOOT_CHEST_OPEN).not.toEqual(LOOT_CHEST);
+    expect(fills(LOOT_CHEST_OPEN)).toEqual(fills(LOOT_CHEST));
   });
 
   it.each([...SKILL_PET_ICON_KINDS])('draws the %s pet as its own 12x12 art in palette colours', (kind) => {

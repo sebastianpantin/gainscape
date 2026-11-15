@@ -1,22 +1,18 @@
 import { type UseQueryResult, useQuery } from '@tanstack/react-query';
 import { levelProgress } from '@domain/index.ts';
-import type { DropSummary } from '@domain/types.ts';
 import { type RefObject, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CountUp } from '../../components/CountUp.tsx';
-import { ItemIcon, LevelUpIcon, LootChestIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
+import { LevelUpIcon, SkillIcon, TrophyIcon } from '../../components/PixelArt.tsx';
 import type { Skill } from '../../lib/exercises/catalog-rules.ts';
 import {
   celebrate,
-  FANFARE_CELEBRATIONS,
   LEVEL_UP_CELEBRATIONS,
   type LevelUpTier,
   primeCelebrationAudio,
 } from '../../lib/platform/celebration-effects.ts';
 import { prefersReducedMotion } from '../../lib/platform/device-effects.ts';
 import { formatXp, sessionXp } from '../../lib/format.ts';
-import { GLOSSARY } from '../../lib/ui/glossary.ts';
-import { type CatalogItem, colorFor, fanfareFor } from '../../lib/collection/item-rules.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
 import { sessionTimingParts } from '../../lib/workout/session-timing-rules.ts';
 import { type CacheFirstLoad } from '../../offline/cache-first.ts';
@@ -52,14 +48,9 @@ import {
   xpToNextLevelText,
 } from './reveal-rules.ts';
 import { describeRecord } from '../../lib/workout/record-text-rules.ts';
+import { type LoadedItems, LootPanel } from './LootPanel.tsx';
 
 const TOTAL_COUNT_UP_MS = 900;
-const LEGENDARY_GLOW_AFTER_POP_S = 0.35;
-
-function dropAnimationDelay(popDelayS: number, glows: boolean): string {
-  return glows ? `${popDelayS}s, ${popDelayS + LEGENDARY_GLOW_AFTER_POP_S}s` : `${popDelayS}s`;
-}
-const LOOT_DROP_STAGGER_S = 0.08;
 const INTERACTIVE_ELEMENTS = 'a[href], button, input, select, textarea, summary, [role="button"], [role="link"]';
 
 const NO_SKILLS: readonly Skill[] = [];
@@ -199,89 +190,6 @@ function LevelUpTakeover({ timing, takeover, nameOf }: LevelUpTakeoverProps) {
         )}
       </div>
     </div>
-  );
-}
-
-type LoadedItems = CatalogItem[] | 'loading' | 'failed';
-
-function LootDrops({ drops, items }: { drops: readonly DropSummary[]; items: LoadedItems }) {
-  if (items === 'loading') return <p className="muted">Loading loot…</p>;
-  if (items === 'failed') return <p className="muted">Couldn't load the loot names. See items for what dropped.</p>;
-  return (
-    <ul className="record-list" aria-label="Loot drops">
-      {drops.map((drop, index) => {
-        const item = items.find((candidate) => candidate.id === drop.itemId);
-        return (
-          <li
-            key={drop.dropId}
-            className={item ? `loot-drop rarity-${item.rarity}` : 'loot-drop'}
-            style={{ animationDelay: dropAnimationDelay(index * LOOT_DROP_STAGGER_S, item?.rarity === 'legendary') }}
-          >
-            <ItemIcon kind={item?.icon ?? 'scraps'} color={item ? colorFor(item) : colorFor({ tier: null })} />
-            <span style={{ flex: 1 }}>{item?.name ?? 'Unknown item'}</span>
-            <span className="pixel">×{drop.quantity}</span>
-            {drop.source === 'pr' && (
-              <span className="accent-text tiny" role="img" aria-label={GLOSSARY.pr.name}>
-                PR
-              </span>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-interface LootPanelProps {
-  userId: string;
-  drops: readonly DropSummary[];
-  items: LoadedItems;
-  delayS: number;
-}
-
-function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
-  const [open, setOpen] = useState(false);
-  const heading = useRef<HTMLHeadingElement>(null);
-  const hasDrops = drops.length > 0;
-  const fanfare = Array.isArray(items)
-    ? fanfareFor(drops.flatMap((drop) => items.find((candidate) => candidate.id === drop.itemId)?.rarity ?? []))
-    : null;
-
-  const flashes = open && fanfare !== null;
-
-  const openLoot = () => {
-    setOpen(true);
-    heading.current?.focus();
-    if (fanfare) celebrate(userId, FANFARE_CELEBRATIONS[fanfare]);
-  };
-
-  return (
-    <section
-      className={flashes ? `panel stack loot-${fanfare}` : 'panel stack rise'}
-      aria-label="Loot"
-      style={flashes ? undefined : { animationDelay: `${delayS}s` }}
-    >
-      <div className="row spread">
-        <h2 ref={heading} tabIndex={-1}>
-          Loot
-        </h2>
-        {hasDrops && (
-          <Link className="tiny" to="/collection/items">
-            See items
-          </Link>
-        )}
-      </div>
-      {!hasDrops && <p className="muted">No loot this time</p>}
-      {hasDrops && !open && (
-        <button type="button" className="loot-chest" onClick={openLoot}>
-          <span className="loot-chest-art">
-            <LootChestIcon />
-          </span>
-          Open loot
-        </button>
-      )}
-      {hasDrops && <div role="status">{open && <LootDrops drops={drops} items={items} />}</div>}
-    </section>
   );
 }
 
