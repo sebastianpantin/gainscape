@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
 import { expect, test } from './support/fixtures.ts';
 import { expectNoAxeViolations } from './support/a11y.ts';
 import { logBench, logExercise, logWorkout, openTab, register, uniqueUsername } from './support/app.ts';
@@ -12,6 +12,13 @@ function thisWeek(page: Page) {
 
 function weekStrip(page: Page) {
   return thisWeek(page).getByRole('link', { name: /^This week: .*\. Open Stats$/ });
+}
+
+async function expectAboveTabBar(page: Page, locator: Locator) {
+  const box = (await locator.boundingBox())!;
+  const tabBar = (await page.getByRole('navigation', { name: 'Main' }).boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(tabBar.y);
 }
 
 function todayName(): string {
@@ -45,37 +52,45 @@ test('the week strip lights today after a workout, opens Stats and stays offline
   await context.setOffline(false);
 });
 
-test('the progress card shows the character in its gear, the pet, the XP to the next level and the quest step', async ({
+test('under the week strip, your character, pet and next level sit above Start workout; the quest step follows below', async ({
   page,
 }) => {
   const username = uniqueUsername('home_hero');
   await register(page, username);
   const hero = page.getByRole('region', { name: 'Your progress' });
+  const start = page.getByRole('button', { name: 'Start workout' });
   await expect(hero.getByRole('link', { name: 'Character with no gear. Open Items', exact: true })).toBeVisible();
   await expect(hero.getByRole('link', { name: /your companion/ })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Start workout' })).toBeInViewport();
+  await expect(start).toBeInViewport();
 
   await grantItems(username, { spotter_pup: 1, rookie_belt: 1 });
   await equipGear(username, 'rookie_belt');
   await seedQuestProgress(username, 'x_marks_the_squat', { stepIndex: 1, stepProgress: 40 });
   await logBench(page);
+  await page.setViewportSize({ width: 360, height: 640 });
   await openTab(page, 'Train');
 
   await expect(hero.getByRole('link', { name: 'Spotter Pup, your companion, excited' })).toBeVisible();
   const character = hero.getByRole('link', { name: 'Character wearing Rookie belt. Open Items', exact: true });
-  await expect(character).toBeVisible();
+  await expectAboveTabBar(page, character);
   await expect(hero.getByRole('link', { name: /^\w[\w ]* is [\d,]+ XP from level \d+$/ })).toBeVisible();
   await expect(hero.getByRole('progressbar', { name: /^\w[\w ]* XP to level \d+$/ })).toHaveAttribute(
     'aria-valuetext',
     /^[\d,]+ of [\d,]+ XP$/,
   );
-  await expect(hero).toContainText('Step 2 of 2: 100 reps of Back Squat in total');
-  const quest = hero.getByRole('progressbar', { name: 'X Marks the Squat progress' });
+  await expectAboveTabBar(page, start);
+  expect((await hero.boundingBox())!.y).toBeGreaterThan((await thisWeek(page).boundingBox())!.y);
+  expect((await hero.boundingBox())!.y).toBeLessThan((await start.boundingBox())!.y);
+
+  const questCard = page.getByRole('region', { name: 'Active quest' });
+  await expect(questCard).toContainText('Step 2 of 2: 100 reps of Back Squat in total');
+  const quest = questCard.getByRole('progressbar', { name: 'X Marks the Squat progress' });
   await expect(quest).toHaveAttribute('aria-valuetext', '40 / 100 reps');
   await expect(quest).toHaveAttribute('aria-valuenow', '70');
+  expect((await questCard.boundingBox())!.y).toBeGreaterThan((await start.boundingBox())!.y);
   await expectNoAxeViolations(page, 'train home, progress');
 
-  await hero.getByRole('link', { name: 'X Marks the Squat', exact: true }).click();
+  await questCard.getByRole('link', { name: 'X Marks the Squat', exact: true }).click();
   await expect(page).toHaveURL(/\/skills\/quests$/);
   await openTab(page, 'Train');
   await character.click();

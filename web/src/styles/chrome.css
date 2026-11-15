@@ -126,15 +126,15 @@
 
 .training-hero {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-3);
 }
 
 .hero-character {
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  gap: var(--space-4);
+  gap: var(--space-1);
+  flex-shrink: 0;
 }
 
 .hero-character-link {

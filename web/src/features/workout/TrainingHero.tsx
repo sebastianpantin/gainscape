@@ -18,7 +18,7 @@ import { useCompanionPet } from './use-companion-pet.ts';
 import { usePetMood } from './use-pet-mood.ts';
 import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
 
-const HERO_CHARACTER_SIZE = 128;
+const HERO_CHARACTER_SIZE = 96;
 
 function CharacterLink({ slots, badgeColor }: { slots: readonly EquippedGear[]; badgeColor: BadgeColor }) {
   return (
@@ -56,23 +56,20 @@ function LevelUpBar({ userId, levelUp }: { userId: string; levelUp: NearestLevel
 interface TrainingHeroProps {
   userId: string;
   standing: StandingState;
-  unit: UnitPref;
   today: string | null;
   trainedDates: readonly string[] | undefined;
 }
 
-export function TrainingHero({ userId, standing, unit, today, trainedDates }: TrainingHeroProps) {
+export function TrainingHero({ userId, standing, today, trainedDates }: TrainingHeroProps) {
   const headingId = useId();
   const pet = useCompanionPet(userId);
   const mood = usePetMood(userId, today, trainedDates);
   const equipped = useQuery(loadoutQuery(userId)).data?.slots ?? [];
   const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
-  const questLog = useQuery(questsQuery(userId)).data?.loaded;
-  const quest = questLog ? activeQuestLine(questLog, unit) : null;
   const levelUp = standing.status === 'ready' ? nearestLevelUp(standing.standing.skills) : null;
   const hasCharacter = badgeColor !== null || pet !== null;
 
-  if (!hasCharacter && !levelUp && !quest) return null;
+  if (!hasCharacter && !levelUp) return null;
   return (
     <section className="panel training-hero" aria-labelledby={headingId}>
       <h2 id={headingId} className="visually-hidden">
@@ -84,25 +81,34 @@ export function TrainingHero({ userId, standing, unit, today, trainedDates }: Tr
           {pet && <PetCompanion pet={pet} mood={mood} />}
         </div>
       )}
-      <div className="stack hero-progress">
-        {levelUp && <LevelUpBar userId={userId} levelUp={levelUp} />}
-        {quest && (
-          <div className="stack hero-bar">
-            <Link className="tap-link" to="/skills/quests">
-              {quest.questName}
-            </Link>
-            <span className="muted tiny">{quest.stepText}</span>
-            <ProgressBar
-              fraction={quest.fraction}
-              label={`${quest.questName} progress`}
-              valueText={quest.progressText}
-            />
-            <span className="muted tiny" aria-hidden="true">
-              {quest.progressText}
-            </span>
-          </div>
-        )}
-      </div>
+      {levelUp && (
+        <div className="hero-progress">
+          <LevelUpBar userId={userId} levelUp={levelUp} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function ActiveQuestCard({ userId, unit }: { userId: string; unit: UnitPref }) {
+  const headingId = useId();
+  const questLog = useQuery(questsQuery(userId)).data?.loaded;
+  const quest = questLog ? activeQuestLine(questLog, unit) : null;
+
+  if (!quest) return null;
+  return (
+    <section className="panel stack hero-bar" aria-labelledby={headingId}>
+      <h2 id={headingId} className="visually-hidden">
+        Active quest
+      </h2>
+      <Link className="tap-link" to="/skills/quests">
+        {quest.questName}
+      </Link>
+      <span className="muted tiny">{quest.stepText}</span>
+      <ProgressBar fraction={quest.fraction} label={`${quest.questName} progress`} valueText={quest.progressText} />
+      <span className="muted tiny" aria-hidden="true">
+        {quest.progressText}
+      </span>
     </section>
   );
 }
