@@ -3,7 +3,7 @@ import { type ReactNode, useId, useRef, useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { EmptyState } from '../../components/EmptyState.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
-import { CharacterFigure } from '../../components/PixelArt.tsx';
+import { CharacterFigure, GymScene } from '../../components/PixelArt.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
@@ -12,6 +12,13 @@ import { characterLabel, characterLook } from '../../lib/collection/character-ru
 import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { capitalized } from '../../lib/names.ts';
 import { BADGE_COLOR_KEYS, type BadgeColor } from '../../lib/profile/profile-rules.ts';
+import {
+  SCENE_STAGE_MIN_TOTAL_LEVEL,
+  SCENE_STAGES,
+  type SceneInput,
+  sceneFor,
+  sceneLabel,
+} from '../../lib/progress/scene-rules.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { DEFAULT_PLATE_SETTINGS, barbellPlates, barbellPlatesText } from '../../lib/workout/plate-rules.ts';
 import { type DraftSet } from '../../offline/draft-format.ts';
@@ -87,6 +94,43 @@ function SampleCharacters() {
           <SampleCharacter key={tier} slots={sampleLoadout(tier)} badge="stone" caption={`Full ${tier}`} />
         ))}
       </div>
+    </>
+  );
+}
+
+const SAMPLE_SCENE_OTHER_HOURS = [6, 19, 23] as const;
+
+function SampleScene({ input, caption }: { input: SceneInput; caption: string }) {
+  const scene = sceneFor(input);
+  return (
+    <figure className="stack design-scene">
+      <div className="training-scene">
+        <GymScene scene={scene} label={sceneLabel(scene)} />
+      </div>
+      <figcaption className="muted tiny">{caption}</figcaption>
+    </figure>
+  );
+}
+
+function SampleScenes() {
+  const fullest = { totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL.skyline, recordCount: 3, questPoints: 15 };
+  return (
+    <>
+      {SCENE_STAGES.map((stage, index) => (
+        <SampleScene
+          key={stage}
+          input={{
+            totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL[stage],
+            recordCount: index,
+            questPoints: index * index,
+            hour: 12,
+          }}
+          caption={`${capitalized(stage)}, total level ${SCENE_STAGE_MIN_TOTAL_LEVEL[stage]}`}
+        />
+      ))}
+      {SAMPLE_SCENE_OTHER_HOURS.map((hour) => (
+        <SampleScene key={hour} input={{ ...fullest, hour }} caption={`Skyline at ${hour}:00`} />
+      ))}
     </>
   );
 }
@@ -284,6 +328,10 @@ export function DesignScreen() {
 
       <GallerySection title="Character">
         <SampleCharacters />
+      </GallerySection>
+
+      <GallerySection title="Gym scene">
+        <SampleScenes />
       </GallerySection>
 
       <GallerySection title="Chips and tags">

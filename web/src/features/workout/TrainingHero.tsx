@@ -1,24 +1,32 @@
 import { levelProgress } from '@domain/index.ts';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { CharacterFigure } from '../../components/PixelArt.tsx';
+import { CharacterFigure, GymScene } from '../../components/PixelArt.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { characterLabel, characterLinkLabel, characterLook } from '../../lib/collection/character-rules.ts';
 import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
+import { type Scene, sceneFor, sceneLabel } from '../../lib/progress/scene-rules.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
-import { loadoutQuery, profileQuery, questsQuery } from '../../lib/query/queries.ts';
+import {
+  loadoutQuery,
+  profileQuery,
+  questPointsQuery,
+  questsQuery,
+  recordTimelineQuery,
+} from '../../lib/query/queries.ts';
 import { activeQuestLine } from '../../lib/quests/quest-rules.ts';
 import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
 import { useCountUp } from '../../lib/ui/use-count-up.ts';
 import { PetCompanion } from './PetCompanion.tsx';
 import { useCompanionPet } from './use-companion-pet.ts';
 import { usePetMood } from './use-pet-mood.ts';
+import { useSceneGrowth } from './use-scene-growth.ts';
 import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
 
-const HERO_CHARACTER_SIZE = 96;
+const SCENE_CHARACTER_SIZE = 96;
 
 function CharacterLink({ slots, badgeColor }: { slots: readonly EquippedGear[]; badgeColor: BadgeColor }) {
   return (
@@ -26,7 +34,7 @@ function CharacterLink({ slots, badgeColor }: { slots: readonly EquippedGear[]; 
       <CharacterFigure
         look={characterLook(slots, badgeColor)}
         label={characterLabel(slots)}
-        size={HERO_CHARACTER_SIZE}
+        size={SCENE_CHARACTER_SIZE}
       />
     </Link>
   );
@@ -58,38 +66,69 @@ interface TrainingHeroProps {
   standing: StandingState;
   today: string | null;
   trainedDates: readonly string[] | undefined;
+  hour: number;
 }
 
-export function TrainingHero({ userId, standing, today, trainedDates }: TrainingHeroProps) {
+function useScene(userId: string, standing: StandingState, hour: number): Scene | null {
+  const records = useInfiniteQuery(recordTimelineQuery(userId)).data?.pages[0]?.loaded;
+  const questPoints = useQuery(questPointsQuery(userId)).data;
+  if (standing.status !== 'ready') return null;
+  return sceneFor({
+    totalLevel: standing.standing.totalLevel,
+    recordCount: records?.length ?? 0,
+    questPoints: questPoints ?? 0,
+    hour,
+  });
+}
+
+export function TrainingHero({ userId, standing, today, trainedDates, hour }: TrainingHeroProps) {
   const headingId = useId();
   const pet = useCompanionPet(userId);
   const mood = usePetMood(userId, today, trainedDates);
   const loadout = useQuery(loadoutQuery(userId));
   const equipped = loadout.isSuccess ? (loadout.data?.slots ?? []) : null;
   const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
-  const levelUp = standing.status === 'ready' ? nearestLevelUp(standing.standing.skills) : null;
-  const hasCharacter = badgeColor !== null || pet !== null;
+  const scene = useScene(userId, standing, hour);
+  const growthText = useSceneGrowth(userId, scene?.stage ?? null);
 
-  if (!hasCharacter && !levelUp) return null;
   return (
     <section className="panel training-hero" aria-labelledby={headingId}>
       <h2 id={headingId} className="visually-hidden">
-        Your progress
+        Your gym
       </h2>
-      {hasCharacter && (
-        <div className="hero-character">
-          {badgeColor !== null && equipped !== null && <CharacterLink slots={equipped} badgeColor={badgeColor} />}
-          {badgeColor !== null && loadout.isPending && (
-            <span className="hero-character-placeholder" aria-hidden="true" />
-          )}
-          {pet && <PetCompanion pet={pet} mood={mood} />}
-        </div>
+      <div className="training-scene">
+        <GymScene scene={scene} label={scene && sceneLabel(scene)} />
+        {badgeColor !== null && equipped !== null && (
+          <span className="scene-character">
+            <CharacterLink slots={equipped} badgeColor={badgeColor} />
+          </span>
+        )}
+        {pet && (
+          <span className="scene-pet">
+            <PetCompanion pet={pet} mood={mood} />
+          </span>
+        )}
+      </div>
+      {growthText && (
+        <p className="notice scene-grew" role="status">
+          {growthText}
+        </p>
       )}
-      {levelUp && (
-        <div className="hero-progress">
-          <LevelUpBar userId={userId} levelUp={levelUp} />
-        </div>
-      )}
+    </section>
+  );
+}
+
+export function NextLevelCard({ userId, standing }: { userId: string; standing: StandingState }) {
+  const headingId = useId();
+  const levelUp = standing.status === 'ready' ? nearestLevelUp(standing.standing.skills) : null;
+
+  if (!levelUp) return null;
+  return (
+    <section className="panel" aria-labelledby={headingId}>
+      <h2 id={headingId} className="visually-hidden">
+        Next level
+      </h2>
+      <LevelUpBar userId={userId} levelUp={levelUp} />
     </section>
   );
 }

@@ -1,3 +1,4 @@
+import { type Scene } from '../lib/progress/scene-rules.ts';
 import { monogramFor } from '../lib/progress/standing-rules.ts';
 import { type CharacterLook, characterFrames } from './character-sprites.ts';
 import {
@@ -12,9 +13,24 @@ import {
   type Sprite,
   TROPHY,
 } from './pixel-sprites.ts';
+import { sceneSprite } from './scene-sprites.ts';
+
+function PixelRects({ sprite }: { sprite: Sprite }) {
+  return sprite.pixels.map((pixel, index) => (
+    <rect
+      key={index}
+      x={pixel.x}
+      y={pixel.y}
+      width={pixel.w}
+      height={pixel.h}
+      fill={pixel.fill}
+      opacity={pixel.opacity}
+    />
+  ));
+}
 
 function PixelGrid({ sprite, size }: { sprite: Sprite; size: number }) {
-  const { pixels, cols, rows } = sprite;
+  const { cols, rows } = sprite;
   return (
     <svg
       width={size * (cols / rows)}
@@ -23,17 +39,7 @@ function PixelGrid({ sprite, size }: { sprite: Sprite; size: number }) {
       shapeRendering="crispEdges"
       aria-hidden="true"
     >
-      {pixels.map((pixel, index) => (
-        <rect
-          key={index}
-          x={pixel.x}
-          y={pixel.y}
-          width={pixel.w}
-          height={pixel.h}
-          fill={pixel.fill}
-          opacity={pixel.opacity}
-        />
-      ))}
+      <PixelRects sprite={sprite} />
     </svg>
   );
 }
@@ -86,6 +92,27 @@ export function CharacterFigure({ look, label, size = 128 }: { look: CharacterLo
       <span className="character-frame bobbed">
         <PixelGrid sprite={bobbed} size={size} />
       </span>
+    </span>
+  );
+}
+
+export function GymScene({ scene, label }: { scene: Scene | null; label: string | null }) {
+  const sprite = sceneSprite(scene);
+  const art = (
+    <svg
+      className="scene-art"
+      viewBox={`0 0 ${sprite.cols} ${sprite.rows}`}
+      preserveAspectRatio="xMidYMax slice"
+      shapeRendering="crispEdges"
+      aria-hidden="true"
+    >
+      <PixelRects sprite={sprite} />
+    </svg>
+  );
+  if (label === null) return art;
+  return (
+    <span className="scene-art-label" role="img" aria-label={label}>
+      {art}
     </span>
   );
 }
