@@ -1,5 +1,6 @@
 import { formatXp } from '../../lib/format.ts';
-import { type PreviewRecord, recordChipLabel } from './record-preview.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
+import { type PreviewRecord, recordGainText, recordLandingLabel } from './record-preview.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 export const SET_DONE_VIBRATION_MS: readonly number[] = Object.freeze([12]);
@@ -14,11 +15,13 @@ export interface SetFeedbackInput {
   becameRecord: () => boolean;
   vibrate: boolean;
   sound: boolean;
+  unit: UnitPref;
 }
 
 export interface SetDrop {
   xpText: string | null;
   record: boolean;
+  recordGain: string | null;
   announcement: string;
 }
 
@@ -44,19 +47,24 @@ function earnedText(preview: SetPreview): string | null {
   return `about ${formatXp(preview.xp)} XP`;
 }
 
-function setDrop(label: string, preview: SetPreview, record: PreviewRecord | null): SetDrop {
+function setDrop(label: string, preview: SetPreview, record: PreviewRecord | null, unit: UnitPref): SetDrop {
   const earned = earnedText(preview);
   const logged = earned === null ? `${label} logged` : `${label} logged, ${earned}`;
   return {
     xpText: preview.basis === 'unknown' || preview.xp <= 0 ? null : `+${previewXpLabel(preview)} XP`,
     record: record !== null,
-    announcement: record === null ? logged : `${logged}. ${recordChipLabel(record)}`,
+    recordGain: record === null ? null : recordGainText(record, unit),
+    announcement: record === null ? logged : `${logged}. ${recordLandingLabel(record, unit)}`,
   };
+}
+
+export function landsRecord(drop: SetDrop | null): boolean {
+  return drop !== null && drop.recordGain !== null;
 }
 
 export function setFeedback(input: SetFeedbackInput): SetFeedback {
   const logged = !input.wasDone && input.isDone;
-  const drop = logged ? setDrop(input.label, input.preview(), input.record()) : null;
+  const drop = logged ? setDrop(input.label, input.preview(), input.record(), input.unit) : null;
   if (!input.isDone) return { drop, vibrationMs: null, celebratesRecord: false };
   const anyCue = input.vibrate || input.sound;
   if (anyCue && input.becameRecord()) return { drop, vibrationMs: null, celebratesRecord: true };

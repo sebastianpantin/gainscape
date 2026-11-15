@@ -59,12 +59,12 @@ test('time a dead hang and a plate pinch in seconds, then see the record chip wh
   await openTab(page, 'Train');
   await page.getByRole('button', { name: 'Start workout' }).click();
   const longerHang = setRow(await addExercise(page, 'dead hang', 'Dead Hang'), 1);
-  const recordChip = longerHang.getByRole('img', { name: 'Predicted longest hold: 45 s' });
+  const recordChip = longerHang.getByRole('img', { name: 'Predicted longest hold: 45 s, +15 s on your best' });
   await longerHang.getByRole('spinbutton', { name: 'Seconds, set 1', exact: true }).fill('25');
   await longerHang.getByRole('radio', { name: 'Hard', exact: true }).click();
   await longerHang.getByRole('button', { name: 'Done set 1' }).click();
   await expect(longerHang.getByRole('img', { name: /^Predicted longest hold/ })).toHaveCount(0);
   await longerHang.getByRole('spinbutton', { name: 'Seconds, set 1', exact: true }).fill('45');
   await longerHang.getByRole('radio', { name: 'Failure', exact: true }).click();
-  await expect(recordChip).toHaveText('Longest hold!');
+  await expect(recordChip).toHaveText('Longest hold! +15 s');
 });

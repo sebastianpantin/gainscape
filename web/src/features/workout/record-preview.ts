@@ -10,7 +10,9 @@ import {
 import type { RecordBaseline } from '../../lib/workout/session-baseline-rules.ts';
 import { formatCardioRecord } from '../../lib/workout/cardio-rules.ts';
 import { capitalized } from '../../lib/names.ts';
-import { HOLD_DISTANCE_UNIT } from '../../lib/units.ts';
+import { roundTo } from '@domain/math.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
+import { HOLD_DISTANCE_UNIT, shownWeight } from '../../lib/units.ts';
 import type { DraftExercise } from '../../offline/draft-format.ts';
 
 export type HoldRecordPreview = { kind: 'hold'; gain: CardioRecordGain };
@@ -110,4 +112,35 @@ export function recordChipLabel(record: PreviewRecord): string {
     return `Predicted ${holdRecordName(record)}: ${formatCardioRecord(record.gain.kind, record.gain.value, HOLD_DISTANCE_UNIT)}`;
   }
   return record.kind === 'rep_max' ? `Predicted new ${record.reps} rep max` : `Predicted most reps: ${record.reps}`;
+}
+
+const SHOWN_GAIN_DECIMALS = 2;
+
+function addedText(amount: number): string {
+  return `+${roundTo(SHOWN_GAIN_DECIMALS, amount)}`;
+}
+
+export function recordGainText(record: PreviewRecord, unit: UnitPref): string | null {
+  if (record.kind === 'cardio') return null;
+  if (record.kind === 'hold') {
+    const { kind, value, previous } = record.gain;
+    if (previous === null) return null;
+    return `+${formatCardioRecord(kind, value - previous, HOLD_DISTANCE_UNIT)}`;
+  }
+  if (record.kind === 'bodyweight_reps') {
+    if (record.previousReps === null) return null;
+    const extra = record.reps - record.previousReps;
+    return `${addedText(extra)} ${extra === 1 ? 'rep' : 'reps'}`;
+  }
+  if (record.previousLoadKg === null) return null;
+  const heavier = roundTo(
+    SHOWN_GAIN_DECIMALS,
+    shownWeight(record.loadKg, unit) - shownWeight(record.previousLoadKg, unit),
+  );
+  return heavier > 0 ? `${addedText(heavier)} ${unit}` : null;
+}
+
+export function recordLandingLabel(record: PreviewRecord, unit: UnitPref): string {
+  const gain = recordGainText(record, unit);
+  return gain === null ? recordChipLabel(record) : `${recordChipLabel(record)}, ${gain} on your best`;
 }

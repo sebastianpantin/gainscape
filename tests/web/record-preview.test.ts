@@ -14,6 +14,8 @@ import {
   becomesRecord,
   recordChipLabel,
   recordChipText,
+  recordGainText,
+  recordLandingLabel,
   recordForSet,
 } from '../../web/src/features/workout/record-preview.ts';
 import { placedInDay } from '../../web/src/offline/draft-days.ts';
@@ -213,6 +215,52 @@ describe('cardio record chips', () => {
     expect(recordChipText(record)).toBe('New bests!');
     expect(recordChipLabel(record)).toBe('Predicted best distance, pace and time');
     expect(recordChipLabel({ kind: 'cardio', gains: [pace] })).toBe('Predicted best pace');
+  });
+});
+
+describe('recordGainText', () => {
+  it('says how much heavier a rep max is than the best it beats, in the shown unit', () => {
+    expect(recordGainText({ kind: 'rep_max', reps: 5, loadKg: 102.5, previousLoadKg: 100 }, 'kg')).toBe('+2.5 kg');
+    expect(recordGainText({ kind: 'rep_max', reps: 5, loadKg: 102.06, previousLoadKg: 99.79 }, 'lb')).toBe('+5 lb');
+  });
+
+  it('counts the extra reps of a most-reps record', () => {
+    expect(recordGainText({ kind: 'bodyweight_reps', reps: 13, previousReps: 12 }, 'kg')).toBe('+1 rep');
+    expect(recordGainText({ kind: 'bodyweight_reps', reps: 15, previousReps: 12 }, 'kg')).toBe('+3 reps');
+  });
+
+  it('adds the extra time or distance of a hold record', () => {
+    expect(recordGainText({ kind: 'hold', gain: { kind: 'duration', value: 45, previous: 30 } }, 'kg')).toBe('+15 s');
+    expect(recordGainText({ kind: 'hold', gain: { kind: 'distance', value: 60, previous: 40 } }, 'lb')).toBe('+20 m');
+  });
+
+  it('shows no gain that rounds to nothing in the shown unit', () => {
+    expect(recordGainText({ kind: 'rep_max', reps: 5, loadKg: 100.02, previousLoadKg: 100 }, 'lb')).toBeNull();
+  });
+
+  it('has no gain for a first record, which beats nothing', () => {
+    expect(recordGainText({ kind: 'rep_max', reps: 5, loadKg: 100, previousLoadKg: null }, 'kg')).toBeNull();
+    expect(recordGainText({ kind: 'bodyweight_reps', reps: 8, previousReps: null }, 'kg')).toBeNull();
+    expect(recordGainText({ kind: 'hold', gain: { kind: 'duration', value: 45, previous: null } }, 'kg')).toBeNull();
+  });
+
+  it('leaves cardio bests to their own chip text', () => {
+    const gains = [{ kind: 'distance' as const, value: 5000, previous: 4000 }];
+    expect(recordGainText({ kind: 'cardio', gains }, 'kg')).toBeNull();
+  });
+});
+
+describe('recordLandingLabel', () => {
+  it('adds the gain to the predicted record', () => {
+    expect(recordLandingLabel({ kind: 'rep_max', reps: 5, loadKg: 102.5, previousLoadKg: 100 }, 'kg')).toBe(
+      'Predicted new 5 rep max, +2.5 kg on your best',
+    );
+  });
+
+  it('is the plain predicted record when it beats nothing', () => {
+    expect(recordLandingLabel({ kind: 'rep_max', reps: 5, loadKg: 100, previousLoadKg: null }, 'kg')).toBe(
+      'Predicted new 5 rep max',
+    );
   });
 });
 

@@ -153,6 +153,7 @@ export function WorkoutScreen({ userId }: WorkoutScreenProps) {
     draft,
     baseline: sessionBaseline,
     bodyweightKg,
+    unit: unitPref,
   });
   const commands = useWorkoutCommands({
     userId,
