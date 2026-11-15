@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { characterLabel, characterLook } from '../../web/src/lib/collection/character-rules.ts';
+import { characterLabel, characterLinkLabel, characterLook } from '../../web/src/lib/collection/character-rules.ts';
 import { type EquippedGear } from '../../web/src/lib/collection/gear-rules.ts';
 import { TIER_COLORS } from '../../web/src/lib/collection/item-rules.ts';
 import { BADGE_COLORS } from '../../web/src/lib/profile/profile-rules.ts';
@@ -53,5 +53,12 @@ describe('characterLabel', () => {
     expect(characterLabel([titanGloves, forgedChalk, rookieBelt])).toBe(
       'Character wearing Rookie belt, Forged chalk and Titan gloves',
     );
+  });
+});
+
+describe('characterLinkLabel', () => {
+  it('names the character and where the link goes', () => {
+    expect(characterLinkLabel([])).toBe('Character with no gear. Open Items');
+    expect(characterLinkLabel([rookieBelt])).toBe('Character wearing Rookie belt. Open Items');
   });
 });

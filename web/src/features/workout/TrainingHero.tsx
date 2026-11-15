@@ -2,13 +2,14 @@ import { levelProgress } from '@domain/index.ts';
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
-import { ItemIcon } from '../../components/PixelArt.tsx';
+import { CharacterFigure } from '../../components/PixelArt.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
-import { type EquippedGear, equippedGearLabel } from '../../lib/collection/gear-rules.ts';
-import { colorFor } from '../../lib/collection/item-rules.ts';
+import { characterLabel, characterLinkLabel, characterLook } from '../../lib/collection/character-rules.ts';
+import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
+import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
-import { loadoutQuery, questsQuery } from '../../lib/query/queries.ts';
+import { loadoutQuery, profileQuery, questsQuery } from '../../lib/query/queries.ts';
 import { activeQuestLine } from '../../lib/quests/quest-rules.ts';
 import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
 import { useCountUp } from '../../lib/ui/use-count-up.ts';
@@ -17,14 +18,16 @@ import { useCompanionPet } from './use-companion-pet.ts';
 import { usePetMood } from './use-pet-mood.ts';
 import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
 
-const GEAR_ICON_SIZE = 28;
+const HERO_CHARACTER_SIZE = 128;
 
-function EquippedGearLink({ slots }: { slots: readonly EquippedGear[] }) {
+function CharacterLink({ slots, badgeColor }: { slots: readonly EquippedGear[]; badgeColor: BadgeColor }) {
   return (
-    <Link className="hero-gear" to="/collection/items" aria-label={equippedGearLabel(slots)}>
-      {slots.map((gear) => (
-        <ItemIcon key={gear.slot} kind={gear.slot} color={colorFor(gear)} size={GEAR_ICON_SIZE} />
-      ))}
+    <Link className="hero-character-link" to="/collection/items" aria-label={characterLinkLabel(slots)}>
+      <CharacterFigure
+        look={characterLook(slots, badgeColor)}
+        label={characterLabel(slots)}
+        size={HERO_CHARACTER_SIZE}
+      />
     </Link>
   );
 }
@@ -63,10 +66,11 @@ export function TrainingHero({ userId, standing, unit, today, trainedDates }: Tr
   const pet = useCompanionPet(userId);
   const mood = usePetMood(userId, today, trainedDates);
   const equipped = useQuery(loadoutQuery(userId)).data?.slots ?? [];
+  const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
   const questLog = useQuery(questsQuery(userId)).data?.loaded;
   const quest = questLog ? activeQuestLine(questLog, unit) : null;
   const levelUp = standing.status === 'ready' ? nearestLevelUp(standing.standing.skills) : null;
-  const hasCharacter = pet !== null || equipped.length > 0;
+  const hasCharacter = badgeColor !== null || pet !== null;
 
   if (!hasCharacter && !levelUp && !quest) return null;
   return (
@@ -76,8 +80,8 @@ export function TrainingHero({ userId, standing, unit, today, trainedDates }: Tr
       </h2>
       {hasCharacter && (
         <div className="hero-character">
+          {badgeColor !== null && <CharacterLink slots={equipped} badgeColor={badgeColor} />}
           {pet && <PetCompanion pet={pet} mood={mood} />}
-          {equipped.length > 0 && <EquippedGearLink slots={equipped} />}
         </div>
       )}
       <div className="stack hero-progress">

@@ -17,3 +17,7 @@ export function characterLabel(slots: readonly EquippedGear[]): string {
   const names = loadoutBySlot(slots).flatMap((row) => row.gear?.name ?? []);
   return names.length === 0 ? 'Character with no gear' : `Character wearing ${GEAR_LIST.format(names)}`;
 }
+
+export function characterLinkLabel(slots: readonly EquippedGear[]): string {
+  return `${characterLabel(slots)}. Open Items`;
+}

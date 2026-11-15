@@ -45,10 +45,15 @@ test('the week strip lights today after a workout, opens Stats and stays offline
   await context.setOffline(false);
 });
 
-test('the progress card shows the pet, the gear, the XP to the next level and the quest step', async ({ page }) => {
+test('the progress card shows the character in its gear, the pet, the XP to the next level and the quest step', async ({
+  page,
+}) => {
   const username = uniqueUsername('home_hero');
   await register(page, username);
-  await expect(page.getByRole('region', { name: 'Your progress' })).toHaveCount(0);
+  const hero = page.getByRole('region', { name: 'Your progress' });
+  await expect(hero.getByRole('link', { name: 'Character with no gear. Open Items', exact: true })).toBeVisible();
+  await expect(hero.getByRole('link', { name: /your companion/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeInViewport();
 
   await grantItems(username, { spotter_pup: 1, rookie_belt: 1 });
   await equipGear(username, 'rookie_belt');
@@ -56,9 +61,9 @@ test('the progress card shows the pet, the gear, the XP to the next level and th
   await logBench(page);
   await openTab(page, 'Train');
 
-  const hero = page.getByRole('region', { name: 'Your progress' });
   await expect(hero.getByRole('link', { name: 'Spotter Pup, your companion, excited' })).toBeVisible();
-  await expect(hero.getByRole('link', { name: 'Loadout: Rookie belt. Open Items' })).toBeVisible();
+  const character = hero.getByRole('link', { name: 'Character wearing Rookie belt. Open Items', exact: true });
+  await expect(character).toBeVisible();
   await expect(hero.getByRole('link', { name: /^\w[\w ]* is [\d,]+ XP from level \d+$/ })).toBeVisible();
   await expect(hero.getByRole('progressbar', { name: /^\w[\w ]* XP to level \d+$/ })).toHaveAttribute(
     'aria-valuetext',
@@ -72,6 +77,9 @@ test('the progress card shows the pet, the gear, the XP to the next level and th
 
   await hero.getByRole('link', { name: 'X Marks the Squat', exact: true }).click();
   await expect(page).toHaveURL(/\/skills\/quests$/);
+  await openTab(page, 'Train');
+  await character.click();
+  await expect(page).toHaveURL(/\/collection\/items$/);
 });
 
 test('highlights show the last workout, the latest record and the rarest drop, each linking on', async ({
