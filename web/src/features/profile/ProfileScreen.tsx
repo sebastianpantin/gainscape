@@ -90,6 +90,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         </p>
       )}
       <ProfileCard
+        userId={userId}
         profile={profile}
         totalLevel={levels?.totalLevel ?? null}
         combatLevel={levels?.combatLevel ?? null}

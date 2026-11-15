@@ -1,7 +1,9 @@
 import { BADGE_COLORS, type BadgeColor, initialsFor, TRAINING_FOCUS_LABELS } from '../../lib/profile/profile.ts';
 import type { CardProfile } from '../../lib/profile/profile-view.ts';
+import { ProfileCharacter } from './ProfileCharacter.tsx';
 
 interface ProfileCardProps {
+  userId: string;
   profile: CardProfile;
   totalLevel: number | null;
   combatLevel: number | null;
@@ -58,6 +60,7 @@ function detailLine(profile: CardProfile): string {
 }
 
 export function ProfileCard({
+  userId,
   profile,
   totalLevel,
   combatLevel,
@@ -70,11 +73,12 @@ export function ProfileCard({
     <section className="panel stack profile-card" aria-label="Profile">
       <div className="row" style={{ gap: 'var(--space-3)' }}>
         <ProfileBadge named color={profile.badgeColor} initials={initialsFor(profile.displayName, profile.username)} />
-        <div className="stack" style={{ gap: 'var(--space-0-5)', minWidth: 0 }}>
+        <div className="stack profile-names">
           <NameHeading className="profile-name">{profile.displayName}</NameHeading>
           <span className="muted">@{profile.username}</span>
           <span className="tiny">{detailLine(profile)}</span>
         </div>
+        <ProfileCharacter userId={userId} badgeColor={profile.badgeColor} />
       </div>
       {profile.bio && <p>{profile.bio}</p>}
       <dl className="stat-tiles">

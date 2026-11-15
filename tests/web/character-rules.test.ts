@@ -49,6 +49,10 @@ describe('characterLabel', () => {
     expect(characterLabel([])).toBe('Character with no gear');
   });
 
+  it('says when the gear is hidden', () => {
+    expect(characterLabel(null)).toBe('Character, gear hidden');
+  });
+
   it('lists the gear in slot order', () => {
     expect(characterLabel([titanGloves, forgedChalk, rookieBelt])).toBe(
       'Character wearing Rookie belt, Forged chalk and Titan gloves',

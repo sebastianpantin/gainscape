@@ -74,9 +74,17 @@ test('the reveal and the workout detail show the gear bonus only with gear equip
 
 async function expectRookieBeltInLoadout(page: Page) {
   await expect(definitionOf(page.getByRole('region', { name: 'Loadout' }), 'Belt')).toHaveText('Rookie belt');
+  await expect(
+    page
+      .getByRole('region', { name: 'Profile' })
+      .getByRole('img', { name: 'Character wearing Rookie belt', exact: true }),
+  ).toBeVisible();
 }
 
-test('the loadout shows on your profile, the friend preview and a friend profile', async ({ newPerson, page }) => {
+test('the loadout and the character wearing it show on your profile, the friend preview and a friend profile', async ({
+  newPerson,
+  page,
+}) => {
   const username = uniqueUsername('gear_pro');
   await register(page, username);
   await grantItems(username, { rookie_belt: 1 });

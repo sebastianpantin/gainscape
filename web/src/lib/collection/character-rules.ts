@@ -13,7 +13,8 @@ export function characterLook(slots: readonly EquippedGear[], badgeColor: BadgeC
   };
 }
 
-export function characterLabel(slots: readonly EquippedGear[]): string {
+export function characterLabel(slots: readonly EquippedGear[] | null): string {
+  if (slots === null) return 'Character, gear hidden';
   const names = loadoutBySlot(slots).flatMap((row) => row.gear?.name ?? []);
   return names.length === 0 ? 'Character with no gear' : `Character wearing ${GEAR_LIST.format(names)}`;
 }
