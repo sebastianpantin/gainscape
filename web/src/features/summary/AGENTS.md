@@ -9,7 +9,7 @@ The post-workout reveal at `/reveal`: XP per skill, level-ups, gear and challeng
 
 ## Map
 
-- `RevealScreen.tsx`: the screen and its choreography.
+- `RevealScreen.tsx`: the screen and its choreography. `LootPanel.tsx`: the chest and its loot run.
 - `reveal-rules.ts`: pure timeline, skip rules and every text the reveal shows (bonuses, challenge outcome, notices). Record lines come from `../../lib/workout/record-text-rules.ts`, shared with the Stats PR timeline. Put new decisions here.
 - `../../offline/finish-outcome.ts`: the Finish outcome the screen shows, remembered in `sessionStorage`.
 - The summary types live in `@domain/types.ts` and are produced by `complete-session`.
@@ -21,7 +21,7 @@ The post-workout reveal at `/reveal`: XP per skill, level-ups, gear and challeng
 - Choreography: every delay comes from `revealTimeline(revealShape(summary))`, compressed so the loot beat never starts after 1.5 s whatever the skill count. A level up adds the takeover: once the last bar has filled, a full-screen `aria-hidden` layer shows one card from `levelUpTakeover`: the skill and its level for a single level up, or a summary listing every level up (biggest first) when there are several, so the wait stays the same however many skills went up. The biggest tier sets its frame, sparks, length and chime. The 1.5 s cap applies before it and again after it. The takeover only decorates; the `Level up!` panel stays the record, so a skip removes the layer and loses nothing. Skip with the floating `Skip` button, a pointer press, Escape, or Enter away from a link, button or field. A skip from the button moves focus to the `Workout complete!` heading.
 - Nothing plays for a history-only save or without a summary: `reveal-still` on `main` turns animations off. It stays on once the choreography settles, so rows that load late appear without animating. Under `prefers-reduced-motion` it starts settled; `e2e/a11y.spec.ts` asserts that.
 - The level-up cue (chime and vibration via `../../lib/platform/celebration-effects.ts`, as the training-device settings allow) primes audio on mount, waits for a suspended context to resume, fires once at the peak of the takeover card with its tier (`LEVEL_UP_CELEBRATIONS`), and never after a skip. A plain level up keeps `LEVEL_UP_CELEBRATION`, which `e2e/reveal.spec.ts` asserts by its vibration.
-- Loot with drops is a separate tap on `Open loot`; a skip never opens it. Opening fills a `role="status"` region and moves focus to the `Loot` heading. A rare or legendary drop plays the fanfare and flashes the panel.
+- Loot with drops is a separate tap on `Open loot` (`LootPanel.tsx`); a skip of the reveal never opens it. Opening fills a `role="status"` region with every row at once, so it announces once, and moves focus to the `Loot` heading. `lootSequence` (`loot-rules.ts`) only stages when each row appears: commonest first and a pet last, longer pauses before rarer drops, the whole run capped. The fanfare, flash and (for legendary) shake fire as the rarest drop lands, not on the tap. A tap or Escape during the run shows everything and plays a pending fanfare at once; reduced motion skips the run. Each row scrolls itself into view as it lands, because the panel sits at the bottom of the reveal.
 - Notices: `challengeNotAppliedText` when the draft planned a challenge but the summary has none (history-only saves keep the scroll; otherwise `complete-session` could not claim a scroll or the challenge or scroll is retired). `unappliedChangesText` when `storedContentDiffers` is set: the server already had this session with other content and stored nothing.
 - `challengeFailReason` says the target rose when the server's `targetLoadsKg` floor is above the planned load, which happens when the e1RM rose since the challenge started.
 - A hold or carry record (a `cardio` summary on a lift with a measure) reads in metres or seconds in either unit setting.
@@ -32,7 +32,7 @@ The post-workout reveal at `/reveal`: XP per skill, level-ups, gear and challeng
 
 ## Testing
 
-- Unit (`make test-web`): `tests/web/reveal-rules.test.ts`, `record-text-rules.test.ts`, `tests/web/finish-outcome.test.ts` (storage faked with `tests/web/memory-storage.ts`).
+- Unit (`make test-web`): `tests/web/reveal-rules.test.ts`, `loot-sequence.test.ts`, `record-text-rules.test.ts`, `tests/web/finish-outcome.test.ts` (storage faked with `tests/web/memory-storage.ts`).
 - E2E (stack): `reveal.spec.ts` (skip, cue, loot tap, reduced motion), `loot.spec.ts`, `challenges.spec.ts`, `a11y.spec.ts`, and the flows that finish a workout.
 
 ## Manual Notes

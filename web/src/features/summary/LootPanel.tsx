@@ -1,45 +1,138 @@
 import type { DropSummary } from '@domain/types.ts';
-import { useRef, useState } from 'react';
+import { type AnimationEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ItemIcon, LootChestIcon } from '../../components/PixelArt.tsx';
-import { type CatalogItem, colorFor, fanfareFor } from '../../lib/collection/item-rules.ts';
-import { celebrate, FANFARE_CELEBRATIONS } from '../../lib/platform/celebration-effects.ts';
+import { ItemIcon, LootChestIcon, OpenLootChestIcon } from '../../components/PixelArt.tsx';
+import { type CatalogItem, colorFor } from '../../lib/collection/item-rules.ts';
+import { celebrate, FANFARE_CELEBRATIONS, primeCelebrationAudio } from '../../lib/platform/celebration-effects.ts';
+import { prefersReducedMotion } from '../../lib/platform/device-effects.ts';
 import { GLOSSARY } from '../../lib/ui/glossary.ts';
+import { type LootSequence, lootSequence, type LootStep } from './loot-rules.ts';
 
 const LEGENDARY_GLOW_AFTER_POP_S = 0.35;
+const PET_ICON_SIZE = 72;
 
-function dropAnimationDelay(popDelayS: number, glows: boolean): string {
-  return glows ? `${popDelayS}s, ${popDelayS + LEGENDARY_GLOW_AFTER_POP_S}s` : `${popDelayS}s`;
-}
-const LOOT_DROP_STAGGER_S = 0.08;
 export type LoadedItems = CatalogItem[] | 'loading' | 'failed';
 
-function LootDrops({ drops, items }: { drops: readonly DropSummary[]; items: LoadedItems }) {
-  if (items === 'loading') return <p className="muted">Loading loot…</p>;
-  if (items === 'failed') return <p className="muted">Couldn't load the loot names. See items for what dropped.</p>;
+type LootPhase = 'closed' | 'opening' | 'shown';
+
+function landingDelay(step: LootStep): string {
+  const glows = step.item?.rarity === 'legendary';
+  return glows ? `${step.landsAtS}s, ${step.landsAtS + LEGENDARY_GLOW_AFTER_POP_S}s` : `${step.landsAtS}s`;
+}
+
+function PrMark({ drop }: { drop: DropSummary }) {
+  if (drop.source !== 'pr') return null;
   return (
-    <ul className="record-list" aria-label="Loot drops">
-      {drops.map((drop, index) => {
-        const item = items.find((candidate) => candidate.id === drop.itemId);
-        return (
-          <li
-            key={drop.dropId}
-            className={item ? `loot-drop rarity-${item.rarity}` : 'loot-drop'}
-            style={{ animationDelay: dropAnimationDelay(index * LOOT_DROP_STAGGER_S, item?.rarity === 'legendary') }}
-          >
-            <ItemIcon kind={item?.icon ?? 'scraps'} color={item ? colorFor(item) : colorFor({ tier: null })} />
-            <span style={{ flex: 1 }}>{item?.name ?? 'Unknown item'}</span>
-            <span className="pixel">×{drop.quantity}</span>
-            {drop.source === 'pr' && (
-              <span className="accent-text tiny" role="img" aria-label={GLOSSARY.pr.name}>
-                PR
-              </span>
-            )}
-          </li>
-        );
-      })}
+    <span className="accent-text tiny" role="img" aria-label={GLOSSARY.pr.name}>
+      PR
+    </span>
+  );
+}
+
+function followLanding(event: AnimationEvent<HTMLLIElement>) {
+  if (event.animationName !== 'pop' || event.target !== event.currentTarget) return;
+  event.currentTarget.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function LootDrop({ step }: { step: LootStep }) {
+  const { drop, item, beat } = step;
+  const color = item ? colorFor(item) : colorFor({ tier: null });
+  const rarityClass = item ? ` rarity-${item.rarity}` : '';
+  if (beat === 'pet' && item) {
+    return (
+      <li
+        className={`loot-drop loot-pet${rarityClass}`}
+        style={{ animationDelay: landingDelay(step) }}
+        onAnimationStart={followLanding}
+      >
+        <ItemIcon kind={item.icon} color={color} size={PET_ICON_SIZE} />
+        <span className="loot-pet-text">
+          <span className="loot-pet-kicker">New pet!</span>
+          <span className="loot-pet-name">{item.name}</span>
+          <span className="muted tiny">{item.description}</span>
+        </span>
+        <PrMark drop={drop} />
+      </li>
+    );
+  }
+  return (
+    <li
+      className={`loot-drop beat-${beat}${rarityClass}`}
+      style={{ animationDelay: landingDelay(step) }}
+      onAnimationStart={followLanding}
+    >
+      <ItemIcon kind={item?.icon ?? 'scraps'} color={color} />
+      <span style={{ flex: 1 }}>{item?.name ?? 'Unknown item'}</span>
+      <span className="pixel">×{drop.quantity}</span>
+      <PrMark drop={drop} />
+    </li>
+  );
+}
+
+function LootDrops({
+  sequence,
+  items,
+  settled,
+}: {
+  sequence: LootSequence | null;
+  items: LoadedItems;
+  settled: boolean;
+}) {
+  if (items === 'loading') return <p className="muted">Loading loot…</p>;
+  if (items === 'failed' || sequence === null)
+    return <p className="muted">Couldn't load the loot names. See items for what dropped.</p>;
+  return (
+    <ul className={settled ? 'record-list loot-list settled' : 'record-list loot-list'} aria-label="Loot drops">
+      {sequence.steps.map((step) => (
+        <LootDrop key={step.drop.dropId} step={step} />
+      ))}
     </ul>
   );
+}
+
+function useLootPlayback(userId: string, sequence: LootSequence | null) {
+  const [phase, setPhase] = useState<LootPhase>('closed');
+  const fanfareFired = useRef(false);
+  const fanfare = sequence?.fanfare ?? null;
+  const endS = sequence?.endS ?? 0;
+
+  const playFanfare = useCallback(() => {
+    if (fanfare === null || fanfareFired.current) return;
+    fanfareFired.current = true;
+    celebrate(userId, FANFARE_CELEBRATIONS[fanfare.kind]);
+  }, [fanfare, userId]);
+
+  const showAll = useCallback(() => {
+    playFanfare();
+    setPhase('shown');
+  }, [playFanfare]);
+
+  useEffect(() => {
+    if (phase !== 'opening') return;
+    const timers = [setTimeout(() => setPhase('shown'), endS * 1000)];
+    if (fanfare) timers.push(setTimeout(playFanfare, fanfare.atS * 1000));
+    const skipOnKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') showAll();
+    };
+    const listening = setTimeout(() => {
+      document.addEventListener('click', showAll);
+      document.addEventListener('keydown', skipOnKey);
+    }, 0);
+    return () => {
+      for (const timer of timers) clearTimeout(timer);
+      clearTimeout(listening);
+      document.removeEventListener('click', showAll);
+      document.removeEventListener('keydown', skipOnKey);
+    };
+  }, [phase, endS, fanfare, playFanfare, showAll]);
+
+  const open = () => {
+    primeCelebrationAudio(userId);
+    if (prefersReducedMotion()) showAll();
+    else setPhase('opening');
+  };
+
+  return { phase, open };
 }
 
 interface LootPanelProps {
@@ -50,26 +143,24 @@ interface LootPanelProps {
 }
 
 export function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
-  const [open, setOpen] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
+  const sequence = Array.isArray(items) ? lootSequence(drops, items) : null;
+  const { phase, open } = useLootPlayback(userId, sequence);
   const hasDrops = drops.length > 0;
-  const fanfare = Array.isArray(items)
-    ? fanfareFor(drops.flatMap((drop) => items.find((candidate) => candidate.id === drop.itemId)?.rarity ?? []))
-    : null;
-
-  const flashes = open && fanfare !== null;
+  const opened = phase !== 'closed';
+  const fanfare = opened ? (sequence?.fanfare ?? null) : null;
 
   const openLoot = () => {
-    setOpen(true);
-    heading.current?.focus();
-    if (fanfare) celebrate(userId, FANFARE_CELEBRATIONS[fanfare]);
+    open();
+    heading.current?.focus({ preventScroll: true });
+    heading.current?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   };
 
   return (
     <section
-      className={flashes ? `panel stack loot-${fanfare}` : 'panel stack rise'}
+      className={fanfare ? `panel stack loot-${fanfare.kind}` : 'panel stack rise'}
       aria-label="Loot"
-      style={flashes ? undefined : { animationDelay: `${delayS}s` }}
+      style={{ animationDelay: fanfare ? `${fanfare.atS}s` : `${delayS}s` }}
     >
       <div className="row spread">
         <h2 ref={heading} tabIndex={-1}>
@@ -82,7 +173,7 @@ export function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
         )}
       </div>
       {!hasDrops && <p className="muted">No loot this time</p>}
-      {hasDrops && !open && (
+      {hasDrops && !opened && (
         <button type="button" className="loot-chest" onClick={openLoot}>
           <span className="loot-chest-art">
             <LootChestIcon />
@@ -90,7 +181,14 @@ export function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
           Open loot
         </button>
       )}
-      {hasDrops && <div role="status">{open && <LootDrops drops={drops} items={items} />}</div>}
+      {opened && (
+        <span className="loot-chest-open" aria-hidden="true">
+          <OpenLootChestIcon />
+        </span>
+      )}
+      {hasDrops && (
+        <div role="status">{opened && <LootDrops sequence={sequence} items={items} settled={phase === 'shown'} />}</div>
+      )}
     </section>
   );
 }

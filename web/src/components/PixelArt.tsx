@@ -6,6 +6,7 @@ import {
   LEVEL_UP,
   LOGO,
   LOOT_CHEST,
+  LOOT_CHEST_OPEN,
   SKILL_SPRITES,
   type Sprite,
   TROPHY,
@@ -68,4 +69,8 @@ export function LevelUpIcon() {
 
 export function LootChestIcon() {
   return <PixelGrid sprite={LOOT_CHEST} size={56} />;
+}
+
+export function OpenLootChestIcon() {
+  return <PixelGrid sprite={LOOT_CHEST_OPEN} size={56} />;
 }

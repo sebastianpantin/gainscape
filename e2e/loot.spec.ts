@@ -106,3 +106,30 @@ test('the luck panel shows the next drop chance and the loot rolls without a dro
   await expect(luck).toContainText('Each loot roll that misses raises the chance, up to 40%.');
   await expect(luck.getByRole('progressbar', { name: 'Next drop chance' })).toHaveAttribute('aria-valuetext', '19%');
 });
+
+test('the chest brings the loot out one at a time, settles by itself, and a tap shows it all at once', async ({
+  page,
+}) => {
+  const username = `lootseq_${Date.now().toString(36)}`;
+  await register(page, username);
+  await logBench(page);
+  await openTab(page, 'Train');
+  await logBench(page, 80);
+  const drops = await activeDropsOfLatestSession(username);
+
+  const loot = await openLoot(page);
+  const list = loot.getByRole('list', { name: 'Loot drops' });
+  await expect(list.getByRole('listitem')).toHaveCount(drops.length);
+  await expect(list).not.toHaveClass(/\bsettled\b/);
+  await expect(list).toHaveClass(/\bsettled\b/, { timeout: 10_000 });
+
+  await page.reload();
+  await openLoot(page);
+  await expect(list).not.toHaveClass(/\bsettled\b/);
+  await page.evaluate(() => document.body.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await expect(list).toHaveClass(/\bsettled\b/);
+  const opacities = await list
+    .getByRole('listitem')
+    .evaluateAll((rows) => rows.map((row) => getComputedStyle(row).opacity));
+  expect(opacities.every((opacity) => opacity === '1')).toBe(true);
+});
