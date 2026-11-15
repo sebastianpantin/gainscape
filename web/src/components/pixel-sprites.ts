@@ -43,7 +43,7 @@ const PLATE_STEEL = '#9a9488';
 type SkillKey =
   'chest' | 'back' | 'shoulders' | 'arms' | 'legs' | 'core' | 'grip' | 'endurance' | 'agility' | 'mobility';
 
-function fromRows(rows: readonly string[], palette: Record<string, string>): Sprite {
+export function fromRows(rows: readonly string[], palette: Record<string, string>): Sprite {
   const pixels: Pixel[] = [];
   rows.forEach((row, y) => {
     let x = 0;
