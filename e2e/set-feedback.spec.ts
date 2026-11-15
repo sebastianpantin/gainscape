@@ -44,8 +44,13 @@ test('marking a set done drops its XP and announces it with the exercise name, a
   await row.getByRole('spinbutton', { name: /^Weight in kg, set \d+$/ }).fill('70');
   await done.click();
   await expect(announcement).toHaveText(
-    /^Barbell Bench Press, set 1 logged, about [\d,]+ XP\. Predicted new 5 rep max$/,
+    /^Barbell Bench Press, set 1 logged, about [\d,]+ XP\. Predicted new 5 rep max, \+10 kg on your best$/,
   );
-  await expect(row).toContainText('New 5RM!');
+  await expect(row).toHaveClass(/\brecord-landed\b/);
+  await expect(row.locator('.record-drop')).toHaveText('+10 kg');
+  await expect(row.getByRole('img', { name: 'Predicted new 5 rep max, +10 kg on your best' })).toHaveText(
+    'New 5RM! +10 kg',
+  );
+  await expect(row).not.toHaveClass(/\brecord-landed\b/);
   expect(await takeVibrations(page)).toEqual([[40, 40, 60]]);
 });

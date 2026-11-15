@@ -7,7 +7,7 @@ import { CardioEffortSelector } from './CardioEffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
 import { SetMenu } from './SetMenu.tsx';
 import { useRowClearOfFinishBarAfterDone } from './use-finish-bar-clearance.ts';
-import type { ShownSetDrop } from './set-feedback-rules.ts';
+import { landsRecord, type ShownSetDrop } from './set-feedback-rules.ts';
 import { type PreviewRecord } from './record-preview.ts';
 import { RecordChip } from './RecordChip.tsx';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
@@ -47,7 +47,7 @@ export function CardioSetRow({
   return (
     <li
       ref={row}
-      className={`set-row bout-row${bout.done ? '' : ' planned'}${current ? ' current' : ''}`}
+      className={`set-row bout-row${bout.done ? '' : ' planned'}${current ? ' current' : ''}${landsRecord(drop) ? ' record-landed' : ''}`}
       aria-label={`Bout ${boutNumber}`}
       aria-current={current ? 'step' : undefined}
     >
@@ -55,7 +55,7 @@ export function CardioSetRow({
       <BoutFields bout={bout} paceUnit={paceUnit} tracksDistance={tracksDistance} unit={unit} onChange={onChange} />
       <span className={bout.done ? 'set-xp earned' : 'set-xp'}>
         {previewXpLabel(preview)}
-        {record && <RecordChip record={record} pulsing={drop?.record === true} />}
+        {record && <RecordChip record={record} pulsing={drop?.record === true} unit={unit} />}
       </span>
       <DoneToggle done={bout.done} label={`Done bout ${boutNumber}`} drop={drop} onToggle={onToggleDone} />
       <BoutModeToggle boutNumber={boutNumber} bout={bout} onChange={onChange} />

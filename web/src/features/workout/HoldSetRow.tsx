@@ -13,7 +13,7 @@ import { clearEffortAction } from './set-menu-rules.ts';
 import { WeightField } from './SetRow.tsx';
 import { type PreviewRecord } from './record-preview.ts';
 import { RecordChip } from './RecordChip.tsx';
-import type { ShownSetDrop } from './set-feedback-rules.ts';
+import { landsRecord, type ShownSetDrop } from './set-feedback-rules.ts';
 import { previewXpLabel, type SetPreview } from './xp-preview.ts';
 
 interface HoldFieldsProps {
@@ -98,7 +98,7 @@ export function HoldSetRow({
   return (
     <li
       ref={row}
-      className={`set-row hold-row${set.done ? '' : ' planned'}${current ? ' current' : ''}`}
+      className={`set-row hold-row${set.done ? '' : ' planned'}${current ? ' current' : ''}${landsRecord(drop) ? ' record-landed' : ''}`}
       aria-label={`Set ${setNumber}`}
       aria-current={current ? 'step' : undefined}
     >
@@ -113,7 +113,7 @@ export function HoldSetRow({
       />
       <span className={set.done ? 'set-xp earned' : 'set-xp'}>
         {previewXpLabel(preview)}
-        {record && <RecordChip record={record} pulsing={drop?.record === true} />}
+        {record && <RecordChip record={record} pulsing={drop?.record === true} unit={unit} />}
       </span>
       <DoneToggle done={set.done} label={`Done set ${setNumber}`} drop={drop} onToggle={onToggleDone} />
       <SetMenu

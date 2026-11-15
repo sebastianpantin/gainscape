@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   feedbackLabel,
+  landsRecord,
   SET_DONE_VIBRATION_MS,
   setFeedback,
   type SetFeedbackInput,
@@ -26,6 +27,7 @@ function input(overrides: Partial<FeedbackValues> = {}): SetFeedbackInput {
     becameRecord: false,
     vibrate: true,
     sound: true,
+    unit: 'kg',
     ...overrides,
   };
   return {
@@ -39,7 +41,7 @@ function input(overrides: Partial<FeedbackValues> = {}): SetFeedbackInput {
 describe('setFeedback', () => {
   it('drops the previewed XP and buzzes briefly when a set is marked done', () => {
     expect(setFeedback(input())).toEqual({
-      drop: { xpText: '+~45 XP', record: false, announcement: 'Set 2 logged, about 45 XP' },
+      drop: { xpText: '+~45 XP', record: false, recordGain: null, announcement: 'Set 2 logged, about 45 XP' },
       vibrationMs: SET_DONE_VIBRATION_MS,
       celebratesRecord: false,
     });
@@ -54,7 +56,8 @@ describe('setFeedback', () => {
       drop: {
         xpText: '+~45 XP',
         record: true,
-        announcement: 'Set 2 logged, about 45 XP. Predicted new 5 rep max',
+        recordGain: '+5 kg',
+        announcement: 'Set 2 logged, about 45 XP. Predicted new 5 rep max, +5 kg on your best',
       },
       vibrationMs: null,
       celebratesRecord: true,
@@ -99,6 +102,18 @@ describe('setFeedback', () => {
     expect(setFeedback(input({ vibrate: false })).drop?.xpText).toBe('+~45 XP');
   });
 
+  it('lands a record that beats a previous best with its gain, in the drop and the announcement', () => {
+    const { drop } = setFeedback(input({ record: FIVE_REP_MAX, becameRecord: true }));
+    expect(drop?.recordGain).toBe('+5 kg');
+    expect(drop?.announcement).toBe('Set 2 logged, about 45 XP. Predicted new 5 rep max, +5 kg on your best');
+  });
+
+  it('lands no gain for a first record or a set that is not a record', () => {
+    const first = { kind: 'rep_max' as const, reps: 5, loadKg: 100, previousLoadKg: null };
+    expect(setFeedback(input({ record: first, becameRecord: true })).drop?.recordGain).toBeNull();
+    expect(setFeedback(input()).drop?.recordGain).toBeNull();
+  });
+
   it('still celebrates a new record with sound alone', () => {
     const soundOnly = input({ vibrate: false, record: FIVE_REP_MAX, becameRecord: true });
     expect(setFeedback(soundOnly).celebratesRecord).toBe(true);
@@ -120,6 +135,7 @@ describe('setFeedback', () => {
     expect(setFeedback(input({ preview: { xp: 0, basis: 'unknown', estimatedRirForXp: null } })).drop).toEqual({
       xpText: null,
       record: false,
+      recordGain: null,
       announcement: 'Set 2 logged',
     });
   });
@@ -128,6 +144,7 @@ describe('setFeedback', () => {
     expect(setFeedback(input({ preview: { xp: 0, basis: 'warmup', estimatedRirForXp: null } })).drop).toEqual({
       xpText: null,
       record: false,
+      recordGain: null,
       announcement: 'Set 2 logged, warm-up',
     });
   });
@@ -136,6 +153,7 @@ describe('setFeedback', () => {
     expect(setFeedback(input({ preview: { xp: 0, basis: 'logged', estimatedRirForXp: 5 } })).drop).toEqual({
       xpText: null,
       record: false,
+      recordGain: null,
       announcement: 'Set 2 logged, no XP',
     });
   });
@@ -172,5 +190,15 @@ describe('setFeedback', () => {
     const silent = input({ wasDone: true, vibrate: false, sound: false });
     setFeedback(silent);
     expect(silent.becameRecord).not.toHaveBeenCalled();
+  });
+});
+
+describe('landsRecord', () => {
+  const drop = { xpText: '+~45 XP', record: true, announcement: 'Set 2 logged', setId: 'set-2', key: 1 };
+
+  it('lands only a drop whose record beats a previous best', () => {
+    expect(landsRecord({ ...drop, recordGain: '+5 kg' })).toBe(true);
+    expect(landsRecord({ ...drop, recordGain: null })).toBe(false);
+    expect(landsRecord(null)).toBe(false);
   });
 });

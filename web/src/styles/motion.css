@@ -7,7 +7,12 @@
     scroll-behavior: auto !important;
   }
 
-  .xp-drop {
+  .xp-drop,
+  .record-drop {
     display: none;
+  }
+
+  .set-row.record-landed {
+    background-image: none;
   }
 }

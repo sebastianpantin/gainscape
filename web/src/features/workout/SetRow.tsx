@@ -30,7 +30,7 @@ import { SetMenu } from './SetMenu.tsx';
 import { clearEffortAction } from './set-menu-rules.ts';
 import { type PreviewRecord } from './record-preview.ts';
 import { RecordChip } from './RecordChip.tsx';
-import type { ShownSetDrop } from './set-feedback-rules.ts';
+import { landsRecord, type ShownSetDrop } from './set-feedback-rules.ts';
 import { useRowClearOfFinishBarAfterDone } from './use-finish-bar-clearance.ts';
 import { previewNote, previewXpLabel, type SetPreview } from './xp-preview.ts';
 
@@ -226,6 +226,7 @@ export function SetRow({
     'stepped',
     set.done ? null : 'planned',
     current ? 'current' : null,
+    landsRecord(drop) ? 'record-landed' : null,
     set.isWarmup ? 'warmup' : null,
     barbell !== null && calculatorOpen ? 'calculating' : null,
   ]
@@ -303,7 +304,7 @@ export function SetRow({
         <span className={set.done ? 'set-xp earned' : 'set-xp'}>
           <span className="set-xp-line">
             {previewXpLabel(preview)}
-            {record && <RecordChip record={record} pulsing={drop?.record === true} />}
+            {record && <RecordChip record={record} pulsing={drop?.record === true} unit={unit} />}
           </span>
           <span className="tiny">{previewNote(preview)}</span>
         </span>

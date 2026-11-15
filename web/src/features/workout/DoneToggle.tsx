@@ -28,6 +28,11 @@ export function DoneToggle({ done, label, drop, onToggle, buttonRef }: DoneToggl
           {drop.xpText}
         </span>
       )}
+      {drop?.recordGain && (
+        <span key={`record-${drop.key}`} className="record-drop" aria-hidden="true">
+          {drop.recordGain}
+        </span>
+      )}
     </>
   );
 }

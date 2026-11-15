@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { type Exercise } from '../../lib/exercises/catalog-rules.ts';
+import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import { type SessionBaseline } from '../../lib/workout/session-baseline-rules.ts';
 import { type DraftDays } from '../../offline/draft-days.ts';
 import { type SetEditChange } from './draft-edit-commands.ts';
@@ -25,6 +26,7 @@ interface WorkoutPreviewsOptions {
   draft: DraftDays | null;
   baseline: SessionBaseline | null;
   bodyweightKg: number | null;
+  unit: UnitPref;
 }
 
 interface SetChange extends SetEditChange {
@@ -43,6 +45,7 @@ export function useWorkoutPreviews({
   draft,
   baseline,
   bodyweightKg,
+  unit,
 }: WorkoutPreviewsOptions): WorkoutPreviews {
   const strength = baseline?.strength ?? null;
   const recordBaseline = baseline?.records ?? null;
@@ -66,6 +69,7 @@ export function useWorkoutPreviews({
         becomesRecord(previewOf(previous).records, previous.exercises, previewAfter().records, next.exercises, setId),
       vibrate,
       sound,
+      unit,
     });
   };
 
