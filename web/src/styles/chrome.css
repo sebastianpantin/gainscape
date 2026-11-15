@@ -137,6 +137,11 @@
   flex-shrink: 0;
 }
 
+.hero-character-placeholder {
+  inline-size: 72px;
+  aspect-ratio: 3 / 4;
+}
+
 .hero-character-link {
   display: inline-flex;
   min-height: var(--tap-target);

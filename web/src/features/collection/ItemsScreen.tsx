@@ -123,6 +123,8 @@ function ChallengeStart({ challenge, challengeExercises, strength, draftOpen, on
   );
 }
 
+type CraftMoment = 'crafted' | 'put-on' | null;
+
 interface ItemDetailProps {
   item: CatalogItem;
   catalog: ItemCatalog;
@@ -134,12 +136,12 @@ interface ItemDetailProps {
   badgeColor: BadgeColor | null;
   offline: boolean;
   draftOpen: boolean | null;
-  justCrafted: boolean;
+  justCrafted: CraftMoment;
   pickedByTap: boolean;
   shownOnToday: boolean | null;
   onShowOnToday: () => void;
   onCraftStarted: () => void;
-  onCrafted: (outputItemId: string) => Promise<void>;
+  onCrafted: (outputItemId: string, putOn: boolean) => Promise<void>;
   onCraftFailed: () => Promise<void>;
   onCatalogStale: () => Promise<void>;
   onLoadoutChanged: () => Promise<void>;
@@ -199,7 +201,7 @@ function ItemDetail({
     setProblem(null);
     const outcome = await craftItem(recipe.id);
     if (outcome.kind === 'ok') {
-      await onCrafted(outcome.result.itemId);
+      await onCrafted(outcome.result.itemId, outcome.result.equippedSlot !== null);
     } else {
       setProblem(craftProblemText(outcome.problem, nameOf));
       if (outcome.problem.kind === 'unknown_recipe') await onCatalogStale();
@@ -212,21 +214,23 @@ function ItemDetail({
     if (!item.gearSlot) return;
     setBusy(true);
     setProblem(null);
+    let changed = false;
     try {
       if (equipped) await unequipGear(item.gearSlot);
       else await equipGear(item.gearSlot, item.id);
-      setPutOn(!equipped);
+      changed = true;
       showToast(`${equipped ? 'Unequipped' : 'Equipped'} ${item.name}`);
     } catch (error) {
       setProblem(`Couldn't change your gear: ${messageOf(error, 'try again.')}`);
     }
     await onLoadoutChanged();
+    if (changed) setPutOn(!equipped);
     setBusy(false);
   };
 
   return (
     <section className="panel stack" aria-label="Item details">
-      {justCrafted && (
+      {justCrafted !== null && (
         <p className={`craft-result pop rarity-${item.rarity}`}>
           <span className="craft-result-art">
             <ItemIcon kind={item.icon} color={colorFor(item)} />
@@ -263,11 +267,7 @@ function ItemDetail({
         </p>
       )}
       {showsEquip && wearing && badgeColor && (
-        <GearTryOn
-          slots={wearing}
-          badgeColor={badgeColor}
-          putOn={putOn || (justCrafted && equipped === true) ? item : null}
-        />
+        <GearTryOn slots={wearing} badgeColor={badgeColor} putOn={putOn || justCrafted === 'put-on' ? item : null} />
       )}
       {showsEquip && (
         <button
@@ -324,7 +324,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const items = useQuery(itemsQuery(userId));
   const [startNotice, setStartNotice] = useState<string | null>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
-  const [craftedId, setCraftedId] = useState<string | null>(null);
+  const [crafted, setCrafted] = useState<{ itemId: string; moment: Exclude<CraftMoment, null> } | null>(null);
   const [pickedByTap, setPickedByTap] = useState(false);
   const [chosenPetId, setChosenPetId] = useState(() => companionPetStore.read(deviceStorage(), userId));
   const { showToast } = useToast();
@@ -455,7 +455,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
                     onClick={() => {
                       setPickedId(item.id);
                       setPickedByTap(true);
-                      setCraftedId(null);
+                      setCrafted(null);
                     }}
                   >
                     <ItemIcon kind={item.icon} color={colorFor(item)} />
@@ -474,7 +474,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
         </div>
       ))}
       <p className="visually-hidden" aria-live="polite">
-        {picked && picked.id === craftedId ? `Crafted ${picked.name}` : ''}
+        {picked && picked.id === crafted?.itemId ? `Crafted ${picked.name}` : ''}
       </p>
       {picked ? (
         <ItemDetail
@@ -489,7 +489,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           badgeColor={badgeColor}
           offline={offline}
           draftOpen={draftOpen}
-          justCrafted={picked.id === craftedId}
+          justCrafted={picked.id === crafted?.itemId ? crafted.moment : null}
           pickedByTap={pickedByTap}
           shownOnToday={picked.kind === 'pet' ? companionPet(catalog.items, held, chosenPetId)?.id === picked.id : null}
           onShowOnToday={() => {
@@ -499,16 +499,16 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           }}
           onCraftStarted={() => {
             primeCelebrationAudio(userId);
-            setCraftedId(null);
+            setCrafted(null);
           }}
-          onCrafted={async (itemId) => {
+          onCrafted={async (itemId, putOn) => {
             const rarity = catalog.items.find((candidate) => candidate.id === itemId)?.rarity;
             const fanfare = rarity ? fanfareFor([rarity]) : null;
             celebrate(userId, fanfare ? FANFARE_CELEBRATIONS[fanfare] : CRAFTED_CELEBRATION);
             await refreshAfterCraft();
             setPickedByTap(false);
             setPickedId(itemId);
-            setCraftedId(itemId);
+            setCrafted({ itemId, moment: putOn ? 'put-on' : 'crafted' });
           }}
           onCraftFailed={refreshAfterCraft}
           onCatalogStale={refetchCatalog}

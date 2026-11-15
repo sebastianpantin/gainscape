@@ -14,6 +14,12 @@ function weekStrip(page: Page) {
   return thisWeek(page).getByRole('link', { name: /^This week: .*\. Open Stats$/ });
 }
 
+async function grantItemsAfterRegister(page: Page, username: string) {
+  await register(page, username);
+  await grantItems(username, { spotter_pup: 1, rookie_belt: 1 });
+  await equipGear(username, 'rookie_belt');
+}
+
 async function expectAboveTabBar(page: Page, locator: Locator) {
   const box = (await locator.boundingBox())!;
   const tabBar = (await page.getByRole('navigation', { name: 'Main' }).boundingBox())!;
@@ -95,6 +101,17 @@ test('under the week strip, your character, pet and next level sit above Start w
   await openTab(page, 'Train');
   await character.click();
   await expect(page).toHaveURL(/\/collection\/items$/);
+});
+
+test('Train never shows a gearless character while the loadout is unknown', async ({ page }) => {
+  const username = uniqueUsername('home_noload');
+  await grantItemsAfterRegister(page, username);
+  await page.route('**/rest/v1/rpc/get_loadout*', (route) => route.abort());
+  await page.reload();
+  const hero = page.getByRole('region', { name: 'Your progress' });
+  await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  await expect(hero.getByRole('link', { name: /^Spotter Pup, your companion/ })).toBeVisible();
+  await expect(hero.getByRole('link', { name: /^Character/ })).toHaveCount(0);
 });
 
 test('highlights show the last workout, the latest record and the rarest drop, each linking on', async ({

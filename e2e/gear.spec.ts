@@ -73,6 +73,38 @@ test('crafting an upgrade of worn gear shows the character putting the new piece
   await expect(details.locator('.gear-drop')).toBeAttached();
 });
 
+test('the gear drops only once the character wears it', async ({ page }) => {
+  const username = uniqueUsername('gear_order');
+  await register(page, username);
+  await grantItems(username, { rookie_belt: 1 });
+  await openItems(page);
+  await page.getByRole('main').getByRole('button', { name: 'Rookie belt', exact: true }).click();
+  const details = page.getByRole('region', { name: 'Item details' });
+  await expect(details.getByRole('img', { name: 'Character with no gear', exact: true })).toBeVisible();
+  await page.route('**/rest/v1/rpc/get_loadout*', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await route.continue();
+  });
+  await details.getByRole('button', { name: 'Equip', exact: true }).click();
+  await expect(details.locator('.gear-drop')).toBeAttached();
+  expect(await details.getByRole('img', { name: 'Character wearing Rookie belt', exact: true }).count()).toBe(1);
+});
+
+test('crafting gear that the server did not equip shows no drop', async ({ page }) => {
+  const username = uniqueUsername('gear_spare');
+  await register(page, username);
+  await grantItems(username, { grinder_belt: 1, rookie_belt: 1, grinder_scraps: 8 });
+  await equipGear(username, 'grinder_belt');
+  await page.reload();
+  await openItems(page);
+  await page.getByRole('main').getByRole('button', { name: 'Rookie belt', exact: true }).click();
+  const details = page.getByRole('region', { name: 'Item details' });
+  await details.getByRole('button', { name: 'Craft Grinder belt' }).click();
+  await expect(details.getByText('Crafted!')).toBeVisible();
+  await expect(details.getByRole('img', { name: 'Character wearing Grinder belt', exact: true })).toBeVisible();
+  await expect(details.locator('.gear-drop')).toHaveCount(0);
+});
+
 test.describe('with reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
 

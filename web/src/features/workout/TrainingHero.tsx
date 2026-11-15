@@ -64,7 +64,8 @@ export function TrainingHero({ userId, standing, today, trainedDates }: Training
   const headingId = useId();
   const pet = useCompanionPet(userId);
   const mood = usePetMood(userId, today, trainedDates);
-  const equipped = useQuery(loadoutQuery(userId)).data?.slots ?? [];
+  const loadout = useQuery(loadoutQuery(userId));
+  const equipped = loadout.isSuccess ? (loadout.data?.slots ?? []) : null;
   const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
   const levelUp = standing.status === 'ready' ? nearestLevelUp(standing.standing.skills) : null;
   const hasCharacter = badgeColor !== null || pet !== null;
@@ -77,7 +78,10 @@ export function TrainingHero({ userId, standing, today, trainedDates }: Training
       </h2>
       {hasCharacter && (
         <div className="hero-character">
-          {badgeColor !== null && <CharacterLink slots={equipped} badgeColor={badgeColor} />}
+          {badgeColor !== null && equipped !== null && <CharacterLink slots={equipped} badgeColor={badgeColor} />}
+          {badgeColor !== null && loadout.isPending && (
+            <span className="hero-character-placeholder" aria-hidden="true" />
+          )}
           {pet && <PetCompanion pet={pet} mood={mood} />}
         </div>
       )}

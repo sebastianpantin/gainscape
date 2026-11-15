@@ -8,6 +8,7 @@ const PROFILE_CHARACTER_SIZE = 96;
 
 export function ProfileCharacter({ userId, badgeColor }: { userId: string; badgeColor: BadgeColor }) {
   const loadout = useQuery(loadoutQuery(userId));
+  if (loadout.isError) return null;
   if (!loadout.isSuccess) return <span className="profile-character" aria-hidden="true" />;
   const slots = loadout.data?.slots ?? null;
   return (
