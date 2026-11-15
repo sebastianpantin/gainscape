@@ -78,3 +78,48 @@
   background: var(--color-accent);
   border-radius: var(--radius);
 }
+
+.gear-try-on {
+  position: relative;
+  align-self: center;
+  display: inline-flex;
+}
+
+.gear-try-on.putting-on .character {
+  animation: gear-put-on-hop 0.4s steps(2, jump-none) 0.5s 1;
+}
+
+.gear-drop {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: var(--gear-landing);
+  translate: -50% -50%;
+  opacity: 0;
+  pointer-events: none;
+  animation: gear-drop 1.1s steps(6, jump-none) 1 forwards;
+}
+
+@keyframes gear-drop {
+  0% {
+    opacity: 1;
+    transform: translateY(-120px);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gear-put-on-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}

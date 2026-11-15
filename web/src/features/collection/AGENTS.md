@@ -21,6 +21,7 @@ The Collection tab: personal records per exercise (`/collection`), the per-exerc
 - The server is authoritative for crafting; the UI only pre-checks with `canCraft` from `@domain/crafting.ts`. Item presentation lives in `lib/collection/item-rules.ts`, fetches in `lib/collection/items.ts` and `lib/collection/collection-data.ts`; do not duplicate them here.
 - Records and Items load cache first and keep working offline from the saved copy. Offline, Equip, Unequip and craft are disabled because they need the server; Start challenge keeps working because it only builds a local draft.
 - Equip, unequip and craft (a craft can auto-equip the upgrade) call `wrote` with `gear-changed`, which refreshes the loadout.
+- `GearTryOn.tsx`: the character in a gear item's details. After Equip, or a craft that auto-equipped the upgrade, the item icon drops onto its slot (`gearLandingTop`); `motion.css` hides the drop under reduced motion.
 - Train home reads the same loadout query and keeps it 5 min (`HOME_QUERY_ROOTS`), so a loadout changed outside the app (an e2e seed) shows only after a reload or a Write (`wrote`).
 - After a craft, `wrote` with `crafted` refetches the inventory, shows it and saves it with `updateItemsCache`; a stale catalog does the same in `ItemsScreen`. So the offline copy stays current.
 - Craft celebration: `onCraftStarted` primes audio inside the click (`primeCelebrationAudio`), because browsers only allow audio started from a user gesture. It also clears the `Crafted!` banner so a repeat craft shows it again.

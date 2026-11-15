@@ -183,3 +183,9 @@ function characterFrame(look: CharacterLook, bob: number): Sprite {
 export function characterFrames(look: CharacterLook): readonly [Sprite, Sprite] {
   return [characterFrame(look, 0), characterFrame(look, IDLE_BOB_ROWS)];
 }
+
+export function gearLandingRow(slot: GearSlot): number {
+  const layer = GEAR_LAYERS[slot];
+  const tintedRows = layer.rows.flatMap((row, index) => (/[Gg]/.test(row) ? [layer.top + index] : []));
+  return tintedRows[Math.floor(tintedRows.length / 2)];
+}

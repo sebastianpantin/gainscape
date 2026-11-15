@@ -39,8 +39,11 @@ test('equip and unequip gear in the Items tab and see the bonus per skill', asyn
   await openItems(page);
   await page.getByRole('main').getByRole('button', { name: 'Rookie belt', exact: true }).click();
   const details = page.getByRole('region', { name: 'Item details' });
+  await expect(details.getByRole('img', { name: 'Character with no gear', exact: true })).toBeVisible();
   await details.getByRole('button', { name: 'Equip', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Equipped Rookie belt' })).toBeVisible();
+  await expect(details.getByRole('img', { name: 'Character wearing Rookie belt', exact: true })).toBeVisible();
+  await expect(details.locator('.gear-drop')).toBeAttached();
 
   const loadout = page.getByRole('region', { name: 'Loadout' });
   await expect(definitionOf(loadout, 'Belt')).toHaveText('Rookie belt');
@@ -52,6 +55,38 @@ test('equip and unequip gear in the Items tab and see the bonus per skill', asyn
   await expect(definitionOf(loadout, 'Belt')).toHaveText('Empty');
   await expect(loadout.getByText('No gear bonus', { exact: true })).toBeVisible();
   await expect(details.getByRole('button', { name: 'Equip', exact: true })).toBeVisible();
+});
+
+test('crafting an upgrade of worn gear shows the character putting the new piece on', async ({ page }) => {
+  const username = uniqueUsername('gear_craft');
+  await register(page, username);
+  await grantItems(username, { rookie_belt: 1, grinder_scraps: 8 });
+  await equipGear(username, 'rookie_belt');
+  await page.reload();
+  await openItems(page);
+  await page.getByRole('main').getByRole('button', { name: 'Rookie belt', exact: true }).click();
+  const details = page.getByRole('region', { name: 'Item details' });
+  await expect(details.getByRole('img', { name: 'Character wearing Rookie belt', exact: true })).toBeVisible();
+  await details.getByRole('button', { name: 'Craft Grinder belt' }).click();
+  await expect(details.getByText('Crafted!')).toBeVisible();
+  await expect(details.getByRole('img', { name: 'Character wearing Grinder belt', exact: true })).toBeVisible();
+  await expect(details.locator('.gear-drop')).toBeAttached();
+});
+
+test.describe('with reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('equipping shows the character in the new gear at once, with no drop', async ({ page }) => {
+    const username = uniqueUsername('gear_still');
+    await register(page, username);
+    await grantItems(username, { rookie_belt: 1 });
+    await openItems(page);
+    await page.getByRole('main').getByRole('button', { name: 'Rookie belt', exact: true }).click();
+    const details = page.getByRole('region', { name: 'Item details' });
+    await details.getByRole('button', { name: 'Equip', exact: true }).click();
+    await expect(details.getByRole('img', { name: 'Character wearing Rookie belt', exact: true })).toBeVisible();
+    await expect(details.locator('.gear-drop')).toBeHidden();
+  });
 });
 
 test('the reveal and the workout detail show the gear bonus only with gear equipped', async ({ page }) => {

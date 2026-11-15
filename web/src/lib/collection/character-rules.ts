@@ -1,4 +1,5 @@
-import { type CharacterLook } from '../../components/character-sprites.ts';
+import type { GearSlot } from '@domain/crafting.ts';
+import { CHARACTER_ROWS, type CharacterLook, gearLandingRow } from '../../components/character-sprites.ts';
 import { type BadgeColor, BADGE_COLORS } from '../profile/profile-rules.ts';
 import { type EquippedGear, loadoutBySlot } from './gear-rules.ts';
 import { TIER_COLORS } from './item-rules.ts';
@@ -21,4 +22,8 @@ export function characterLabel(slots: readonly EquippedGear[] | null): string {
 
 export function characterLinkLabel(slots: readonly EquippedGear[]): string {
   return `${characterLabel(slots)}. Open Items`;
+}
+
+export function gearLandingTop(slot: GearSlot): string {
+  return `${(((gearLandingRow(slot) + 0.5) / CHARACTER_ROWS) * 100).toFixed(1)}%`;
 }

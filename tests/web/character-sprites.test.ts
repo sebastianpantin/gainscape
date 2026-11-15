@@ -7,6 +7,7 @@ import {
   CHARACTER_ROWS,
   type CharacterLook,
   characterFrames,
+  gearLandingRow,
   IDLE_BOB_ROWS,
 } from '../../web/src/components/character-sprites.ts';
 import { type Sprite } from '../../web/src/components/pixel-sprites.ts';
@@ -105,5 +106,18 @@ describe('characterFrames', () => {
     );
     const [stillShoes, bobbedShoes] = characterFrames(lookWith({ shoes: GEAR_TINT }));
     expect(pixelsIn(bobbedShoes, GEAR_TINT)).toEqual(pixelsIn(stillShoes, GEAR_TINT));
+  });
+});
+
+describe('gearLandingRow', () => {
+  it.each(GEAR_SLOTS)('lands %s on a row its own layer paints', (slot: GearSlot) => {
+    const [dressed] = characterFrames(lookWith({ [slot]: GEAR_TINT }));
+    const rows = new Set(pixelsIn(dressed, GEAR_TINT).map((pixel) => pixel.y));
+    expect(rows.has(gearLandingRow(slot))).toBe(true);
+  });
+
+  it('lands gloves above shoes and the belt above sleeves', () => {
+    expect(gearLandingRow('gloves')).toBeLessThan(gearLandingRow('shoes'));
+    expect(gearLandingRow('belt')).toBeLessThan(gearLandingRow('sleeves'));
   });
 });

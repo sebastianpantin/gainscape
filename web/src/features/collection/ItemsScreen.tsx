@@ -50,7 +50,10 @@ import { useWorkoutDraft } from '../../offline/use-workout-draft.ts';
 import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first.ts';
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { wrote } from '../../lib/query/writes.ts';
-import { itemsQuery, loadoutQuery } from '../../lib/query/queries.ts';
+import { itemsQuery, loadoutQuery, profileQuery } from '../../lib/query/queries.ts';
+import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
+import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
+import { GearTryOn } from './GearTryOn.tsx';
 import { useToast } from '../../lib/ui/toast.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { recallFinishOutcome } from '../../offline/finish-outcome.ts';
@@ -127,6 +130,8 @@ interface ItemDetailProps {
   challengeExercises: readonly ChallengeExerciseEntry[];
   strength: StrengthState | null;
   equipped: boolean | null;
+  wearing: readonly EquippedGear[] | null;
+  badgeColor: BadgeColor | null;
   offline: boolean;
   draftOpen: boolean | null;
   justCrafted: boolean;
@@ -148,6 +153,8 @@ function ItemDetail({
   challengeExercises,
   strength,
   equipped,
+  wearing,
+  badgeColor,
   offline,
   draftOpen,
   justCrafted,
@@ -163,6 +170,7 @@ function ItemDetail({
 }: ItemDetailProps) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [putOn, setPutOn] = useState(false);
   const offlineId = useId();
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -207,6 +215,7 @@ function ItemDetail({
     try {
       if (equipped) await unequipGear(item.gearSlot);
       else await equipGear(item.gearSlot, item.id);
+      setPutOn(!equipped);
       showToast(`${equipped ? 'Unequipped' : 'Equipped'} ${item.name}`);
     } catch (error) {
       setProblem(`Couldn't change your gear: ${messageOf(error, 'try again.')}`);
@@ -252,6 +261,13 @@ function ItemDetail({
         <p className="notice" id={offlineReason}>
           {ITEM_ACTIONS_OFFLINE_TEXT}
         </p>
+      )}
+      {showsEquip && wearing && badgeColor && (
+        <GearTryOn
+          slots={wearing}
+          badgeColor={badgeColor}
+          putOn={putOn || (justCrafted && equipped === true) ? item : null}
+        />
       )}
       {showsEquip && (
         <button
@@ -320,6 +336,7 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const { state: draftState, startWorkout, flush } = useWorkoutDraft(userId);
   const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
   const loadout = useQuery(loadoutQuery(userId));
+  const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
   const wroteLoadout = () => wrote(queryClient, { change: 'gear-changed', userId });
 
   const refetchCatalog = async () => {
@@ -468,6 +485,8 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
           challengeExercises={challengeExercises}
           strength={strength}
           equipped={loadout.data ? loadout.data.slots.some((equippedGear) => equippedGear.itemId === picked.id) : null}
+          wearing={loadout.data?.slots ?? null}
+          badgeColor={badgeColor}
           offline={offline}
           draftOpen={draftOpen}
           justCrafted={picked.id === craftedId}

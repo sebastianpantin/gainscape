@@ -8,7 +8,8 @@
   }
 
   .xp-drop,
-  .record-drop {
+  .record-drop,
+  .gear-drop {
     display: none;
   }
 
