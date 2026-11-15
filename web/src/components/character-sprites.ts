@@ -19,8 +19,8 @@ const INK = '#000';
 const SKIN = '#d8c8a8';
 const SKIN_SHADE = '#b3a58c';
 const HAIR = '#7a6a52';
-const SHORTS = '#6b5f4b';
-const SHORTS_SHADE = '#5e5442';
+const SHORTS = '#3e3529';
+const SHORTS_SHADE = '#2f2419';
 const CHALK = '#f0e6d0';
 const GEAR_SHADE_OPACITY = 0.35;
 
@@ -79,40 +79,56 @@ interface GearLayer extends Layer {
 
 const GEAR_LAYERS: Record<GearSlot, GearLayer> = {
   chalk: {
-    top: 21,
+    top: 20,
     moves: true,
     rows: [
+      '....WW............WW....',
       '...WWW............WWW...',
-      '...W.W.......KWWK.W.W...',
+      '...W.W.......KKKK.W.W...',
+      '.............KWWK.......',
+      '.............KGGK.......',
       '.............KGGK.......',
       '.............KggK.......',
       '.............KKKK.......',
     ],
   },
   gloves: {
-    top: 20,
+    top: 19,
     moves: true,
-    rows: ['....gg............gg....', '...GGG............GGG...', '...GGG............GGG...'],
+    rows: [
+      '...GGG............GGG...',
+      '...KggK..........KggK...',
+      '..KGGGK..........KGGGK..',
+      '..KGGGK..........KGGGK..',
+      '...KgK............KgK...',
+    ],
   },
   straps: {
-    top: 20,
+    top: 19,
     moves: true,
-    rows: ['....GG............GG....', '......G..........G......', '......G..........G......'],
+    rows: [
+      '...GGG............GGG...',
+      '....GG............GG....',
+      '......G..........G......',
+      '......G..........G......',
+      '......G..........G......',
+      '.....GG..........GG.....',
+    ],
   },
   belt: {
     top: 19,
     moves: true,
-    rows: ['........GGKWWKGG........', '........ggKWWKgg........'],
+    rows: ['.......GGKWWWWKGG.......', '.......GGKWKKWKGG.......', '.......ggKKKKKKgg.......'],
   },
   sleeves: {
-    top: 26,
+    top: 25,
     moves: false,
-    rows: ['........ggg..ggg........', '........GGG..GGG........', '........GGG..GGG........'],
+    rows: ['.......GGGG..GGGG.......', '.......GGGG..GGGG.......', '.......gggg..gggg.......'],
   },
   shoes: {
     top: 29,
     moves: false,
-    rows: ['........GGG..GGG........', '.......GGGG..GGGG.......', '......KggggKKggggK......'],
+    rows: ['.......GGGG..GGGG.......', '.....GGGGGG..GGGGGG.....', '.....WWWWWK..KWWWWW.....'],
   },
 };
 
