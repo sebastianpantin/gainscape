@@ -58,15 +58,16 @@ test('the week strip lights today after a workout, opens Stats and stays offline
   await context.setOffline(false);
 });
 
-test('under the week strip, your character, pet and next level sit above Start workout; the quest step follows below', async ({
+test('your gym sits above the week strip with your character and pet; the next level and quest step follow Start workout', async ({
   page,
 }) => {
   const username = uniqueUsername('home_hero');
   await register(page, username);
-  const hero = page.getByRole('region', { name: 'Your progress' });
+  const gym = page.getByRole('region', { name: 'Your gym' });
   const start = page.getByRole('button', { name: 'Start workout' });
-  await expect(hero.getByRole('link', { name: 'Character with no gear. Open Items', exact: true })).toBeVisible();
-  await expect(hero.getByRole('link', { name: /your companion/ })).toHaveCount(0);
+  await expect(gym.getByRole('img', { name: /^Your gym: a bare room with a rack, / })).toBeVisible();
+  await expect(gym.getByRole('link', { name: 'Character with no gear. Open Items', exact: true })).toBeVisible();
+  await expect(gym.getByRole('link', { name: /your companion/ })).toHaveCount(0);
   await expect(start).toBeInViewport();
 
   await grantItems(username, { spotter_pup: 1, rookie_belt: 1 });
@@ -76,17 +77,20 @@ test('under the week strip, your character, pet and next level sit above Start w
   await page.setViewportSize({ width: 360, height: 640 });
   await openTab(page, 'Train');
 
-  await expect(hero.getByRole('link', { name: 'Spotter Pup, your companion, excited' })).toBeVisible();
-  const character = hero.getByRole('link', { name: 'Character wearing Rookie belt. Open Items', exact: true });
+  await expect(gym.getByRole('link', { name: /^[\w ]+, your companion, excited$/ })).toBeVisible();
+  const character = gym.getByRole('link', { name: 'Character wearing Rookie belt. Open Items', exact: true });
   await expectAboveTabBar(page, character);
-  await expect(hero.getByRole('link', { name: /^\w[\w ]* is [\d,]+ XP from level \d+$/ })).toBeVisible();
-  await expect(hero.getByRole('progressbar', { name: /^\w[\w ]* XP to level \d+$/ })).toHaveAttribute(
+  await expectAboveTabBar(page, start);
+  expect((await gym.boundingBox())!.y).toBeLessThan((await thisWeek(page).boundingBox())!.y);
+  expect((await thisWeek(page).boundingBox())!.y).toBeLessThan((await start.boundingBox())!.y);
+
+  const nextLevel = page.getByRole('region', { name: 'Next level' });
+  await expect(nextLevel.getByRole('link', { name: /^\w[\w ]* is [\d,]+ XP from level \d+$/ })).toBeVisible();
+  await expect(nextLevel.getByRole('progressbar', { name: /^\w[\w ]* XP to level \d+$/ })).toHaveAttribute(
     'aria-valuetext',
     /^[\d,]+ of [\d,]+ XP$/,
   );
-  await expectAboveTabBar(page, start);
-  expect((await hero.boundingBox())!.y).toBeGreaterThan((await thisWeek(page).boundingBox())!.y);
-  expect((await hero.boundingBox())!.y).toBeLessThan((await start.boundingBox())!.y);
+  expect((await nextLevel.boundingBox())!.y).toBeGreaterThan((await start.boundingBox())!.y);
 
   const questCard = page.getByRole('region', { name: 'Active quest' });
   await expect(questCard).toContainText('Step 2 of 2: 100 reps of Back Squat in total');
@@ -103,15 +107,42 @@ test('under the week strip, your character, pet and next level sit above Start w
   await expect(page).toHaveURL(/\/collection\/items$/);
 });
 
+test('your gym grows with your total level, says so once, and hangs your records as trophies', async ({ page }) => {
+  await register(page, uniqueUsername('home_gym'));
+  const gym = page.getByRole('region', { name: 'Your gym' });
+  await expect(gym.getByRole('img', { name: /^Your gym: a bare room with a rack, / })).toBeVisible();
+  await expect(gym.getByRole('status')).toHaveCount(0);
+
+  await logWorkout(page, async () => {
+    await logExercise(page, 'squat', 'Back Squat', [{ weightKg: 100, reps: 5 }]);
+    await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 80, reps: 5 }]);
+    await logExercise(page, 'deadlift', 'Deadlift', [{ weightKg: 120, reps: 5 }]);
+  });
+  await openTab(page, 'Train');
+
+  await expect(gym.getByRole('status')).toHaveText('Your gym grew: plates on the wall');
+  await expect(gym.getByRole('img', { name: /^Your gym: a rack and plates on the wall, / })).toBeVisible();
+  await expectNoAxeViolations(page, 'train home, gym grew');
+
+  await page.reload();
+  await expect(gym.getByRole('img', { name: /^Your gym: a rack and plates on the wall, / })).toBeVisible();
+  await expect(gym.getByRole('status')).toHaveCount(0);
+
+  await logBench(page, 90);
+  await openTab(page, 'Train');
+  await expect(gym.getByRole('img', { name: /^Your gym: a rack, plates on the wall and 1 trophy, / })).toBeVisible();
+  await expect(gym.getByRole('status')).toHaveCount(0);
+});
+
 test('Train never shows a gearless character while the loadout is unknown', async ({ page }) => {
   const username = uniqueUsername('home_noload');
   await grantItemsAfterRegister(page, username);
   await page.route('**/rest/v1/rpc/get_loadout*', (route) => route.abort());
   await page.reload();
-  const hero = page.getByRole('region', { name: 'Your progress' });
+  const gym = page.getByRole('region', { name: 'Your gym' });
   await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
-  await expect(hero.getByRole('link', { name: /^Spotter Pup, your companion/ })).toBeVisible();
-  await expect(hero.getByRole('link', { name: /^Character/ })).toHaveCount(0);
+  await expect(gym.getByRole('link', { name: /^Spotter Pup, your companion/ })).toBeVisible();
+  await expect(gym.getByRole('link', { name: /^Character/ })).toHaveCount(0);
 });
 
 test('highlights show the last workout, the latest record and the rarest drop, each linking on', async ({

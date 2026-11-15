@@ -125,32 +125,53 @@
 }
 
 .training-hero {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  padding: 0;
+  overflow: hidden;
 }
 
-.hero-character {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-1);
-  flex-shrink: 0;
+.training-scene {
+  --scene-pixel: 3px;
+  position: relative;
+  block-size: calc(36 * var(--scene-pixel));
+  overflow: hidden;
+  background: var(--color-chrome);
 }
 
-.hero-character-placeholder {
-  inline-size: 72px;
-  aspect-ratio: 3 / 4;
+.scene-grew {
+  margin: 0;
+  border-width: var(--border-width) 0 0;
+}
+
+.scene-art,
+.scene-art-label {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.scene-character {
+  position: absolute;
+  inset-block-end: calc(2 * var(--scene-pixel));
+  inset-inline-start: calc(50% - 28 * var(--scene-pixel));
+  line-height: 0;
+}
+
+.scene-pet {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: calc(50% - 2 * var(--scene-pixel) - 4px);
+}
+
+.scene-pet .pet-companion {
+  justify-content: flex-end;
+  min-block-size: var(--tap-target);
+  min-inline-size: var(--tap-target);
 }
 
 .hero-character-link {
   display: inline-flex;
   min-height: var(--tap-target);
   text-decoration: none;
-}
-
-.hero-progress {
-  flex: 1;
-  min-width: 0;
 }
 
 .hero-bar {
@@ -178,6 +199,14 @@
 .character {
   display: inline-grid;
   line-height: 0;
+}
+
+.design-scene {
+  margin: 0;
+}
+
+.design-scene .training-scene {
+  border: var(--border-width) solid var(--color-outline);
 }
 
 .design-character {

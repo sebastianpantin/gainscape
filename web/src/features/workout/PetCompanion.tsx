@@ -3,7 +3,7 @@ import { ItemIcon } from '../../components/PixelArt.tsx';
 import { type CatalogItem, colorFor } from '../../lib/collection/item-rules.ts';
 import { type PetMood, petCompanionLabel } from './pet-mood-rules.ts';
 
-const HERO_PET_SIZE = 48;
+const SCENE_PET_SIZE = 36;
 
 export function PetCompanion({ pet, mood }: { pet: CatalogItem; mood: PetMood | null }) {
   return (
@@ -13,7 +13,7 @@ export function PetCompanion({ pet, mood }: { pet: CatalogItem; mood: PetMood | 
       aria-label={petCompanionLabel(pet.name, mood)}
     >
       <span className="pet-companion-art" aria-hidden="true">
-        <ItemIcon kind={pet.icon} color={colorFor(pet)} size={HERO_PET_SIZE} />
+        <ItemIcon kind={pet.icon} color={colorFor(pet)} size={SCENE_PET_SIZE} />
       </span>
     </Link>
   );

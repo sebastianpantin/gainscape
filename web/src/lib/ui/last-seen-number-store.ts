@@ -5,6 +5,8 @@ import { keyedStore } from '../platform/keyed-store.ts';
 const lastSeenNumbers = userCache('gainscape.last-seen-numbers.v1.', z.record(z.string(), z.number()));
 const retiredSeenLevels = keyedStore('gainscape.seen-levels.v1.', (raw) => raw !== null);
 
+export const SCENE_STAGE_METRIC = 'scene-stage';
+
 export function skillXpMetric(skillKey: string): string {
   return `skill-xp.${skillKey}`;
 }
