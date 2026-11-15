@@ -48,7 +48,7 @@ export function ItemIcon({ kind, color, size = 36 }: { kind: ItemIconKind; color
   return <PixelGrid sprite={itemSprite(kind, color)} size={size} />;
 }
 
-export function SkillIcon({ skillKey }: { skillKey: string }) {
+export function SkillIcon({ skillKey, size = 32 }: { skillKey: string; size?: number }) {
   if (!isSkillKey(skillKey))
     return (
       <span className="monogram" aria-hidden="true">
@@ -57,7 +57,7 @@ export function SkillIcon({ skillKey }: { skillKey: string }) {
     );
   return (
     <span className="skill-icon" aria-hidden="true">
-      <PixelGrid sprite={SKILL_SPRITES[skillKey]} size={32} />
+      <PixelGrid sprite={SKILL_SPRITES[skillKey]} size={size} />
     </span>
   );
 }

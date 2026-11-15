@@ -1,8 +1,9 @@
-import { levelProgress } from '@domain/index.ts';
+import { levelProgress, MAX_LEVEL } from '@domain/index.ts';
 import { FLOAT_TOLERANCE } from '@domain/math.ts';
-import type { QuestProgressSummary, SessionSummary } from '@domain/types.ts';
+import type { LevelUp, QuestProgressSummary, SessionSummary } from '@domain/types.ts';
 import type { DraftChallenge } from '../../offline/draft-format.ts';
 import { formatXp } from '../../lib/format.ts';
+import type { LevelUpTier } from '../../lib/platform/celebration-effects.ts';
 import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import { formatWeight } from '../../lib/units.ts';
 import {
@@ -161,10 +162,55 @@ const RECORDS_BEAT_S = 0.25;
 const RISE_S = 0.4;
 const GAIN_FILL_S = 0.6;
 const POP_PEAK_MS = 300;
+const MAX_TAKEOVER_CARDS = 3;
+
+const TIER_RANK: Record<LevelUpTier, number> = { normal: 0, milestone: 1, max: 2 };
+
+const TAKEOVER_CARD_S: Record<LevelUpTier, number> = { normal: 1.6, milestone: 2.2, max: 3 };
+
+const NAMED_MILESTONES: readonly number[] = [10, 25, 50, 75];
+const ROUND_MILESTONES_FROM = 50;
+const ROUND_MILESTONE_STEP = 10;
+
+function isMilestone(level: number): boolean {
+  return NAMED_MILESTONES.includes(level) || (level > ROUND_MILESTONES_FROM && level % ROUND_MILESTONE_STEP === 0);
+}
+
+export function levelUpTier({ from, to }: Pick<LevelUp, 'from' | 'to'>): LevelUpTier {
+  if (to >= MAX_LEVEL) return 'max';
+  for (let level = from + 1; level <= to; level++) if (isMilestone(level)) return 'milestone';
+  return 'normal';
+}
+
+export interface LevelUpCard extends LevelUp {
+  tier: LevelUpTier;
+}
+
+export function levelUpCards(levelUps: readonly LevelUp[]): { cards: LevelUpCard[]; moreCount: number } {
+  const ranked = levelUps
+    .map((levelUp) => ({ ...levelUp, tier: levelUpTier(levelUp) }))
+    .sort((left, right) => TIER_RANK[left.tier] - TIER_RANK[right.tier] || left.to - right.to);
+  const cards = ranked.slice(-MAX_TAKEOVER_CARDS);
+  return { cards, moreCount: ranked.length - cards.length };
+}
+
+const TAKEOVER_KICKERS: Record<LevelUpTier, string> = {
+  normal: 'Level up!',
+  milestone: 'Milestone!',
+  max: 'Max level!',
+};
+
+export function takeoverKicker(tier: LevelUpTier): string {
+  return TAKEOVER_KICKERS[tier];
+}
+
+export function moreLevelUpsText(count: number): string {
+  return `+${count} more level ${count === 1 ? 'up' : 'ups'}`;
+}
 
 interface RevealShape {
   skillCount: number;
-  hasLevelUps: boolean;
+  levelUpTiers: LevelUpTier[];
   hasRecords: boolean;
 }
 
@@ -186,17 +232,25 @@ export function skipsRevealOnKey({
 export function revealShape(
   summary: Pick<SessionSummary, 'historyOnly' | 'xpBySkill' | 'levelUps' | 'prs'> | null,
 ): RevealShape {
-  if (!summary || summary.historyOnly) return { skillCount: 0, hasLevelUps: false, hasRecords: false };
+  if (!summary || summary.historyOnly) return { skillCount: 0, levelUpTiers: [], hasRecords: false };
   return {
     skillCount: Object.values(summary.xpBySkill).filter((xp) => xp > 0).length,
-    hasLevelUps: summary.levelUps.length > 0,
+    levelUpTiers: levelUpCards(summary.levelUps).cards.map((card) => card.tier),
     hasRecords: summary.prs.length > 0,
   };
+}
+
+export interface RevealTakeover {
+  startS: number;
+  cardStartsS: number[];
+  cardLengthsS: number[];
+  endS: number;
 }
 
 export interface RevealTimeline {
   skillDelaysS: number[];
   barDelaysS: number[];
+  takeover: RevealTakeover | null;
   levelUpDelayS: number | null;
   recordsDelayS: number | null;
   lootDelayS: number;
@@ -211,21 +265,37 @@ function roundedS(seconds: number): number {
   return toMs(seconds) / 1000;
 }
 
-export function revealTimeline({ skillCount, hasLevelUps, hasRecords }: RevealShape): RevealTimeline {
+function takeoverFrom(startS: number, tiers: readonly LevelUpTier[]): RevealTakeover | null {
+  if (tiers.length === 0) return null;
+  const cardLengthsS = tiers.map((tier) => TAKEOVER_CARD_S[tier]);
+  const cardStartsS: number[] = [];
+  let cursor = startS;
+  for (const lengthS of cardLengthsS) {
+    cardStartsS.push(roundedS(cursor));
+    cursor += lengthS;
+  }
+  return { startS: roundedS(startS), cardStartsS, cardLengthsS, endS: roundedS(cursor) };
+}
+
+export function revealTimeline({ skillCount, levelUpTiers, hasRecords }: RevealShape): RevealTimeline {
   const stagger = skillCount > 1 ? Math.min(SKILL_STAGGER_S, SKILL_SPREAD_MAX_S / (skillCount - 1)) : 0;
   const skillDelaysS = Array.from({ length: skillCount }, (_, index) => roundedS(SKILLS_START_S + index * stagger));
   const barDelaysS = skillDelaysS.map((delay) => roundedS(delay + BAR_LAG_S));
   const lastSkillS = skillDelaysS.at(-1);
+  const lastBarEndS = Math.max(0, ...barDelaysS.map((delay) => delay + GAIN_FILL_S));
   let cursor = lastSkillS === undefined ? SKILLS_START_S : lastSkillS + SKILL_SETTLE_S;
+  const takeover = takeoverFrom(Math.max(cursor, lastBarEndS), levelUpTiers);
+  if (takeover) cursor = takeover.endS;
+  const hasLevelUps = levelUpTiers.length > 0;
   const levelUpDelayS = hasLevelUps ? roundedS(cursor) : null;
   if (hasLevelUps) cursor += LEVEL_UP_BEAT_S;
   const recordsDelayS = hasRecords ? roundedS(cursor) : null;
   if (hasRecords) cursor += RECORDS_BEAT_S;
   const lootDelayS = roundedS(cursor);
-  const lastBarEndS = Math.max(0, ...barDelaysS.map((delay) => delay + GAIN_FILL_S));
   return {
     skillDelaysS,
     barDelaysS,
+    takeover,
     levelUpDelayS,
     recordsDelayS,
     lootDelayS,
@@ -233,12 +303,10 @@ export function revealTimeline({ skillCount, hasLevelUps, hasRecords }: RevealSh
   };
 }
 
-export function levelUpCueDelayMs(
-  timeline: Pick<RevealTimeline, 'levelUpDelayS'>,
-  reducedMotion: boolean,
-): number | null {
-  if (timeline.levelUpDelayS === null) return null;
-  return reducedMotion ? 0 : toMs(timeline.levelUpDelayS) + POP_PEAK_MS;
+export function levelUpCueDelayMs(timeline: Pick<RevealTimeline, 'takeover'>, reducedMotion: boolean): number | null {
+  const lastCardS = timeline.takeover?.cardStartsS.at(-1);
+  if (lastCardS === undefined) return null;
+  return reducedMotion ? 0 : toMs(lastCardS) + POP_PEAK_MS;
 }
 
 function xpToGoText(nextLevelXp: number, xp: number): string {

@@ -10,7 +10,7 @@
   position: fixed;
   right: calc(var(--space-4) + env(safe-area-inset-right));
   bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom) + var(--space-3));
-  z-index: 2;
+  z-index: 23;
   min-width: 88px;
   filter: drop-shadow(3px 3px 0 var(--color-bevel));
 }
@@ -367,5 +367,302 @@
   to {
     transform: none;
     opacity: 1;
+  }
+}
+
+.level-up-takeover {
+  position: fixed;
+  inset: 0;
+  z-index: 22;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4) calc(var(--space-4) + env(safe-area-inset-right)) var(--space-4)
+    calc(var(--space-4) + env(safe-area-inset-left));
+  background: var(--color-scrim);
+  pointer-events: none;
+  opacity: 0;
+  animation-name: takeover-dim;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+.takeover-card {
+  grid-area: 1 / 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(300px, 100%);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  opacity: 0;
+  animation-name: takeover-card;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.takeover-card.tier-milestone {
+  border-color: var(--color-accent);
+  background: radial-gradient(
+    circle at 50% 35%,
+    color-mix(in srgb, var(--color-accent) 30%, var(--color-panel)) 0,
+    var(--color-panel) 70%
+  );
+}
+
+.takeover-card.tier-max {
+  border-color: var(--color-accent-light);
+  background: var(--color-accent);
+  color: var(--color-ink);
+}
+
+.takeover-card .skill-icon {
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-accent) 60%, transparent));
+}
+
+.takeover-kicker {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  color: var(--color-accent);
+  text-shadow: var(--text-shadow);
+}
+
+.takeover-card.tier-max .takeover-kicker {
+  color: var(--color-ink);
+  text-shadow: none;
+}
+
+.takeover-skill {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.takeover-level {
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 700;
+  color: var(--color-xp);
+  text-shadow: 3px 3px 0 var(--color-bevel);
+}
+
+.takeover-card.tier-max .takeover-level {
+  color: var(--color-ink);
+  text-shadow: none;
+}
+
+.takeover-more {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.takeover-card.tier-max .takeover-more {
+  color: var(--color-ink);
+}
+
+.takeover-sparks {
+  position: absolute;
+  inset: 0;
+  animation-delay: inherit;
+}
+
+.spark {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  animation: spark 1s steps(6, end) both;
+  animation-delay: inherit;
+}
+
+.tier-max .spark {
+  animation-iteration-count: 2;
+}
+
+.spark:nth-child(4n + 1) {
+  background: var(--color-accent);
+}
+
+.spark:nth-child(4n + 2) {
+  background: var(--color-xp);
+}
+
+.spark:nth-child(4n + 3) {
+  background: var(--color-rare);
+}
+
+.spark:nth-child(4n + 4) {
+  background: var(--color-accent-light);
+}
+
+.spark:nth-child(1) {
+  --dx: 135px;
+  --dy: 0px;
+}
+
+.spark:nth-child(2) {
+  --dx: 117px;
+  --dy: 67px;
+}
+
+.spark:nth-child(3) {
+  --dx: 68px;
+  --dy: 117px;
+}
+
+.spark:nth-child(4) {
+  --dx: 0px;
+  --dy: 135px;
+}
+
+.spark:nth-child(5) {
+  --dx: -67px;
+  --dy: 117px;
+}
+
+.spark:nth-child(6) {
+  --dx: -117px;
+  --dy: 67px;
+}
+
+.spark:nth-child(7) {
+  --dx: -135px;
+  --dy: 0px;
+}
+
+.spark:nth-child(8) {
+  --dx: -117px;
+  --dy: -68px;
+}
+
+.spark:nth-child(9) {
+  --dx: -68px;
+  --dy: -117px;
+}
+
+.spark:nth-child(10) {
+  --dx: 0px;
+  --dy: -135px;
+}
+
+.spark:nth-child(11) {
+  --dx: 68px;
+  --dy: -117px;
+}
+
+.spark:nth-child(12) {
+  --dx: 117px;
+  --dy: -68px;
+}
+
+.spark:nth-child(13) {
+  --dx: 193px;
+  --dy: 52px;
+}
+
+.spark:nth-child(14) {
+  --dx: 141px;
+  --dy: 141px;
+}
+
+.spark:nth-child(15) {
+  --dx: 52px;
+  --dy: 193px;
+}
+
+.spark:nth-child(16) {
+  --dx: -52px;
+  --dy: 193px;
+}
+
+.spark:nth-child(17) {
+  --dx: -141px;
+  --dy: 141px;
+}
+
+.spark:nth-child(18) {
+  --dx: -193px;
+  --dy: 52px;
+}
+
+.spark:nth-child(19) {
+  --dx: -193px;
+  --dy: -52px;
+}
+
+.spark:nth-child(20) {
+  --dx: -141px;
+  --dy: -141px;
+}
+
+.spark:nth-child(21) {
+  --dx: -52px;
+  --dy: -193px;
+}
+
+.spark:nth-child(22) {
+  --dx: 52px;
+  --dy: -193px;
+}
+
+.spark:nth-child(23) {
+  --dx: 141px;
+  --dy: -141px;
+}
+
+.spark:nth-child(24) {
+  --dx: 193px;
+  --dy: -52px;
+}
+
+@keyframes takeover-dim {
+  0% {
+    opacity: 0;
+  }
+  8%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes takeover-card {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  26% {
+    transform: scale(1);
+  }
+  86% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes spark {
+  0%,
+  20% {
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)));
   }
 }

@@ -76,6 +76,30 @@ test('skipping jumps the reveal to its end without the level-up cue, and a playe
   await expect(skipButton(page)).toHaveCount(0);
 });
 
+test('a level up takes over the screen until it ends or a tap, and reduced motion leaves it out', async ({ page }) => {
+  await register(page, uniqueUsername('rv_takeover'));
+  await page.getByRole('button', { name: 'Start workout' }).click();
+  await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 100, reps: 5 }]);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+
+  const takeover = page.locator('.level-up-takeover');
+  await expect(takeover).toHaveAttribute('aria-hidden', 'true');
+  await expect(takeover.locator('.takeover-card').last()).toContainText(/Level up!.+Level \d+/);
+  await expect(takeover).toHaveCount(0, { timeout: 10_000 });
+  await expect(page.getByRole('heading', { name: 'Level up!' })).toBeVisible();
+
+  await page.reload();
+  await expect(takeover).toHaveCount(1);
+  await page.evaluate(() => document.body.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await expect(takeover).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Level up!' })).toBeVisible();
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Level up!' })).toBeVisible();
+  await expect(takeover).toHaveCount(0);
+});
+
 test('starting a scroll keeps the reveal playing, a tap skips it, and its lists have headings', async ({ page }) => {
   await page.clock.install();
   await register(page, uniqueUsername('rv_scroll'));
