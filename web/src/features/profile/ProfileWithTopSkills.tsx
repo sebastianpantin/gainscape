@@ -20,6 +20,7 @@ export function ProfileWithTopSkills({ skills, profile, headingId, nameIsPageTit
   return (
     <>
       <ProfileCard
+        userId={profile.userId}
         profile={cardProfileOf(profile)}
         nameIsPageTitle={nameIsPageTitle}
         totalLevel={standing.totalLevel}

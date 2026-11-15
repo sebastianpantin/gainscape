@@ -361,6 +361,7 @@ test('the design gallery has no serious axe violations', async ({ page }) => {
   await checkScreen(page, 'design gallery', async () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Design', exact: true })).toBeVisible();
     await expect(page.getByRole('listitem', { name: 'Set 2' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Character wearing Forged belt', exact: true })).toBeVisible();
   });
 });
 

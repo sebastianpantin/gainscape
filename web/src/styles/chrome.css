@@ -127,23 +127,24 @@
 .training-hero {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .hero-character {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
+  align-items: flex-end;
+  gap: var(--space-1);
   flex-shrink: 0;
 }
 
-.hero-gear {
-  display: grid;
-  grid-template-columns: repeat(3, auto);
-  gap: var(--space-1);
+.hero-character-placeholder {
+  inline-size: 72px;
+  aspect-ratio: 3 / 4;
+}
+
+.hero-character-link {
+  display: inline-flex;
   min-height: var(--tap-target);
-  align-content: center;
   text-decoration: none;
 }
 
@@ -172,6 +173,46 @@
   display: inline-flex;
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 40%, transparent));
   animation: pet-bob 1.8s steps(2, jump-none) infinite;
+}
+
+.character {
+  display: inline-grid;
+  line-height: 0;
+}
+
+.design-character {
+  margin: 0;
+  align-items: center;
+  min-inline-size: 7rem;
+  text-align: center;
+}
+
+.character-frame {
+  grid-area: 1 / 1;
+  animation: character-idle-still 1.6s step-end infinite;
+}
+
+.character-frame.bobbed {
+  visibility: hidden;
+  animation-name: character-idle-bobbed;
+}
+
+@keyframes character-idle-still {
+  0% {
+    visibility: visible;
+  }
+  50% {
+    visibility: hidden;
+  }
+}
+
+@keyframes character-idle-bobbed {
+  0% {
+    visibility: hidden;
+  }
+  50% {
+    visibility: visible;
+  }
 }
 
 .pet-companion.excited .pet-companion-art {

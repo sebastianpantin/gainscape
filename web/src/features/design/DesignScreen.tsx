@@ -1,11 +1,17 @@
+import { GEAR_SLOTS, ITEM_TIERS, type ItemTier } from '@domain/crafting.ts';
 import { type ReactNode, useId, useRef, useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { EmptyState } from '../../components/EmptyState.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
+import { CharacterFigure } from '../../components/PixelArt.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { SegmentedChoice } from '../../components/SegmentedChoice.tsx';
 import { Switch } from '../../components/Switch.tsx';
+import { characterLabel, characterLook } from '../../lib/collection/character-rules.ts';
+import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
+import { capitalized } from '../../lib/names.ts';
+import { BADGE_COLOR_KEYS, type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { useToast } from '../../lib/ui/toast.ts';
 import { DEFAULT_PLATE_SETTINGS, barbellPlates, barbellPlatesText } from '../../lib/workout/plate-rules.ts';
 import { type DraftSet } from '../../offline/draft-format.ts';
@@ -38,6 +44,52 @@ const SAMPLE_SETS: readonly DraftSet[] = [
     done: false,
   },
 ];
+
+function sampleLoadout(tier: ItemTier): EquippedGear[] {
+  return GEAR_SLOTS.map((slot) => ({
+    slot,
+    itemId: `design-${tier}-${slot}`,
+    itemKey: `${tier}_${slot}`,
+    name: `${capitalized(tier)} ${slot}`,
+    tier,
+  }));
+}
+
+function SampleCharacter({ slots, badge, caption }: { slots: EquippedGear[]; badge: BadgeColor; caption: string }) {
+  return (
+    <figure className="stack design-character">
+      <CharacterFigure look={characterLook(slots, badge)} label={characterLabel(slots)} />
+      <figcaption className="muted tiny">{caption}</figcaption>
+    </figure>
+  );
+}
+
+function SampleCharacters() {
+  return (
+    <>
+      <div className="row wrap">
+        {BADGE_COLOR_KEYS.map((badge) => (
+          <SampleCharacter key={badge} slots={[]} badge={badge} caption={`${capitalized(badge)}, no gear`} />
+        ))}
+      </div>
+      <div className="row wrap">
+        {GEAR_SLOTS.map((slot) => (
+          <SampleCharacter
+            key={slot}
+            slots={sampleLoadout('forged').filter((gear) => gear.slot === slot)}
+            badge="blue"
+            caption={`Forged ${slot}`}
+          />
+        ))}
+      </div>
+      <div className="row wrap">
+        {ITEM_TIERS.map((tier) => (
+          <SampleCharacter key={tier} slots={sampleLoadout(tier)} badge="stone" caption={`Full ${tier}`} />
+        ))}
+      </div>
+    </>
+  );
+}
 
 function GallerySection({ title, children }: { title: string; children: ReactNode }) {
   const headingId = useId();
@@ -229,6 +281,10 @@ export function DesignScreen() {
       </GallerySection>
 
       <SampleSetRows />
+
+      <GallerySection title="Character">
+        <SampleCharacters />
+      </GallerySection>
 
       <GallerySection title="Chips and tags">
         <div className="row wrap">

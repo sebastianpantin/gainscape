@@ -1,4 +1,5 @@
 import { monogramFor } from '../lib/progress/standing-rules.ts';
+import { type CharacterLook, characterFrames } from './character-sprites.ts';
 import {
   isSkillKey,
   type ItemIconKind,
@@ -73,4 +74,18 @@ export function LootChestIcon() {
 
 export function OpenLootChestIcon() {
   return <PixelGrid sprite={LOOT_CHEST_OPEN} size={56} />;
+}
+
+export function CharacterFigure({ look, label, size = 128 }: { look: CharacterLook; label: string; size?: number }) {
+  const [still, bobbed] = characterFrames(look);
+  return (
+    <span className="character" role="img" aria-label={label}>
+      <span className="character-frame still">
+        <PixelGrid sprite={still} size={size} />
+      </span>
+      <span className="character-frame bobbed">
+        <PixelGrid sprite={bobbed} size={size} />
+      </span>
+    </span>
+  );
 }

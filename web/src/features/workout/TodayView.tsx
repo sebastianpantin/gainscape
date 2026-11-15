@@ -33,7 +33,7 @@ import { ProgramSummary } from './ProgramSummary.tsx';
 import { ProgramToday } from './ProgramToday.tsx';
 import { ThisWeekCard } from './ThisWeekCard.tsx';
 import { greetingFor } from './today-rules.ts';
-import { TrainingHero } from './TrainingHero.tsx';
+import { ActiveQuestCard, TrainingHero } from './TrainingHero.tsx';
 import { type useWorkoutStart } from './use-workout-start.ts';
 
 interface TodayViewProps {
@@ -108,6 +108,7 @@ export function TodayView({
       )}
       <InstallCard userId={userId} />
       <ThisWeekCard today={today} trainedDates={trainedDates} />
+      <TrainingHero userId={userId} standing={standing} today={today} trainedDates={trainedDates} />
       <ProgramSummary userId={userId} program={program} />
       <ProgramToday
         program={program}
@@ -144,7 +145,7 @@ export function TodayView({
         hideEmptyState={program.kind !== 'none' || followCardShown}
         onStart={start.startFromDay}
       />
-      <TrainingHero userId={userId} standing={standing} unit={unit} today={today} trainedDates={trainedDates} />
+      <ActiveQuestCard userId={userId} unit={unit} />
       <HighlightsCard userId={userId} today={today} trainedDates={trainedDates} unit={unit} />
       <LiftGoalsCard userId={userId} unit={unit} />
       <FriendActivityStrip userId={userId} />

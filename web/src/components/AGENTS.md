@@ -10,6 +10,7 @@ Shared UI pieces for feature screens: icons, pixel-art sprites and their rendere
 ## Map
 
 - `pixel-sprites.ts` is pure sprite data (no React). `scripts/icons/render.ts` also uses it to generate `web/public/icons/*`. `PixelArt.tsx` renders the sprites.
+- `character-sprites.ts`: the 24 by 32 lifter, a base body plus one overlay per gear slot tinted with the tier colour, in two idle frames. `CharacterFigure` (`PixelArt.tsx`) stacks both frames and swaps them in CSS; the look and label come from `../lib/collection/character-rules.ts`. Judge art changes in the `/design` gallery.
 - `Icon.tsx`: line icons in a `PATHS` record. To add an icon, add a name and its path there.
 - Providers wrapping the app in `App.tsx`: `PreferencesProvider.tsx` (unit and effort mode) and `ToastProvider.tsx` (inside the data router from `createBrowserRouter`). `ScreenErrorBoundary.tsx` wraps the routes.
 - Their decisions live in `../lib/ui/*-rules.ts` (the bar chart shares the line chart's frame, ticks and styles) and `glossary.ts`.
@@ -18,7 +19,7 @@ Shared UI pieces for feature screens: icons, pixel-art sprites and their rendere
 
 - After changing `LOGO`, `APP_ICON_BACKGROUND` or `APP_ICON_FRAME` in `pixel-sprites.ts`, run `make icons` and commit the output, or `make check` fails.
 - `ItemIconKind` is `ItemIconKey` from `@domain/crafting.ts` plus `'locked'`. A new domain item icon needs a sprite here; the sprite test iterates `ITEM_ICON_KINDS`.
-- Sprite hex values are the only colour literals outside `styles/tokens.css`, and they must be colours listed in `tokens.css` (`tests/web/pixel-sprites.test.ts`). Everything else gets its colour from token classes.
+- Sprite hex values are the only colour literals outside `styles/tokens.css`, and they must be colours listed in `tokens.css` (`tests/web/pixel-sprites.test.ts`, `tests/web/character-sprites.test.ts`). Tints passed in (tier and badge colours) are the exception. Everything else gets its colour from token classes.
 - Decorative SVGs are `aria-hidden`; put the meaningful label on the surrounding element.
 - `BodyMap` colour is the only state cue in the figure, so the screen must also list the names (`RecoveryPanel`).
 - `CountUp` and `ShownNumber` hide the animated text from assistive tech (`aria-hidden`) and put the final value in a visually hidden span, so screen readers and e2e names never read the running count. `ProgressBar`'s `shownFraction` moves only the fill; `aria-valuenow` and `aria-valuetext` stay on the real value.
@@ -45,7 +46,7 @@ Shared UI pieces for feature screens: icons, pixel-art sprites and their rendere
 
 ## Testing
 
-- `tests/web/pixel-sprites.test.ts` covers the sprite data, and `tests/web/png.test.ts` covers icon rendering (`make test-web`).
+- `tests/web/pixel-sprites.test.ts` and `tests/web/character-sprites.test.ts` cover the sprite data, and `tests/web/png.test.ts` covers icon rendering (`make test-web`).
 - The components themselves have no unit tests. `e2e/a11y.spec.ts` and the feature specs exercise them (`make e2e`, needs the stack). New accessibility behaviour goes in `e2e/a11y.spec.ts`.
 
 ## Manual Notes
