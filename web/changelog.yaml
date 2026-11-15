@@ -1,3 +1,13 @@
+- prs: [214, 215, 216, 217, 218]
+  version: 0.28.0
+  date: 2026-11-15
+  title: Your character, your gym
+  items:
+    - Meet your character, a pixel lifter who wears the gear you equip, with your pet beside them. They stand on Train and on profiles, yours and your friends'. Equip or craft a piece and watch it drop into place.
+    - Train now opens on your own gym. It starts as a bare room with a rack and gains plates, a banner, a window and finally a city view as your total level rises. Your latest records hang as trophies, quests add pennants, and the light follows the time of day.
+    - Level up a skill and the reveal stops for a moment to celebrate it, with a gold frame for milestone levels and a bigger moment still at 99.
+    - Opening the loot chest brings your drops out one at a time, best last. Rare finds land in a beam of light, and a new pet gets a card of its own.
+    - Beat a best mid-workout and the set says by how much, like "New 5RM! +2.5 kg", with a gold sweep across the row.
 - prs: [211]
   version: 0.27.0
   date: 2026-11-06
