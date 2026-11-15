@@ -5,10 +5,9 @@ import {
   challengeFailReason,
   challengeHeadline,
   challengeNotAppliedText,
-  levelUpCards,
+  levelUpTakeover,
   levelUpCueDelayMs,
   levelUpTier,
-  moreLevelUpsText,
   playsReveal,
   questRevealLines,
   REVEAL_MAX_PRE_LOOT_S,
@@ -21,6 +20,8 @@ import {
   gainBarLabel,
 } from '../../web/src/features/summary/reveal-rules.ts';
 import { questLogFrom } from '../../web/src/lib/quests/quest-rules.ts';
+
+const roundedS = (seconds: number) => Math.round(seconds * 1000) / 1000;
 
 describe('bonusText', () => {
   it('shows the gear bonus of a skill with grouped thousands', () => {
@@ -178,95 +179,112 @@ describe('levelUpTier', () => {
   });
 });
 
-describe('levelUpCards', () => {
-  it('shows one card per level up, the biggest last', () => {
-    const { cards, moreCount } = levelUpCards([
-      { skill: 'chest', from: 9, to: 10 },
-      { skill: 'arms', from: 3, to: 4 },
-    ]);
-    expect(cards).toEqual([
-      { skill: 'arms', from: 3, to: 4, tier: 'normal' },
-      { skill: 'chest', from: 9, to: 10, tier: 'milestone' },
-    ]);
-    expect(moreCount).toBe(0);
+describe('levelUpTakeover', () => {
+  it('takes over with the one level up of the workout', () => {
+    expect(levelUpTakeover([{ skill: 'chest', from: 9, to: 10 }])).toEqual({
+      tier: 'milestone',
+      entries: [{ skill: 'chest', from: 9, to: 10, tier: 'milestone' }],
+    });
   });
 
-  it('orders level ups of the same tier by the level reached', () => {
-    const { cards } = levelUpCards([
+  it('sums up every level up of the workout on one card, biggest first, and takes the tier of the biggest', () => {
+    const takeover = levelUpTakeover([
+      { skill: 'arms', from: 3, to: 4 },
+      { skill: 'chest', from: 9, to: 10 },
       { skill: 'legs', from: 30, to: 31 },
       { skill: 'core', from: 5, to: 6 },
     ]);
-    expect(cards.map((card) => card.skill)).toEqual(['core', 'legs']);
+    expect(takeover?.tier).toBe('milestone');
+    expect(takeover?.entries.map((entry) => entry.skill)).toEqual(['chest', 'legs', 'core', 'arms']);
   });
 
-  it('keeps the three biggest level ups and counts the rest', () => {
-    const { cards, moreCount } = levelUpCards([
-      { skill: 'chest', from: 3, to: 4 },
-      { skill: 'back', from: 5, to: 6 },
-      { skill: 'arms', from: 98, to: 99 },
-      { skill: 'legs', from: 7, to: 8 },
-      { skill: 'core', from: 24, to: 25 },
-    ]);
-    expect(cards.map((card) => card.skill)).toEqual(['legs', 'core', 'arms']);
-    expect(moreCount).toBe(2);
+  it('keeps every level up, however many skills went up', () => {
+    const levelUps = [
+      'chest',
+      'back',
+      'shoulders',
+      'arms',
+      'legs',
+      'core',
+      'grip',
+      'endurance',
+      'agility',
+      'mobility',
+    ].map((skill) => ({ skill, from: 1, to: 2 }));
+    expect(levelUpTakeover(levelUps)?.entries).toHaveLength(10);
   });
 
-  it('has no cards without a level up', () => {
-    expect(levelUpCards([])).toEqual({ cards: [], moreCount: 0 });
+  it('has no takeover without a level up', () => {
+    expect(levelUpTakeover([])).toBeNull();
   });
 });
 
-describe('takeover texts', () => {
-  it('names the kind of level up above the skill', () => {
-    expect(takeoverKicker('normal')).toBe('Level up!');
-    expect(takeoverKicker('milestone')).toBe('Milestone!');
-    expect(takeoverKicker('max')).toBe('Max level!');
+describe('takeoverKicker', () => {
+  it('names the kind of a single level up', () => {
+    expect(takeoverKicker('normal', 1)).toBe('Level up!');
+    expect(takeoverKicker('milestone', 1)).toBe('Milestone!');
+    expect(takeoverKicker('max', 1)).toBe('Max level!');
   });
 
-  it('counts the level ups that did not get a card', () => {
-    expect(moreLevelUpsText(1)).toBe('+1 more level up');
-    expect(moreLevelUpsText(4)).toBe('+4 more level ups');
+  it('counts the level ups of a summary', () => {
+    expect(takeoverKicker('normal', 3)).toBe('3 level ups!');
+    expect(takeoverKicker('milestone', 2)).toBe('2 level ups!');
   });
 });
 
 describe('revealTimeline', () => {
-  const tiers = fc.array(fc.constantFrom('normal' as const, 'milestone' as const, 'max' as const), { maxLength: 3 });
   const shapes = fc.record({
     skillCount: fc.integer({ min: 0, max: 40 }),
-    levelUpTiers: tiers,
+    levelUp: fc.option(
+      fc.record({
+        tier: fc.constantFrom('normal' as const, 'milestone' as const, 'max' as const),
+        count: fc.integer({ min: 1, max: 10 }),
+      }),
+      { nil: null },
+    ),
     hasRecords: fc.boolean(),
   });
 
   it('staggers a few skills at a relaxed pace', () => {
-    const timeline = revealTimeline({ skillCount: 3, levelUpTiers: [], hasRecords: false });
+    const timeline = revealTimeline({ skillCount: 3, levelUp: null, hasRecords: false });
     expect(timeline.skillDelaysS).toEqual([0.1, 0.25, 0.4]);
     expect(timeline.barDelaysS).toEqual([0.2, 0.35, 0.5]);
   });
 
   it('compresses the stagger so ten skills start within the same window as four', () => {
-    const four = revealTimeline({ skillCount: 4, levelUpTiers: [], hasRecords: false });
-    const ten = revealTimeline({ skillCount: 10, levelUpTiers: [], hasRecords: false });
+    const four = revealTimeline({ skillCount: 4, levelUp: null, hasRecords: false });
+    const ten = revealTimeline({ skillCount: 10, levelUp: null, hasRecords: false });
     expect(ten.skillDelaysS.at(-1)).toBeCloseTo(four.skillDelaysS.at(-1)!);
     expect(ten.skillDelaysS[1] - ten.skillDelaysS[0]).toBeCloseTo(0.05);
   });
 
   it('takes over the screen once the bars have filled, then brings in level ups, records and the loot', () => {
-    const timeline = revealTimeline({ skillCount: 2, levelUpTiers: ['normal'], hasRecords: true });
-    expect(timeline.takeover).toEqual({ startS: 0.95, cardStartsS: [0.95], cardLengthsS: [1.6], endS: 2.55 });
+    const timeline = revealTimeline({ skillCount: 2, levelUp: { tier: 'normal', count: 1 }, hasRecords: true });
+    expect(timeline.takeover).toEqual({ startS: 0.95, endS: 2.55 });
     expect(timeline.levelUpDelayS).toBeCloseTo(2.55);
     expect(timeline.recordsDelayS).toBeCloseTo(2.85);
     expect(timeline.lootDelayS).toBeCloseTo(3.1);
   });
 
-  it('plays the takeover cards back to back, longer for a milestone and longest for level 99', () => {
-    const timeline = revealTimeline({ skillCount: 1, levelUpTiers: ['normal', 'milestone', 'max'], hasRecords: false });
-    expect(timeline.takeover?.cardLengthsS).toEqual([1.6, 2.2, 3]);
-    expect(timeline.takeover?.cardStartsS).toEqual([0.8, 2.4, 4.6]);
-    expect(timeline.takeover?.endS).toBeCloseTo(7.6);
+  it('holds a milestone longer and level 99 longest', () => {
+    const lengthOf = (tier: 'normal' | 'milestone' | 'max') => {
+      const { takeover } = revealTimeline({ skillCount: 1, levelUp: { tier, count: 1 }, hasRecords: false });
+      return takeover === null ? 0 : roundedS(takeover.endS - takeover.startS);
+    };
+    expect([lengthOf('normal'), lengthOf('milestone'), lengthOf('max')]).toEqual([1.6, 2.2, 3]);
+  });
+
+  it('gives a summary a little longer to read, however many level ups it lists', () => {
+    const lengthFor = (count: number) => {
+      const { takeover } = revealTimeline({ skillCount: 1, levelUp: { tier: 'normal', count }, hasRecords: false });
+      return takeover === null ? 0 : roundedS(takeover.endS - takeover.startS);
+    };
+    expect(lengthFor(2)).toBe(2.2);
+    expect(lengthFor(10)).toBe(2.2);
   });
 
   it('skips the beats of sections that are not shown', () => {
-    const timeline = revealTimeline({ skillCount: 2, levelUpTiers: [], hasRecords: false });
+    const timeline = revealTimeline({ skillCount: 2, levelUp: null, hasRecords: false });
     expect(timeline.takeover).toBeNull();
     expect(timeline.levelUpDelayS).toBeNull();
     expect(timeline.recordsDelayS).toBeNull();
@@ -274,7 +292,7 @@ describe('revealTimeline', () => {
   });
 
   it('starts the loot at once when nothing comes before it', () => {
-    expect(revealTimeline({ skillCount: 0, levelUpTiers: [], hasRecords: false }).lootDelayS).toBeCloseTo(0.1);
+    expect(revealTimeline({ skillCount: 0, levelUp: null, hasRecords: false }).lootDelayS).toBeCloseTo(0.1);
   });
 
   it('starts the takeover only after the last bar has filled', () => {
@@ -296,6 +314,7 @@ describe('revealTimeline', () => {
         if (takeover === null) expect(timeline.lootDelayS).toBeLessThanOrEqual(REVEAL_MAX_PRE_LOOT_S);
         else {
           expect(takeover.startS).toBeLessThanOrEqual(REVEAL_MAX_PRE_LOOT_S);
+          expect(takeover.endS - takeover.startS).toBeLessThanOrEqual(4);
           expect(timeline.lootDelayS - takeover.endS).toBeLessThanOrEqual(REVEAL_MAX_PRE_LOOT_S);
         }
         expect(timeline.skillDelaysS).toHaveLength(shape.skillCount);
@@ -327,21 +346,21 @@ describe('revealShape', () => {
   };
 
   it('counts the skills that gained XP and notes the level-up cards and records', () => {
-    expect(revealShape(summary)).toEqual({ skillCount: 2, levelUpTiers: ['normal'], hasRecords: false });
+    expect(revealShape(summary)).toEqual({ skillCount: 2, levelUp: { tier: 'normal', count: 1 }, hasRecords: false });
   });
 
   it('has nothing to choreograph for a history-only save or a missing summary', () => {
-    const empty = { skillCount: 0, levelUpTiers: [], hasRecords: false };
+    const empty = { skillCount: 0, levelUp: null, hasRecords: false };
     expect(revealShape({ ...summary, historyOnly: true as const })).toEqual(empty);
     expect(revealShape(null)).toEqual(empty);
   });
 });
 
 describe('levelUpCueDelayMs', () => {
-  const withLevelUps = revealTimeline({ skillCount: 2, levelUpTiers: ['normal', 'milestone'], hasRecords: false });
+  const withLevelUps = revealTimeline({ skillCount: 2, levelUp: { tier: 'milestone', count: 2 }, hasRecords: false });
 
-  it('lands the cue on the peak of the last takeover card', () => {
-    expect(levelUpCueDelayMs(withLevelUps, false)).toBe(2850);
+  it('lands the cue on the peak of the takeover card', () => {
+    expect(levelUpCueDelayMs(withLevelUps, false)).toBe(1250);
   });
 
   it('cues at once under reduced motion, where the level up is already on screen', () => {
@@ -349,7 +368,7 @@ describe('levelUpCueDelayMs', () => {
   });
 
   it('has no cue without a level up', () => {
-    const without = revealTimeline({ skillCount: 2, levelUpTiers: [], hasRecords: false });
+    const without = revealTimeline({ skillCount: 2, levelUp: null, hasRecords: false });
     expect(levelUpCueDelayMs(without, false)).toBeNull();
     expect(levelUpCueDelayMs(without, true)).toBeNull();
   });

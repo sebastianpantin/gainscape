@@ -35,10 +35,9 @@ import {
   challengeFailReason,
   challengeHeadline,
   challengeNotAppliedText,
-  type LevelUpCard,
-  levelUpCards,
+  type LevelUpTakeover as LevelUpTakeoverContent,
   levelUpCueDelayMs,
-  moreLevelUpsText,
+  levelUpTakeover,
   playsReveal,
   type QuestReveal,
   questRevealLines,
@@ -157,44 +156,48 @@ function GainBar({ skillName, xpAfter, gain, delaySeconds }: GainBarProps) {
 
 const SPARKS_BY_TIER: Record<LevelUpTier, number> = { normal: 12, milestone: 24, max: 24 };
 const TAKEOVER_ICON_SIZE = 96;
+const SUMMARY_TWO_COLUMNS_FROM = 6;
 
 interface LevelUpTakeoverProps {
-  takeover: RevealTakeover;
-  cards: readonly LevelUpCard[];
-  moreCount: number;
+  timing: RevealTakeover;
+  takeover: LevelUpTakeoverContent;
   nameOf: (skillKey: string) => string;
 }
 
-function LevelUpTakeover({ takeover, cards, moreCount, nameOf }: LevelUpTakeoverProps) {
+function LevelUpTakeover({ timing, takeover, nameOf }: LevelUpTakeoverProps) {
+  const { tier, entries } = takeover;
+  const [single] = entries;
+  const animation = { animationDelay: `${timing.startS}s`, animationDuration: `${timing.endS - timing.startS}s` };
   return (
-    <div
-      className="level-up-takeover"
-      aria-hidden="true"
-      style={{ animationDelay: `${takeover.startS}s`, animationDuration: `${takeover.endS - takeover.startS}s` }}
-    >
-      {cards.map((card, index) => (
-        <div
-          key={card.skill}
-          className={`panel takeover-card tier-${card.tier}`}
-          style={{
-            animationDelay: `${takeover.cardStartsS[index] ?? takeover.startS}s`,
-            animationDuration: `${takeover.cardLengthsS[index] ?? 0}s`,
-          }}
-        >
-          <span className="takeover-sparks">
-            {Array.from({ length: SPARKS_BY_TIER[card.tier] }, (_, spark) => (
-              <span key={spark} className="spark" />
-            ))}
-          </span>
-          <SkillIcon skillKey={card.skill} size={TAKEOVER_ICON_SIZE} />
-          <span className="takeover-kicker">{takeoverKicker(card.tier)}</span>
-          <span className="takeover-skill">{nameOf(card.skill)}</span>
-          <span className="takeover-level">Level {card.to}</span>
-          {moreCount > 0 && index === cards.length - 1 && (
-            <span className="takeover-more">{moreLevelUpsText(moreCount)}</span>
-          )}
-        </div>
-      ))}
+    <div className="level-up-takeover" aria-hidden="true" style={animation}>
+      <div className={`panel takeover-card tier-${tier}${entries.length > 1 ? ' summary' : ''}`} style={animation}>
+        <span className="takeover-sparks">
+          {Array.from({ length: SPARKS_BY_TIER[tier] }, (_, spark) => (
+            <span key={spark} className="spark" />
+          ))}
+        </span>
+        {entries.length === 1 && single !== undefined ? (
+          <>
+            <SkillIcon skillKey={single.skill} size={TAKEOVER_ICON_SIZE} />
+            <span className="takeover-kicker">{takeoverKicker(tier, 1)}</span>
+            <span className="takeover-skill">{nameOf(single.skill)}</span>
+            <span className="takeover-level">Level {single.to}</span>
+          </>
+        ) : (
+          <>
+            <span className="takeover-kicker">{takeoverKicker(tier, entries.length)}</span>
+            <ul className={entries.length >= SUMMARY_TWO_COLUMNS_FROM ? 'takeover-list wide' : 'takeover-list'}>
+              {entries.map((entry) => (
+                <li key={entry.skill} className={`tier-${entry.tier}`}>
+                  <SkillIcon skillKey={entry.skill} />
+                  <span className="takeover-entry-name">{nameOf(entry.skill)}</span>
+                  <span className="takeover-entry-level">{entry.to}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -362,8 +365,8 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   );
   const sessionId = summary?.sessionId;
   const timeline = revealTimeline(revealShape(summary));
-  const takeoverCards = levelUpCards(summary?.levelUps ?? []);
-  const cueTier = takeoverCards.cards.at(-1)?.tier ?? null;
+  const takeoverContent = levelUpTakeover(summary?.levelUps ?? []);
+  const cueTier = takeoverContent?.tier ?? null;
   const title = useRef<HTMLHeadingElement>(null);
   const xpHeadingId = useId();
   const recordsHeadingId = useId();
@@ -449,13 +452,8 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           </button>
         )}
       </header>
-      {phase === 'playing' && timeline.takeover && (
-        <LevelUpTakeover
-          takeover={timeline.takeover}
-          cards={takeoverCards.cards}
-          moreCount={takeoverCards.moreCount}
-          nameOf={nameOf}
-        />
+      {phase === 'playing' && timeline.takeover && takeoverContent && (
+        <LevelUpTakeover timing={timeline.takeover} takeover={takeoverContent} nameOf={nameOf} />
       )}
       {timingText && <p className="muted">{timingText}</p>}
       {unappliedNotice}

@@ -76,7 +76,9 @@ test('skipping jumps the reveal to its end without the level-up cue, and a playe
   await expect(skipButton(page)).toHaveCount(0);
 });
 
-test('a level up takes over the screen until it ends or a tap, and reduced motion leaves it out', async ({ page }) => {
+test('level ups take over the screen on one summary card until it ends or a tap, and reduced motion leaves it out', async ({
+  page,
+}) => {
   await register(page, uniqueUsername('rv_takeover'));
   await page.getByRole('button', { name: 'Start workout' }).click();
   await logExercise(page, 'bench', 'Barbell Bench Press', [{ weightKg: 100, reps: 5 }]);
@@ -84,9 +86,16 @@ test('a level up takes over the screen until it ends or a tap, and reduced motio
 
   const takeover = page.locator('.level-up-takeover');
   await expect(takeover).toHaveAttribute('aria-hidden', 'true');
-  await expect(takeover.locator('.takeover-card').last()).toContainText(/Level up!.+Level \d+/);
+  await expect(takeover.locator('.takeover-card')).toHaveCount(1);
+  const summarised = takeover.locator('.takeover-list li');
+  await expect(takeover.locator('.takeover-kicker')).toHaveText(/^\d+ level ups!$/);
+  const levelUpCount = await summarised.count();
+  expect(levelUpCount).toBeGreaterThan(1);
+  await expect(takeover.locator('.takeover-kicker')).toHaveText(`${levelUpCount} level ups!`);
   await expect(takeover).toHaveCount(0, { timeout: 10_000 });
-  await expect(page.getByRole('heading', { name: 'Level up!' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Level ups', exact: true }).getByRole('listitem')).toHaveCount(
+    levelUpCount,
+  );
 
   await page.reload();
   await expect(takeover).toHaveCount(1);
