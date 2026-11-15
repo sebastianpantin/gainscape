@@ -1,8 +1,9 @@
-import { levelProgress } from '@domain/index.ts';
+import { levelProgress, MAX_LEVEL } from '@domain/index.ts';
 import { FLOAT_TOLERANCE } from '@domain/math.ts';
-import type { QuestProgressSummary, SessionSummary } from '@domain/types.ts';
+import type { LevelUp, QuestProgressSummary, SessionSummary } from '@domain/types.ts';
 import type { DraftChallenge } from '../../offline/draft-format.ts';
 import { formatXp } from '../../lib/format.ts';
+import type { LevelUpTier } from '../../lib/platform/celebration-effects.ts';
 import type { UnitPref } from '../../lib/profile/profile-rules.ts';
 import { formatWeight } from '../../lib/units.ts';
 import {
@@ -161,10 +162,56 @@ const RECORDS_BEAT_S = 0.25;
 const RISE_S = 0.4;
 const GAIN_FILL_S = 0.6;
 const POP_PEAK_MS = 300;
+const SUMMARY_READ_S = 0.6;
+
+const TIER_RANK: Record<LevelUpTier, number> = { normal: 0, milestone: 1, max: 2 };
+
+const TAKEOVER_S: Record<LevelUpTier, number> = { normal: 1.6, milestone: 2.2, max: 3 };
+
+const NAMED_MILESTONES: readonly number[] = [10, 25, 50, 75];
+const ROUND_MILESTONES_FROM = 50;
+const ROUND_MILESTONE_STEP = 10;
+
+function isMilestone(level: number): boolean {
+  return NAMED_MILESTONES.includes(level) || (level > ROUND_MILESTONES_FROM && level % ROUND_MILESTONE_STEP === 0);
+}
+
+export function levelUpTier({ from, to }: Pick<LevelUp, 'from' | 'to'>): LevelUpTier {
+  if (to >= MAX_LEVEL) return 'max';
+  for (let level = from + 1; level <= to; level++) if (isMilestone(level)) return 'milestone';
+  return 'normal';
+}
+
+export interface LevelUpEntry extends LevelUp {
+  tier: LevelUpTier;
+}
+
+export interface LevelUpTakeover {
+  tier: LevelUpTier;
+  entries: LevelUpEntry[];
+}
+
+export function levelUpTakeover(levelUps: readonly LevelUp[]): LevelUpTakeover | null {
+  const entries = levelUps
+    .map((levelUp) => ({ ...levelUp, tier: levelUpTier(levelUp) }))
+    .sort((left, right) => TIER_RANK[right.tier] - TIER_RANK[left.tier] || right.to - left.to);
+  const [biggest] = entries;
+  return biggest === undefined ? null : { tier: biggest.tier, entries };
+}
+
+const TAKEOVER_KICKERS: Record<LevelUpTier, string> = {
+  normal: 'Level up!',
+  milestone: 'Milestone!',
+  max: 'Max level!',
+};
+
+export function takeoverKicker(tier: LevelUpTier, count: number): string {
+  return count === 1 ? TAKEOVER_KICKERS[tier] : `${count} level ups!`;
+}
 
 interface RevealShape {
   skillCount: number;
-  hasLevelUps: boolean;
+  levelUp: { tier: LevelUpTier; count: number } | null;
   hasRecords: boolean;
 }
 
@@ -186,17 +233,24 @@ export function skipsRevealOnKey({
 export function revealShape(
   summary: Pick<SessionSummary, 'historyOnly' | 'xpBySkill' | 'levelUps' | 'prs'> | null,
 ): RevealShape {
-  if (!summary || summary.historyOnly) return { skillCount: 0, hasLevelUps: false, hasRecords: false };
+  if (!summary || summary.historyOnly) return { skillCount: 0, levelUp: null, hasRecords: false };
+  const takeover = levelUpTakeover(summary.levelUps);
   return {
     skillCount: Object.values(summary.xpBySkill).filter((xp) => xp > 0).length,
-    hasLevelUps: summary.levelUps.length > 0,
+    levelUp: takeover && { tier: takeover.tier, count: takeover.entries.length },
     hasRecords: summary.prs.length > 0,
   };
+}
+
+export interface RevealTakeover {
+  startS: number;
+  endS: number;
 }
 
 export interface RevealTimeline {
   skillDelaysS: number[];
   barDelaysS: number[];
+  takeover: RevealTakeover | null;
   levelUpDelayS: number | null;
   recordsDelayS: number | null;
   lootDelayS: number;
@@ -211,21 +265,32 @@ function roundedS(seconds: number): number {
   return toMs(seconds) / 1000;
 }
 
-export function revealTimeline({ skillCount, hasLevelUps, hasRecords }: RevealShape): RevealTimeline {
+function takeoverLengthS({ tier, count }: { tier: LevelUpTier; count: number }): number {
+  return TAKEOVER_S[tier] + (count > 1 ? SUMMARY_READ_S : 0);
+}
+
+export function revealTimeline({ skillCount, levelUp, hasRecords }: RevealShape): RevealTimeline {
   const stagger = skillCount > 1 ? Math.min(SKILL_STAGGER_S, SKILL_SPREAD_MAX_S / (skillCount - 1)) : 0;
   const skillDelaysS = Array.from({ length: skillCount }, (_, index) => roundedS(SKILLS_START_S + index * stagger));
   const barDelaysS = skillDelaysS.map((delay) => roundedS(delay + BAR_LAG_S));
   const lastSkillS = skillDelaysS.at(-1);
+  const lastBarEndS = Math.max(0, ...barDelaysS.map((delay) => delay + GAIN_FILL_S));
   let cursor = lastSkillS === undefined ? SKILLS_START_S : lastSkillS + SKILL_SETTLE_S;
-  const levelUpDelayS = hasLevelUps ? roundedS(cursor) : null;
-  if (hasLevelUps) cursor += LEVEL_UP_BEAT_S;
+  let takeover: RevealTakeover | null = null;
+  if (levelUp) {
+    const startS = Math.max(cursor, lastBarEndS);
+    takeover = { startS: roundedS(startS), endS: roundedS(startS + takeoverLengthS(levelUp)) };
+    cursor = takeover.endS;
+  }
+  const levelUpDelayS = levelUp ? roundedS(cursor) : null;
+  if (levelUp) cursor += LEVEL_UP_BEAT_S;
   const recordsDelayS = hasRecords ? roundedS(cursor) : null;
   if (hasRecords) cursor += RECORDS_BEAT_S;
   const lootDelayS = roundedS(cursor);
-  const lastBarEndS = Math.max(0, ...barDelaysS.map((delay) => delay + GAIN_FILL_S));
   return {
     skillDelaysS,
     barDelaysS,
+    takeover,
     levelUpDelayS,
     recordsDelayS,
     lootDelayS,
@@ -233,12 +298,9 @@ export function revealTimeline({ skillCount, hasLevelUps, hasRecords }: RevealSh
   };
 }
 
-export function levelUpCueDelayMs(
-  timeline: Pick<RevealTimeline, 'levelUpDelayS'>,
-  reducedMotion: boolean,
-): number | null {
-  if (timeline.levelUpDelayS === null) return null;
-  return reducedMotion ? 0 : toMs(timeline.levelUpDelayS) + POP_PEAK_MS;
+export function levelUpCueDelayMs(timeline: Pick<RevealTimeline, 'takeover'>, reducedMotion: boolean): number | null {
+  if (timeline.takeover === null) return null;
+  return reducedMotion ? 0 : toMs(timeline.takeover.startS) + POP_PEAK_MS;
 }
 
 function xpToGoText(nextLevelXp: number, xp: number): string {

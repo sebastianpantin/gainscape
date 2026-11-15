@@ -26,6 +26,24 @@ export const LEVEL_UP_CELEBRATION: Celebration = {
   vibrationMs: [40, 50, 40, 50, 140],
 };
 
+export type LevelUpTier = 'normal' | 'milestone' | 'max';
+
+export const LEVEL_UP_CELEBRATIONS: Record<LevelUpTier, Celebration> = {
+  normal: LEVEL_UP_CELEBRATION,
+  milestone: {
+    tones: arpeggio([523, 659, 784, 1047, 1319], 0.09, 0.45),
+    volume: 0.18,
+    wave: 'triangle',
+    vibrationMs: [40, 50, 40, 50, 40, 50, 200],
+  },
+  max: {
+    tones: arpeggio([392, 523, 659, 784, 1047, 1319, 1568, 2093], 0.1, 0.8),
+    volume: 0.18,
+    wave: 'square',
+    vibrationMs: [60, 50, 60, 50, 60, 50, 60, 50, 320],
+  },
+};
+
 export const FANFARE_CELEBRATIONS: Record<Fanfare, Celebration> = {
   rare: {
     tones: arpeggio([784, 988, 1319], 0.07, 0.25),

@@ -9,7 +9,8 @@ import type { Skill } from '../../lib/exercises/catalog-rules.ts';
 import {
   celebrate,
   FANFARE_CELEBRATIONS,
-  LEVEL_UP_CELEBRATION,
+  LEVEL_UP_CELEBRATIONS,
+  type LevelUpTier,
   primeCelebrationAudio,
 } from '../../lib/platform/celebration-effects.ts';
 import { prefersReducedMotion } from '../../lib/platform/device-effects.ts';
@@ -34,14 +35,18 @@ import {
   challengeFailReason,
   challengeHeadline,
   challengeNotAppliedText,
+  type LevelUpTakeover as LevelUpTakeoverContent,
   levelUpCueDelayMs,
+  levelUpTakeover,
   playsReveal,
   type QuestReveal,
   questRevealLines,
   type RevealTimeline,
   revealShape,
+  type RevealTakeover,
   revealTimeline,
   skipsRevealOnKey,
+  takeoverKicker,
   unappliedChangesText,
   gainBarLabel,
   xpToNextLevelText,
@@ -68,6 +73,7 @@ type RevealPhase = 'playing' | 'settled' | 'skipped';
 function useRevealPlayback(
   userId: string,
   timeline: RevealTimeline,
+  cueTier: LevelUpTier | null,
   focusAfterSkip: RefObject<HTMLElement | null>,
   plays: boolean,
 ): { phase: RevealPhase; skip: () => void } {
@@ -78,13 +84,13 @@ function useRevealPlayback(
   const { settledAfterMs } = timeline;
 
   useEffect(() => {
-    if (cueDelayMs === null) return;
+    if (cueDelayMs === null || cueTier === null) return;
     primeCelebrationAudio(userId);
     const cue = setTimeout(() => {
-      if (!skipped.current) celebrate(userId, LEVEL_UP_CELEBRATION);
+      if (!skipped.current) celebrate(userId, LEVEL_UP_CELEBRATIONS[cueTier]);
     }, cueDelayMs);
     return () => clearTimeout(cue);
-  }, [cueDelayMs, userId]);
+  }, [cueDelayMs, cueTier, userId]);
 
   const skip = useCallback(() => {
     skipped.current = true;
@@ -145,6 +151,54 @@ function GainBar({ skillName, xpAfter, gain, delaySeconds }: GainBarProps) {
         {xpToNextLevelText(xpAfter)}
       </span>
     </>
+  );
+}
+
+const SPARKS_BY_TIER: Record<LevelUpTier, number> = { normal: 12, milestone: 24, max: 24 };
+const TAKEOVER_ICON_SIZE = 96;
+const SUMMARY_TWO_COLUMNS_FROM = 6;
+
+interface LevelUpTakeoverProps {
+  timing: RevealTakeover;
+  takeover: LevelUpTakeoverContent;
+  nameOf: (skillKey: string) => string;
+}
+
+function LevelUpTakeover({ timing, takeover, nameOf }: LevelUpTakeoverProps) {
+  const { tier, entries } = takeover;
+  const [single] = entries;
+  const animation = { animationDelay: `${timing.startS}s`, animationDuration: `${timing.endS - timing.startS}s` };
+  return (
+    <div className="level-up-takeover" aria-hidden="true" style={animation}>
+      <div className={`panel takeover-card tier-${tier}${entries.length > 1 ? ' summary' : ''}`} style={animation}>
+        <span className="takeover-sparks">
+          {Array.from({ length: SPARKS_BY_TIER[tier] }, (_, spark) => (
+            <span key={spark} className="spark" />
+          ))}
+        </span>
+        {entries.length === 1 && single !== undefined ? (
+          <>
+            <SkillIcon skillKey={single.skill} size={TAKEOVER_ICON_SIZE} />
+            <span className="takeover-kicker">{takeoverKicker(tier, 1)}</span>
+            <span className="takeover-skill">{nameOf(single.skill)}</span>
+            <span className="takeover-level">Level {single.to}</span>
+          </>
+        ) : (
+          <>
+            <span className="takeover-kicker">{takeoverKicker(tier, entries.length)}</span>
+            <ul className={entries.length >= SUMMARY_TWO_COLUMNS_FROM ? 'takeover-list wide' : 'takeover-list'}>
+              {entries.map((entry) => (
+                <li key={entry.skill} className={`tier-${entry.tier}`}>
+                  <SkillIcon skillKey={entry.skill} />
+                  <span className="takeover-entry-name">{nameOf(entry.skill)}</span>
+                  <span className="takeover-entry-level">{entry.to}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -311,10 +365,12 @@ export function RevealScreen({ userId }: RevealScreenProps) {
   );
   const sessionId = summary?.sessionId;
   const timeline = revealTimeline(revealShape(summary));
+  const takeoverContent = levelUpTakeover(summary?.levelUps ?? []);
+  const cueTier = takeoverContent?.tier ?? null;
   const title = useRef<HTMLHeadingElement>(null);
   const xpHeadingId = useId();
   const recordsHeadingId = useId();
-  const { phase, skip } = useRevealPlayback(userId, timeline, title, playsReveal(summary));
+  const { phase, skip } = useRevealPlayback(userId, timeline, cueTier, title, playsReveal(summary));
 
   useEffect(() => {
     if (sessionId) markInstallCardDue(userId);
@@ -396,6 +452,9 @@ export function RevealScreen({ userId }: RevealScreenProps) {
           </button>
         )}
       </header>
+      {phase === 'playing' && timeline.takeover && takeoverContent && (
+        <LevelUpTakeover timing={timeline.takeover} takeover={takeoverContent} nameOf={nameOf} />
+      )}
       {timingText && <p className="muted">{timingText}</p>}
       {unappliedNotice}
       {notAppliedNotice}
