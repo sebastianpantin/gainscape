@@ -106,6 +106,10 @@ const DesignScreen = import.meta.env.DEV
   ? lazyScreen(() => import('./features/design/DesignScreen.tsx'), 'DesignScreen')
   : null;
 
+const GarminImportPrototype = import.meta.env.DEV
+  ? lazyScreen(() => import('./features/prototype-garmin-import/GarminImportPrototype.tsx'), 'GarminImportPrototype')
+  : null;
+
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Train', icon: 'train' },
   { to: '/skills', label: 'Skills', icon: 'skills' },
@@ -257,6 +261,7 @@ function SignedInShell() {
               <Route path="/programs/new" element={<ProgramEditor userId={userId} creating />} />
               <Route path="/programs/:programId" element={<ProgramEditor userId={userId} />} />
               {DesignScreen && <Route path="/design" element={<DesignScreen />} />}
+              {GarminImportPrototype && <Route path="/prototype/garmin-import" element={<GarminImportPrototype />} />}
               <Route path="*" element={<UnknownPath />} />
             </Routes>
           </RouteView>

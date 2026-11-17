@@ -33,6 +33,7 @@ const SCREEN_TITLES: readonly (readonly [pattern: string, screen: string])[] = [
   ['/programs/new', 'New program'],
   ['/programs/:programId', 'Edit program'],
   ['/design', 'Design'],
+  ['/prototype/garmin-import', 'Import prototype'],
 ];
 
 export const SCREEN_PATHS: readonly string[] = SCREEN_TITLES.map(([pattern]) => pattern);
