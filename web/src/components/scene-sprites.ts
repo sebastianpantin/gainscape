@@ -1,4 +1,4 @@
-import { type Scene, type SceneLight, type TorchFlame } from '../lib/progress/scene-rules.ts';
+import { type Scene, type SceneEquipment, type SceneLight, type TorchFlame } from '../lib/progress/scene-rules.ts';
 import { fromRows, type Pixel, type Sprite } from './pixel-sprites.ts';
 
 export const SCENE_COLS = 176;
@@ -31,6 +31,10 @@ const MOON = '#ffe27a';
 const BUILDING = '#5c4f3d';
 const BUILDING_FAR = '#3e3529';
 const UNLIT_WINDOW = '#958468';
+const ROPE = '#d8c8a8';
+const ROPE_SHADE = '#b3a58c';
+const MAT = '#3fa35b';
+const MAT_SHADE = '#4e8f3f';
 
 const WALL_BOTTOM_ROW = 29;
 const FLOOR_TOP_ROW = 30;
@@ -239,6 +243,62 @@ function pennants(count: number): Pixel[] {
   ];
 }
 
+const ROPE_KNOT_TOP = 13;
+const ROPE_TWIST_ROWS = 3;
+
+function climbingRope(): Pixel[] {
+  const pixels: Pixel[] = [rect(41, 0, 2, ROPE_KNOT_TOP, ROPE)];
+  for (let y = ROPE_TWIST_ROWS - 1; y < ROPE_KNOT_TOP; y += ROPE_TWIST_ROWS) pixels.push(rect(41, y, 2, 1, ROPE_SHADE));
+  return [
+    ...pixels,
+    ...placed(['KKKK', 'KRRK', 'KrrK', '.KK.', '.RR.'], { K: INK, R: ROPE, r: ROPE_SHADE }, 40, ROPE_KNOT_TOP),
+  ];
+}
+
+function jumpRope(): Pixel[] {
+  return placed(['G...G', 'G...G', 'R...R', 'R...R', 'R...R', '.RRR.'], { G: XP, R: ROPE }, 108, 15);
+}
+
+const EQUIPMENT_ART: Record<SceneEquipment, () => Pixel[]> = {
+  bench: () =>
+    placed(
+      ['KKKKKKKKKKKK', 'KBBBBBBBBBBK', 'KKKKKKKKKKKK', '.KS......SK.', '.KS......SK.', '.KS......SK.', 'KKKK....KKKK'],
+      { K: INK, B: PLATE_BLUE, S: STEEL_DARK },
+      109,
+      26,
+    ),
+  'climbing-rope': climbingRope,
+  'medicine-ball': () =>
+    placed(['.KKK.', 'KRRRK', 'KWWWK', 'KRRRK', '.KKK.'], { K: INK, R: BANNER_CLOTH, W: CLOUD }, 54, 30),
+  dumbbells: () => {
+    const dumbbell = ['SS.SS', 'SSDSS', 'SS.SS'];
+    const palette = { S: STEEL, D: STEEL_DARK };
+    return [...placed(dumbbell, palette, 109, 33), ...placed(dumbbell, palette, 116, 33)];
+  },
+  'bar-plates': () => [
+    rect(94, 9, 3, 9, INK),
+    rect(95, 10, 1, 7, PLATE_YELLOW),
+    rect(132, 9, 3, 9, INK),
+    rect(133, 10, 1, 7, PLATE_YELLOW),
+  ],
+  kettlebell: () =>
+    placed(['.KKK.', '.K.K.', 'KKKKK', 'KSSSK', 'KSsSK', '.KKK.'], { K: INK, S: STEEL, s: STEEL_DARK }, 42, 29),
+  'chalk-bowl': () =>
+    placed(
+      ['.WWWW.', 'KKKKKK', '.KSSK.', '..KK..', '..SS..', '..SS..', '..SS..', '..SS..', '..SS..', '.KSSK.', 'KKKKKK'],
+      { K: INK, W: CLOUD, S: STEEL_DARK },
+      128,
+      24,
+    ),
+  'jump-rope': jumpRope,
+  cones: () => placed(['..O..', '.OOO.', '.WWW.', 'OOOOO', 'KKKKK'], { K: INK, O: GOLD, W: CLOUD }, 48, 30),
+  mat: () => [rect(84, 33, 15, 2, MAT), rect(84, 34, 15, 1, MAT_SHADE), rect(84, 33, 1, 2, MAT_SHADE)],
+};
+
+function equipment(pieces: readonly SceneEquipment[]): Pixel[] {
+  return pieces.flatMap((piece) => EQUIPMENT_ART[piece]());
+}
+
 const TORCH_LEFT = 96;
 const TORCH_HOLDER_TOP = 4;
 const TORCH_HOLDER_ROWS = ['KKKKK', '.KWK.', '..W..', '.KWK.'];
@@ -247,13 +307,14 @@ const TORCH_FLAME_ROWS: Record<TorchFlame, readonly string[]> = {
   steady: ['..F..', '.FYF.', '.FYF.'],
   roaring: ['..F..', '.FYF.', 'FYLYF', 'FYLYF'],
 };
-const TORCH_GLOW_OPACITY = 0.12;
+const TORCH_GLOW_OPACITY = 0.06;
 
 function torch(flame: TorchFlame): Pixel[] {
   const flameRows = TORCH_FLAME_ROWS[flame];
   const flameTop = TORCH_HOLDER_TOP - flameRows.length;
   return [
-    rect(TORCH_LEFT - 2, flameTop, 9, flameRows.length + 2, GOLD_LIGHT, TORCH_GLOW_OPACITY),
+    rect(TORCH_LEFT - 2, flameTop + 1, 9, flameRows.length, GOLD_LIGHT, TORCH_GLOW_OPACITY),
+    rect(TORCH_LEFT - 1, flameTop, 7, flameRows.length + 2, GOLD_LIGHT, TORCH_GLOW_OPACITY),
     ...placed(flameRows, { F: GOLD, Y: GOLD_LIGHT, L: MOON }, TORCH_LEFT, flameTop),
     ...placed(TORCH_HOLDER_ROWS, { K: INK, W: WOOD }, TORCH_LEFT, TORCH_HOLDER_TOP),
   ];
@@ -271,7 +332,13 @@ export function sceneSprite(scene: Scene | null): Sprite {
     if (has('window')) pixels.push(...windowWithView(scene.light, has('skyline')));
     if (has('banner')) pixels.push(...banner());
     if (has('wall-plates')) pixels.push(...wallPlates());
-    pixels.push(...pennants(scene.pennants), ...trophies(scene.trophies), ...rack(), ...lightTint(scene.light));
+    pixels.push(
+      ...pennants(scene.pennants),
+      ...trophies(scene.trophies),
+      ...rack(),
+      ...equipment(scene.equipment),
+      ...lightTint(scene.light),
+    );
     if (scene.torch) pixels.push(...torch(scene.torch.flame));
   }
   return { cols: SCENE_COLS, rows: SCENE_ROWS, pixels };

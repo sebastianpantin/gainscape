@@ -1,7 +1,7 @@
 import { combatLevel, levelForXp, MAX_LEVEL, xpForLevel } from '@domain/index.ts';
 import { describe, expect, it } from 'vitest';
 import type { Skill } from '../../web/src/lib/exercises/catalog-rules.ts';
-import { monogramFor, skillXpText, standingFrom } from '../../web/src/lib/progress/standing-rules.ts';
+import { monogramFor, skillLevelsByKey, skillXpText, standingFrom } from '../../web/src/lib/progress/standing-rules.ts';
 
 const skills: Skill[] = [
   { id: 'chest-id', key: 'chest', name: 'Chest', sortOrder: 1, combatWeight: 1, modality: 'lift' },
@@ -18,6 +18,13 @@ describe('monogramFor', () => {
 
   it('falls back to the first two letters, upper case', () => {
     expect(monogramFor('running')).toBe('RU');
+  });
+});
+
+describe('skillLevelsByKey', () => {
+  it('maps each skill key to its level', () => {
+    const standing = standingFrom(skills, new Map([['legs-id', xpForLevel(10)]]));
+    expect(skillLevelsByKey(standing.skills)).toEqual({ chest: levelForXp(0), legs: 10, running: levelForXp(0) });
   });
 });
 

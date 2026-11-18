@@ -4,6 +4,19 @@ export const SCENE_STAGES = ['bare', 'plates', 'banners', 'window', 'skyline'] a
 export type SceneStage = (typeof SCENE_STAGES)[number];
 export type SceneProp = 'rack' | 'wall-plates' | 'banner' | 'window' | 'skyline';
 export type SceneLight = 'dawn' | 'day' | 'dusk' | 'night';
+export const SCENE_EQUIPMENT = [
+  'bench',
+  'climbing-rope',
+  'medicine-ball',
+  'dumbbells',
+  'bar-plates',
+  'kettlebell',
+  'chalk-bowl',
+  'jump-rope',
+  'cones',
+  'mat',
+] as const;
+export type SceneEquipment = (typeof SCENE_EQUIPMENT)[number];
 export const TORCH_FLAMES = ['small', 'steady', 'roaring'] as const;
 export type TorchFlame = (typeof TORCH_FLAMES)[number];
 
@@ -12,6 +25,8 @@ export interface SceneTorch {
   flame: TorchFlame;
 }
 
+export const EQUIPMENT_MIN_SKILL_LEVEL = 20;
+export const MAX_EQUIPMENT_NAMED = 3;
 export const MAX_SCENE_TROPHIES = 3;
 export const MAX_SCENE_PENNANTS = 3;
 
@@ -29,6 +44,32 @@ const PROP_ADDED_BY_STAGE: Record<SceneStage, SceneProp> = {
   banners: 'banner',
   window: 'window',
   skyline: 'skyline',
+};
+
+export const EQUIPMENT_SKILL: Record<SceneEquipment, string> = {
+  bench: 'chest',
+  'climbing-rope': 'back',
+  'medicine-ball': 'shoulders',
+  dumbbells: 'arms',
+  'bar-plates': 'legs',
+  kettlebell: 'core',
+  'chalk-bowl': 'grip',
+  'jump-rope': 'endurance',
+  cones: 'agility',
+  mat: 'mobility',
+};
+
+const EQUIPMENT_PHRASE: Record<SceneEquipment, string> = {
+  bench: 'a bench',
+  'climbing-rope': 'a climbing rope',
+  'medicine-ball': 'a medicine ball',
+  dumbbells: 'dumbbells',
+  'bar-plates': 'more plates on the bar',
+  kettlebell: 'a kettlebell',
+  'chalk-bowl': 'a chalk bowl',
+  'jump-rope': 'a jump rope',
+  cones: 'cones',
+  mat: 'a mat',
 };
 
 const GROWTH_TEXT: Record<Exclude<SceneStage, 'bare'>, string> = {
@@ -68,12 +109,14 @@ export interface SceneInput {
   recordCount: number;
   questPoints: number;
   streakWeeks: number;
+  skillLevels: Readonly<Record<string, number>>;
   hour: number;
 }
 
 export interface Scene {
   stage: SceneStage;
   props: readonly SceneProp[];
+  equipment: readonly SceneEquipment[];
   trophies: number;
   pennants: number;
   torch: SceneTorch | null;
@@ -108,11 +151,15 @@ function torchFor(streakWeeks: number): SceneTorch | null {
   return { streakWeeks, flame };
 }
 
-export function sceneFor({ totalLevel, recordCount, questPoints, streakWeeks, hour }: SceneInput): Scene {
+export function sceneFor(input: SceneInput): Scene {
+  const { totalLevel, recordCount, questPoints, streakWeeks, skillLevels, hour } = input;
   const stage = stageFor(totalLevel);
   return {
     stage,
     props: SCENE_STAGES.slice(0, sceneStageIndex(stage) + 1).map((reached) => PROP_ADDED_BY_STAGE[reached]),
+    equipment: SCENE_EQUIPMENT.filter(
+      (equipment) => (skillLevels[EQUIPMENT_SKILL[equipment]] ?? 0) >= EQUIPMENT_MIN_SKILL_LEVEL,
+    ),
     trophies: Math.min(Math.max(recordCount, 0), MAX_SCENE_TROPHIES),
     pennants: Math.min(PENNANT_QUEST_POINTS.filter((points) => questPoints >= points).length, MAX_SCENE_PENNANTS),
     torch: torchFor(streakWeeks),
@@ -120,10 +167,39 @@ export function sceneFor({ totalLevel, recordCount, questPoints, streakWeeks, ho
   };
 }
 
-export function sceneGrowthText(lastSeenStageIndex: number | null, stage: SceneStage): string | null {
-  if (lastSeenStageIndex === null || stage === 'bare') return null;
-  if (sceneStageIndex(stage) <= lastSeenStageIndex) return null;
-  return `Your gym grew: ${GROWTH_TEXT[stage]}`;
+export interface SceneSeen {
+  stageIndex: number;
+  equipmentMask: number | null;
+}
+
+export function equipmentMask(equipment: readonly SceneEquipment[]): number {
+  return equipment.reduce((mask, piece) => mask | (1 << SCENE_EQUIPMENT.indexOf(piece)), 0);
+}
+
+function arrivalsText(seenMask: number | null, equipment: readonly SceneEquipment[]): string | null {
+  if (seenMask === null) return null;
+  const arrived = equipment.filter((piece) => (seenMask & equipmentMask([piece])) === 0);
+  if (arrived.length === 0) return null;
+  if (arrived.length > MAX_EQUIPMENT_NAMED) return `${arrived.length} pieces of equipment arrived`;
+  return `${PHRASE_LIST.format(arrived.map((piece) => EQUIPMENT_PHRASE[piece]))} arrived`;
+}
+
+function stageGrowthText(seenStageIndex: number, stage: SceneStage): string | null {
+  return stage === 'bare' || sceneStageIndex(stage) <= seenStageIndex ? null : GROWTH_TEXT[stage];
+}
+
+export function sceneGrowthText(seen: SceneSeen | null, scene: Pick<Scene, 'stage' | 'equipment'>): string | null {
+  if (seen === null) return null;
+  const grown = [
+    stageGrowthText(seen.stageIndex, scene.stage),
+    arrivalsText(seen.equipmentMask, scene.equipment),
+  ].filter((text) => text !== null);
+  return grown.length === 0 ? null : `Your gym grew: ${PHRASE_LIST.format(grown)}`;
+}
+
+function equipmentPhrases(equipment: readonly SceneEquipment[]): string[] {
+  if (equipment.length > MAX_EQUIPMENT_NAMED) return [`${equipment.length} pieces of equipment`];
+  return equipment.map((piece) => EQUIPMENT_PHRASE[piece]);
 }
 
 function propPhrases(props: readonly SceneProp[]): string[] {
@@ -142,6 +218,7 @@ function trophiesText(count: number): string {
 export function sceneLabel(scene: Scene): string {
   const light = LIGHT_PHRASE[scene.light];
   const extras = [
+    ...equipmentPhrases(scene.equipment),
     ...(scene.trophies > 0 ? [trophiesText(scene.trophies)] : []),
     ...(scene.pennants > 0 ? [formatCount(scene.pennants, 'quest pennant')] : []),
     ...(scene.torch ? [`a torch lit for a ${scene.torch.streakWeeks} week streak`] : []),

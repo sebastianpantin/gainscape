@@ -14,6 +14,9 @@ import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { capitalized } from '../../lib/names.ts';
 import { BADGE_COLOR_KEYS, type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import {
+  EQUIPMENT_MIN_SKILL_LEVEL,
+  EQUIPMENT_SKILL,
+  SCENE_EQUIPMENT,
   SCENE_STAGE_MIN_TOTAL_LEVEL,
   SCENE_STAGES,
   type SceneInput,
@@ -138,6 +141,7 @@ function SampleScenes() {
     recordCount: 3,
     questPoints: 15,
     streakWeeks: 12,
+    skillLevels: Object.fromEntries(Object.values(EQUIPMENT_SKILL).map((skill) => [skill, EQUIPMENT_MIN_SKILL_LEVEL])),
   };
   return (
     <>
@@ -149,6 +153,9 @@ function SampleScenes() {
             recordCount: index,
             questPoints: index * index,
             streakWeeks: index * 3,
+            skillLevels: Object.fromEntries(
+              SCENE_EQUIPMENT.slice(0, index * 2).map((piece) => [EQUIPMENT_SKILL[piece], EQUIPMENT_MIN_SKILL_LEVEL]),
+            ),
             hour: 12,
           }}
           caption={`${capitalized(stage)}, total level ${SCENE_STAGE_MIN_TOTAL_LEVEL[stage]}`}

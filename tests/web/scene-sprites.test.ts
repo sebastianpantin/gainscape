@@ -10,6 +10,8 @@ import {
   sceneSprite,
 } from '../../web/src/components/scene-sprites.ts';
 import {
+  EQUIPMENT_SKILL,
+  SCENE_EQUIPMENT,
   SCENE_STAGES,
   type Scene,
   type SceneInput,
@@ -36,12 +38,22 @@ function sceneAt(stage: SceneStage, extras: Partial<Omit<SceneInput, 'totalLevel
     recordCount: 0,
     questPoints: 0,
     streakWeeks: 0,
+    skillLevels: {},
     hour: 12,
     ...extras,
   });
 }
 
-const FULLEST: Scene = sceneFor({ totalLevel: 990, recordCount: 9, questPoints: 99, streakWeeks: 52, hour: 23 });
+const EVERY_SKILL_MAXED = Object.fromEntries(Object.values(EQUIPMENT_SKILL).map((skill) => [skill, 99]));
+
+const FULLEST: Scene = sceneFor({
+  totalLevel: 990,
+  recordCount: 9,
+  questPoints: 99,
+  streakWeeks: 52,
+  skillLevels: EVERY_SKILL_MAXED,
+  hour: 23,
+});
 
 function expectInBounds(sprite: Sprite) {
   expect([sprite.cols, sprite.rows]).toEqual([SCENE_COLS, SCENE_ROWS]);
@@ -64,7 +76,13 @@ describe('sceneSprite', () => {
   it.each([...SCENE_STAGES])('paints the %s stage inside the grid in token colours only', (stage) => {
     for (const light of Object.keys(LIGHT_HOUR) as SceneLight[]) {
       const sprite = sceneSprite(
-        sceneAt(stage, { recordCount: 3, questPoints: 15, streakWeeks: 12, hour: LIGHT_HOUR[light] }),
+        sceneAt(stage, {
+          recordCount: 3,
+          questPoints: 15,
+          streakWeeks: 12,
+          skillLevels: EVERY_SKILL_MAXED,
+          hour: LIGHT_HOUR[light],
+        }),
       );
       expectInBounds(sprite);
       for (const pixel of sprite.pixels) expect(tokenColours.has(pixel.fill.toLowerCase()), pixel.fill).toBe(true);
@@ -113,6 +131,27 @@ describe('sceneSprite', () => {
     expect(counts[0]).toBe(0);
     expect(counts[2]).toBeGreaterThan(counts[1]);
     expect(counts[3]).toBeGreaterThan(counts[2]);
+  });
+
+  it.each([...SCENE_EQUIPMENT])('draws the %s once its skill brings it in', (piece) => {
+    const bare = sceneSprite(sceneAt('bare'));
+    const equipped = sceneSprite(sceneAt('bare', { skillLevels: { [EQUIPMENT_SKILL[piece]]: 99 } }));
+    expect(addedPixels(bare, equipped).length).toBeGreaterThan(0);
+    expect(addedPixels(equipped, bare)).toEqual([]);
+  });
+
+  it('gives every piece of equipment its own spot', () => {
+    const bare = sceneSprite(sceneAt('bare'));
+    const cells = new Map<string, string>();
+    for (const piece of SCENE_EQUIPMENT) {
+      const added = addedPixels(bare, sceneSprite(sceneAt('bare', { skillLevels: { [EQUIPMENT_SKILL[piece]]: 99 } })));
+      for (const pixel of added)
+        for (let x = pixel.x; x < pixel.x + pixel.w; x++)
+          for (let y = pixel.y; y < pixel.y + pixel.h; y++) {
+            expect(cells.get(`${x},${y}`) ?? piece, `${piece} at ${x},${y}`).toBe(piece);
+            cells.set(`${x},${y}`, piece);
+          }
+    }
   });
 
   it('lights a torch that burns higher with the streak', () => {

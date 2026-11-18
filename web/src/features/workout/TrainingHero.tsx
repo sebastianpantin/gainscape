@@ -11,6 +11,7 @@ import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type Scene, sceneFor, sceneLabel } from '../../lib/progress/scene-rules.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
+import { skillLevelsByKey } from '../../lib/progress/standing-rules.ts';
 import {
   loadoutQuery,
   profileQuery,
@@ -124,6 +125,7 @@ function useScene(userId: string, standing: StandingState, recordCount: number, 
     recordCount,
     questPoints: questPoints ?? 0,
     streakWeeks: weeklyGoal?.goal != null ? weeklyGoal.streakWeeks : 0,
+    skillLevels: skillLevelsByKey(standing.standing.skills),
     hour,
   });
 }
@@ -137,7 +139,7 @@ export function TrainingHero({ userId, standing, unit, today, trainedDates, hour
   const equipped = loadout.isSuccess ? (loadout.data?.slots ?? []) : null;
   const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
   const scene = useScene(userId, standing, recordDates?.length ?? 0, hour);
-  const growthText = useSceneGrowth(userId, scene?.stage ?? null);
+  const growthText = useSceneGrowth(userId, scene);
 
   return (
     <section className="panel training-hero" aria-labelledby={headingId}>
