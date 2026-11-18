@@ -5,6 +5,7 @@ export const SCENE_STAGES = ['bare', 'plates', 'banners', 'window', 'skyline'] a
 export type SceneStage = (typeof SCENE_STAGES)[number];
 export type SceneProp = 'rack' | 'wall-plates' | 'banner' | 'window' | 'skyline';
 export type SceneLight = 'dawn' | 'day' | 'dusk' | 'night';
+export type SceneWeather = 'clear' | 'snow';
 export const SCENE_EQUIPMENT = [
   'bench',
   'climbing-rope',
@@ -101,6 +102,7 @@ const LIGHT_PHRASE: Record<SceneLight, string> = {
 
 export const TORCH_FLAME_MIN_STREAK_WEEKS: Record<TorchFlame, number> = { small: 1, steady: 4, roaring: 12 };
 
+const SNOW_MONTHS = new Set(['12', '01', '02']);
 const HOURS_IN_DAY = 24;
 const DAWN_FROM_HOUR = 5;
 const DAY_FROM_HOUR = 8;
@@ -127,6 +129,7 @@ export interface Scene {
   pennants: number;
   torch: SceneTorch | null;
   light: SceneLight;
+  weather: SceneWeather;
 }
 
 export function sceneStageIndex(stage: SceneStage): number {
@@ -146,6 +149,10 @@ export function sceneLightFor(hour: number): SceneLight {
   if (dayHour < DAY_FROM_HOUR) return 'dawn';
   if (dayHour < DUSK_FROM_HOUR) return 'day';
   return 'dusk';
+}
+
+export function sceneWeatherFor(today: string): SceneWeather {
+  return SNOW_MONTHS.has(today.slice(5, 7)) ? 'snow' : 'clear';
 }
 
 function torchFor(streakWeeks: number): SceneTorch | null {
@@ -184,6 +191,7 @@ export function sceneFor(input: SceneInput): Scene {
     pennants: PENNANT_QUEST_POINTS.filter((points) => questPoints >= points).length,
     torch: torchFor(streakWeeks),
     light: sceneLightFor(hour),
+    weather: sceneWeatherFor(today),
   };
 }
 
@@ -240,7 +248,8 @@ function trophyPhrases(trophies: readonly TrophyMetal[]): string[] {
 }
 
 export function sceneLabel(scene: Scene): string {
-  const light = LIGHT_PHRASE[scene.light];
+  const snows = scene.weather === 'snow' && scene.props.includes('window');
+  const light = snows ? `${LIGHT_PHRASE[scene.light]} with snow outside` : LIGHT_PHRASE[scene.light];
   const extras = [
     ...equipmentPhrases(scene.equipment),
     ...trophyPhrases(scene.trophies),

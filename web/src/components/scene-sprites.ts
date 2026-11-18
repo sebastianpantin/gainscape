@@ -160,19 +160,88 @@ function sky(light: SceneLight): Pixel[] {
     rect(GLASS.left, GLASS.top + 5, width, 6, middle),
     rect(GLASS.left, GLASS.top + 11, width, GLASS.bottom - GLASS.top - 11, bottom),
   ];
-  if (light === 'night')
-    pixels.push(
-      rect(62, 9, 1, 1, STAR),
-      rect(69, 12, 1, 1, STAR),
-      rect(79, 8, 1, 1, STAR),
-      rect(89, 15, 1, 1, STAR),
-      rect(60, 16, 1, 1, STAR),
-      rect(84, 8, 3, 3, MOON),
-      rect(84, 8, 1, 1, '#1d160f'),
-    );
-  if (light === 'day') pixels.push(rect(62, 9, 6, 1, CLOUD), rect(60, 10, 10, 1, CLOUD), rect(82, 12, 7, 1, CLOUD));
+  if (light === 'night') pixels.push(rect(84, 8, 3, 3, MOON), rect(84, 8, 1, 1, '#1d160f'));
   if (light === 'dawn' || light === 'dusk') pixels.push(rect(80, GLASS.bottom - 3, 6, 3, GOLD_LIGHT));
   return pixels;
+}
+
+type FramePair = readonly [Pixel[], Pixel[]];
+
+const STILL: FramePair = [[], []];
+
+function dots(cells: readonly (readonly [number, number])[], fill: string): Pixel[] {
+  return cells.map(([x, y]) => rect(x, y, 1, 1, fill));
+}
+
+const STEADY_STARS = [
+  [62, 9],
+  [79, 8],
+  [60, 10],
+] as const;
+const TWINKLING_STARS: readonly [readonly (readonly [number, number])[], readonly (readonly [number, number])[]] = [
+  [
+    [69, 8],
+    [90, 9],
+  ],
+  [
+    [66, 10],
+    [88, 8],
+  ],
+];
+
+const CLOUDS = [
+  { left: 62, top: 9, width: 6 },
+  { left: 60, top: 10, width: 10 },
+  { left: 84, top: 8, width: 6 },
+  { left: 83, top: 9, width: 8 },
+] as const;
+
+function skyFrames(light: SceneLight): FramePair {
+  if (light === 'night') {
+    const steady = dots(STEADY_STARS, STAR);
+    return [
+      [...steady, ...dots(TWINKLING_STARS[0], STAR)],
+      [...steady, ...dots(TWINKLING_STARS[1], STAR)],
+    ];
+  }
+  if (light !== 'day') return STILL;
+  const drifted = (cols: number) => CLOUDS.map(({ left, top, width }) => rect(left + cols, top, width, 1, CLOUD));
+  return [drifted(0), drifted(1)];
+}
+
+const SNOWFLAKES: readonly [readonly (readonly [number, number])[], readonly (readonly [number, number])[]] = [
+  [
+    [60, 8],
+    [66, 11],
+    [71, 9],
+    [79, 10],
+    [85, 12],
+    [90, 12],
+    [63, 17],
+    [69, 20],
+    [78, 18],
+    [83, 21],
+    [88, 16],
+    [61, 22],
+  ],
+  [
+    [61, 10],
+    [67, 13],
+    [72, 11],
+    [80, 12],
+    [86, 15],
+    [91, 15],
+    [64, 19],
+    [70, 22],
+    [79, 20],
+    [84, 11],
+    [89, 18],
+    [62, 8],
+  ],
+];
+
+function snowFrames(): FramePair {
+  return [dots(SNOWFLAKES[0], CLOUD), dots(SNOWFLAKES[1], CLOUD)];
 }
 
 const BUILDINGS: readonly { left: number; top: number; width: number; far: boolean }[] = [
@@ -186,16 +255,39 @@ const BUILDINGS: readonly { left: number; top: number; width: number; far: boole
   { left: 87, top: 13, width: 5, far: false },
 ];
 
-function skyline(light: SceneLight): Pixel[] {
-  const lit = light === 'night' || light === 'dusk' ? GOLD_LIGHT : UNLIT_WINDOW;
-  return BUILDINGS.flatMap(({ left, top, width, far }) => {
-    const body = rect(left, top, width, GLASS.bottom - top, far ? BUILDING_FAR : BUILDING);
-    if (far) return [body];
-    const lights: Pixel[] = [];
+function cityWindows(): (readonly [number, number])[] {
+  return BUILDINGS.filter(({ far }) => !far).flatMap(({ left, top, width }) => {
+    const cells: [number, number][] = [];
     for (let y = top + 2; y < GLASS.bottom - 1; y += 3)
-      for (let x = left + 1; x < left + width - 1; x += 2) if ((x + y) % 4 !== 0) lights.push(rect(x, y, 1, 1, lit));
-    return [body, ...lights];
+      for (let x = left + 1; x < left + width - 1; x += 2) if ((x + y) % 4 !== 0) cells.push([x, y]);
+    return cells;
   });
+}
+
+function cityIsLit(light: SceneLight): boolean {
+  return light === 'night' || light === 'dusk';
+}
+
+function skyline(light: SceneLight): Pixel[] {
+  return [
+    ...BUILDINGS.map(({ left, top, width, far }) =>
+      rect(left, top, width, GLASS.bottom - top, far ? BUILDING_FAR : BUILDING),
+    ),
+    ...dots(cityWindows(), cityIsLit(light) ? GOLD_LIGHT : UNLIT_WINDOW),
+  ];
+}
+
+const CITY_FLICKER_EVERY = 5;
+
+function cityFrames(light: SceneLight): FramePair {
+  if (!cityIsLit(light)) return STILL;
+  return [
+    [],
+    dots(
+      cityWindows().filter(([x, y]) => (x + 2 * y) % CITY_FLICKER_EVERY === 0),
+      BUILDING_FAR,
+    ),
+  ];
 }
 
 function windowFrame(): Pixel[] {
@@ -235,6 +327,20 @@ function trophies(metals: readonly TrophyMetal[]): Pixel[] {
     rect(105, 9, 1, 1, WOOD_DARK),
     rect(123, 9, 1, 1, WOOD_DARK),
     ...metals.flatMap((metal, index) => placed(TROPHY_ROWS, TROPHY_PALETTE[metal], TROPHY_COLS[index], 1)),
+  ];
+}
+
+function trophyFrames(metals: readonly TrophyMetal[]): FramePair {
+  const golden = metals.flatMap((metal, index) => (metal === 'gold' ? [TROPHY_COLS[index]] : []));
+  return [
+    dots(
+      golden.map((left) => [left - 1, 1]),
+      CLOUD,
+    ),
+    dots(
+      golden.map((left) => [left + 5, 3]),
+      CLOUD,
+    ),
   ];
 }
 
@@ -315,22 +421,37 @@ function equipment(pieces: readonly SceneEquipment[]): Pixel[] {
 const TORCH_LEFT = 96;
 const TORCH_HOLDER_TOP = 4;
 const TORCH_HOLDER_ROWS = ['KKKKK', '.KWK.', '..W..', '.KWK.'];
-const TORCH_FLAME_ROWS: Record<TorchFlame, readonly string[]> = {
-  small: ['..F..', '.FYF.'],
-  steady: ['..F..', '.FYF.', '.FYF.'],
-  roaring: ['..F..', '.FYF.', 'FYLYF', 'FYLYF'],
+const TORCH_FLAME_ROWS: Record<TorchFlame, readonly [readonly string[], readonly string[]]> = {
+  small: [
+    ['..F..', '.FYF.'],
+    ['.F...', '.FYF.'],
+  ],
+  steady: [
+    ['..F..', '.FYF.', '.FYF.'],
+    ['...F.', '..FF.', '.FYF.'],
+  ],
+  roaring: [
+    ['..F..', '.FYF.', 'FYLYF', 'FYLYF'],
+    ['.F...', '.FYFF', 'FYLYF', 'FLYYF'],
+  ],
 };
 const TORCH_GLOW_OPACITY = 0.06;
 
 function torch(flame: TorchFlame): Pixel[] {
-  const flameRows = TORCH_FLAME_ROWS[flame];
-  const flameTop = TORCH_HOLDER_TOP - flameRows.length;
+  const flameRows = TORCH_FLAME_ROWS[flame][0].length;
+  const flameTop = TORCH_HOLDER_TOP - flameRows;
   return [
-    rect(TORCH_LEFT - 2, flameTop + 1, 9, flameRows.length, GOLD_LIGHT, TORCH_GLOW_OPACITY),
-    rect(TORCH_LEFT - 1, flameTop, 7, flameRows.length + 2, GOLD_LIGHT, TORCH_GLOW_OPACITY),
-    ...placed(flameRows, { F: GOLD, Y: GOLD_LIGHT, L: MOON }, TORCH_LEFT, flameTop),
+    rect(TORCH_LEFT - 2, flameTop + 1, 9, flameRows, GOLD_LIGHT, TORCH_GLOW_OPACITY),
+    rect(TORCH_LEFT - 1, flameTop, 7, flameRows + 2, GOLD_LIGHT, TORCH_GLOW_OPACITY),
     ...placed(TORCH_HOLDER_ROWS, { K: INK, W: WOOD }, TORCH_LEFT, TORCH_HOLDER_TOP),
   ];
+}
+
+function torchFrames(flame: TorchFlame): FramePair {
+  const palette = { F: GOLD, Y: GOLD_LIGHT, L: MOON };
+  const [steady, flickered] = TORCH_FLAME_ROWS[flame];
+  const flameTop = TORCH_HOLDER_TOP - steady.length;
+  return [placed(steady, palette, TORCH_LEFT, flameTop), placed(flickered, palette, TORCH_LEFT, flameTop)];
 }
 
 function lightTint(light: SceneLight): Pixel[] {
@@ -338,7 +459,7 @@ function lightTint(light: SceneLight): Pixel[] {
   return tint ? [rect(0, 0, SCENE_COLS, SCENE_ROWS, tint.fill, tint.opacity)] : [];
 }
 
-export function sceneSprite(scene: Scene | null): Sprite {
+function stillPixels(scene: Scene | null): Pixel[] {
   const pixels = room();
   if (scene) {
     const has = (prop: Scene['props'][number]) => scene.props.includes(prop);
@@ -354,5 +475,37 @@ export function sceneSprite(scene: Scene | null): Sprite {
     );
     if (scene.torch) pixels.push(...torch(scene.torch.flame));
   }
+  return pixels;
+}
+
+function movingPixels(scene: Scene | null): FramePair {
+  if (!scene) return STILL;
+  const hasWindow = scene.props.includes('window');
+  const moving = [
+    hasWindow ? skyFrames(scene.light) : STILL,
+    scene.props.includes('skyline') ? cityFrames(scene.light) : STILL,
+    hasWindow && scene.weather === 'snow' ? snowFrames() : STILL,
+    trophyFrames(scene.trophies),
+    scene.torch ? torchFrames(scene.torch.flame) : STILL,
+  ];
+  return [moving.flatMap(([first]) => first), moving.flatMap(([, second]) => second)];
+}
+
+function sprite(pixels: Pixel[]): Sprite {
   return { cols: SCENE_COLS, rows: SCENE_ROWS, pixels };
+}
+
+export interface SceneArt {
+  still: Sprite;
+  frames: readonly [Sprite, Sprite];
+}
+
+export function sceneArt(scene: Scene | null): SceneArt {
+  const [first, second] = movingPixels(scene);
+  return { still: sprite(stillPixels(scene)), frames: [sprite(first), sprite(second)] };
+}
+
+export function sceneSprite(scene: Scene | null): Sprite {
+  const { still, frames } = sceneArt(scene);
+  return sprite([...still.pixels, ...frames[0].pixels]);
 }

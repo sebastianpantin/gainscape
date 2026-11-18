@@ -20,6 +20,7 @@ import {
   sceneLabel,
   sceneLightFor,
   sceneStageIndex,
+  sceneWeatherFor,
 } from '../../web/src/lib/progress/scene-rules.ts';
 
 const TODAY = '2026-11-18';
@@ -56,6 +57,7 @@ describe('sceneFor', () => {
       pennants: 0,
       torch: null,
       light: 'day',
+      weather: 'clear',
     });
   });
 
@@ -152,6 +154,20 @@ describe('sceneFor', () => {
     expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 11 }).torch).toEqual({ streakWeeks: 11, flame: 'steady' });
     expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 12 }).torch).toEqual({ streakWeeks: 12, flame: 'roaring' });
     expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 80 }).torch).toEqual({ streakWeeks: 80, flame: 'roaring' });
+  });
+});
+
+describe('sceneWeatherFor', () => {
+  it.each([
+    ['2026-12-01', 'snow'],
+    ['2027-01-15', 'snow'],
+    ['2027-02-28', 'snow'],
+    ['2027-03-01', 'clear'],
+    ['2026-07-04', 'clear'],
+    ['2026-11-30', 'clear'],
+  ] as const)('on %s the weather is %s', (today, weather) => {
+    expect(sceneWeatherFor(today)).toBe(weather);
+    expect(sceneFor({ ...NEW_LIFTER, today }).weather).toBe(weather);
   });
 });
 
@@ -262,6 +278,15 @@ describe('sceneLabel', () => {
     ).toBe('Your gym: a rack, a bench, more plates on the bar, cones and 1 gold trophy, in daylight');
     expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 15, skillLevels: skilled(...SCENE_EQUIPMENT) }))).toBe(
       'Your gym: a rack, plates on the wall and 10 pieces of equipment, in daylight',
+    );
+  });
+
+  it('mentions the snow only once a window shows it', () => {
+    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, today: '2026-12-24' }))).toBe(
+      'Your gym: a bare room with a rack, in daylight',
+    );
+    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 100, today: '2026-12-24', hour: 22 }))).toBe(
+      'Your gym: a rack, plates on the wall, a banner and a window, at night with snow outside',
     );
   });
 

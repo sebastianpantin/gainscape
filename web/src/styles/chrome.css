@@ -149,6 +149,19 @@
   block-size: 100%;
 }
 
+.scene-frame {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  animation: two-frame-first 1.6s step-end infinite;
+}
+
+.scene-frame.second {
+  visibility: hidden;
+  animation-name: two-frame-second;
+}
+
 .scene-character {
   position: absolute;
   inset-block-end: calc(2 * var(--scene-pixel));
@@ -252,12 +265,12 @@
 
 .character-frame {
   grid-area: 1 / 1;
-  animation: character-idle-still 1.6s step-end infinite;
+  animation: two-frame-first 1.6s step-end infinite;
 }
 
 .character-frame.bobbed {
   visibility: hidden;
-  animation-name: character-idle-bobbed;
+  animation-name: two-frame-second;
 }
 
 .character.lifting .character-frame {
@@ -272,7 +285,7 @@
   animation-duration: 3.2s;
 }
 
-@keyframes character-idle-still {
+@keyframes two-frame-first {
   0% {
     visibility: visible;
   }
@@ -281,7 +294,7 @@
   }
 }
 
-@keyframes character-idle-bobbed {
+@keyframes two-frame-second {
   0% {
     visibility: hidden;
   }

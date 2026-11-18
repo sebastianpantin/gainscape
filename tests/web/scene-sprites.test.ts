@@ -7,6 +7,7 @@ import {
   SCENE_ROWS,
   SCENE_VISIBLE_FROM_COL,
   SCENE_VISIBLE_TO_COL,
+  sceneArt,
   sceneSprite,
 } from '../../web/src/components/scene-sprites.ts';
 import {
@@ -187,5 +188,86 @@ describe('sceneSprite', () => {
       );
       expect(new Set(pictures).size, stage).toBe(4);
     }
+  });
+});
+
+describe('sceneArt', () => {
+  const WINTER = '2026-12-24';
+  const framesOf = (scene: Scene | null) => sceneArt(scene).frames.map((frame) => JSON.stringify(frame.pixels));
+  const moves = (scene: Scene | null) => new Set(framesOf(scene)).size === 2;
+
+  it('is the still picture plus the first frame', () => {
+    const { still, frames } = sceneArt(FULLEST);
+    expect(sceneSprite(FULLEST).pixels).toEqual([...still.pixels, ...frames[0].pixels]);
+  });
+
+  it.each([...SCENE_STAGES])('keeps both frames of the %s stage in the grid, in token colours', (stage) => {
+    for (const light of Object.keys(LIGHT_HOUR) as SceneLight[]) {
+      const scene = sceneAt(stage, {
+        recordDates: THREE_RECORDS,
+        streakWeeks: 12,
+        today: WINTER,
+        hour: LIGHT_HOUR[light],
+      });
+      for (const frame of sceneArt(scene).frames) {
+        expectInBounds(frame);
+        for (const pixel of frame.pixels) {
+          expect(tokenColours.has(pixel.fill.toLowerCase()), pixel.fill).toBe(true);
+          expect(pixel.x).toBeGreaterThanOrEqual(SCENE_VISIBLE_FROM_COL);
+          expect(pixel.x + pixel.w).toBeLessThanOrEqual(SCENE_VISIBLE_TO_COL);
+        }
+      }
+    }
+  });
+
+  it('holds still while nothing in the room moves', () => {
+    expect(framesOf(null)).toEqual(['[]', '[]']);
+    expect(framesOf(sceneAt('banners'))).toEqual(['[]', '[]']);
+    expect(moves(sceneAt('window', { hour: LIGHT_HOUR.dawn }))).toBe(false);
+    expect(moves(sceneAt('bare', { recordDates: ['2026-06-01'] }))).toBe(false);
+  });
+
+  it('flickers the torch, drifts the clouds, twinkles the stars and a gold trophy', () => {
+    expect(moves(sceneAt('bare', { streakWeeks: 1 }))).toBe(true);
+    expect(moves(sceneAt('bare', { streakWeeks: 4 }))).toBe(true);
+    expect(moves(sceneAt('bare', { streakWeeks: 12 }))).toBe(true);
+    expect(moves(sceneAt('window', { hour: LIGHT_HOUR.day }))).toBe(true);
+    expect(moves(sceneAt('window', { hour: LIGHT_HOUR.night }))).toBe(true);
+    expect(moves(sceneAt('bare', { recordDates: [TODAY] }))).toBe(true);
+  });
+
+  it('switches city lights off and on after dark only', () => {
+    const cityOnly = (hour: number) => {
+      const [, withCity] = sceneArt(sceneAt('skyline', { hour })).frames;
+      const [, withoutCity] = sceneArt(sceneAt('window', { hour })).frames;
+      return addedPixels(withoutCity, withCity).length;
+    };
+    expect(cityOnly(LIGHT_HOUR.day)).toBe(0);
+    expect(cityOnly(LIGHT_HOUR.dusk)).toBeGreaterThan(0);
+    expect(cityOnly(LIGHT_HOUR.night)).toBeGreaterThan(0);
+  });
+
+  it('lets it snow outside the window in winter, in both frames, never on the frame', () => {
+    const snowIn = (stage: SceneStage) => {
+      const clear = sceneArt(sceneAt(stage, { hour: LIGHT_HOUR.dawn })).frames;
+      const snowy = sceneArt(sceneAt(stage, { today: WINTER, hour: LIGHT_HOUR.dawn })).frames;
+      return snowy.map((frame, index) => addedPixels(clear[index], frame));
+    };
+    expect(snowIn('banners')).toEqual([[], []]);
+    const [first, second] = snowIn('window');
+    expect(first.length).toBeGreaterThan(0);
+    expect(second.length).toBe(first.length);
+    expect(second).not.toEqual(first);
+    const windowFrame = new Set(
+      addedPixels(sceneSprite(sceneAt('banners')), sceneSprite(sceneAt('window', { hour: LIGHT_HOUR.dawn })))
+        .filter((pixel) => pixel.fill === '#000' || pixel.fill === '#7a6a52')
+        .flatMap((pixel) =>
+          Array.from(
+            { length: pixel.w * pixel.h },
+            (_, cell) => `${pixel.x + (cell % pixel.w)},${pixel.y + Math.floor(cell / pixel.w)}`,
+          ),
+        ),
+    );
+    for (const flake of [...first, ...second]) expect(windowFrame.has(`${flake.x},${flake.y}`)).toBe(false);
   });
 });

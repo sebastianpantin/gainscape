@@ -14,7 +14,7 @@ import {
   type Sprite,
   TROPHY,
 } from './pixel-sprites.ts';
-import { sceneSprite } from './scene-sprites.ts';
+import { sceneArt } from './scene-sprites.ts';
 
 function PixelRects({ sprite }: { sprite: Sprite }) {
   return sprite.pixels.map((pixel, index) => (
@@ -108,11 +108,10 @@ export function CharacterFigure({ look, label, pose = 'idle', size = 128 }: Char
   );
 }
 
-export function GymScene({ scene, label }: { scene: Scene | null; label: string | null }) {
-  const sprite = sceneSprite(scene);
-  const art = (
+function SceneLayer({ sprite, className }: { sprite: Sprite; className: string }) {
+  return (
     <svg
-      className="scene-art"
+      className={className}
       viewBox={`0 0 ${sprite.cols} ${sprite.rows}`}
       preserveAspectRatio="xMidYMax slice"
       shapeRendering="crispEdges"
@@ -121,10 +120,17 @@ export function GymScene({ scene, label }: { scene: Scene | null; label: string 
       <PixelRects sprite={sprite} />
     </svg>
   );
-  if (label === null) return art;
+}
+
+export function GymScene({ scene, label }: { scene: Scene | null; label: string | null }) {
+  const { still, frames } = sceneArt(scene);
+  if (label === null) return <SceneLayer sprite={still} className="scene-art" />;
+  const moves = frames.some((frame) => frame.pixels.length > 0);
   return (
     <span className="scene-art-label" role="img" aria-label={label}>
-      {art}
+      <SceneLayer sprite={still} className="scene-art" />
+      {moves && <SceneLayer sprite={frames[0]} className="scene-frame" />}
+      {moves && <SceneLayer sprite={frames[1]} className="scene-frame second" />}
     </span>
   );
 }

@@ -15,7 +15,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
   - `use-optimistic-profile-save.ts`: applies the change, persists it, and rolls back on failure.
 - Shared with other features:
   - `ProfileCard.tsx` and `ProfileBadge` (friends use them). Its stat tiles (2 by 2) include quest points: your own from `questPointsQuery`, a friend's from `get_profile`.
-  - `ProfileCharacter.tsx`: the card's character, from that user's `loadoutQuery` (shared with `LoadoutPanel`). It keeps its box while loading so the card does not jump, and a null loadout shows a bare character labelled gear hidden.
+  - `ProfileCharacter.tsx`: the card's character, from that user's `loadoutQuery` (shared with `LoadoutPanel`). It keeps its box while loading so the card does not jump, and a null loadout shows a bare character labelled gear hidden. Its build comes from the skill levels the card is given.
   - `LoadoutPanel.tsx` (Items, Profile, Preview and the friend profile).
   - `save-bodyweight.ts` (workout finish and history edit).
 - Logic lives outside this folder:
