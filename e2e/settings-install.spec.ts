@@ -51,6 +51,8 @@ test('the Train install card waits for a first workout, installs, and stays dism
   await logBench(page);
   await openTab(page, 'Train');
   await expect(installCard(page)).toContainText('Install Gainscape so your workouts load without signal.');
+  const start = (await page.getByRole('button', { name: 'Start workout' }).boundingBox())!;
+  expect((await installCard(page).boundingBox())!.y).toBeGreaterThan(start.y + start.height);
   await installCard(page).getByRole('button', { name: 'Install Gainscape' }).click();
   await expect.poll(() => installPromptCalls(page)).toBe(1);
   await expect(installCard(page)).toHaveCount(0);

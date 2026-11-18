@@ -106,7 +106,6 @@ export function TodayView({
           This workout was saved in another tab.
         </p>
       )}
-      <InstallCard userId={userId} />
       <TrainingHero
         userId={userId}
         standing={standing}
@@ -137,6 +136,7 @@ export function TodayView({
       <p className="muted" style={{ textAlign: 'center' }}>
         Freestyle: add exercises as you go.
       </p>
+      <InstallCard userId={userId} />
       {followCardShown && (
         <FollowProgramCard
           programs={featured}
