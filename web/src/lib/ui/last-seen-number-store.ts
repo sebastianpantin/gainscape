@@ -6,6 +6,7 @@ const lastSeenNumbers = userCache('gainscape.last-seen-numbers.v1.', z.record(z.
 const retiredSeenLevels = keyedStore('gainscape.seen-levels.v1.', (raw) => raw !== null);
 
 export const SCENE_STAGE_METRIC = 'scene-stage';
+export const SCENE_EQUIPMENT_METRIC = 'scene-equipment';
 
 export function skillXpMetric(skillKey: string): string {
   return `skill-xp.${skillKey}`;

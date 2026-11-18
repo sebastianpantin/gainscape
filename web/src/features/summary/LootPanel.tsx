@@ -6,6 +6,7 @@ import { type CatalogItem, colorFor } from '../../lib/collection/item-rules.ts';
 import { celebrate, FANFARE_CELEBRATIONS, primeCelebrationAudio } from '../../lib/platform/celebration-effects.ts';
 import { prefersReducedMotion } from '../../lib/platform/device-effects.ts';
 import { GLOSSARY } from '../../lib/ui/glossary.ts';
+import { markFinishLootOpened } from '../../offline/finish-outcome.ts';
 import { type LootSequence, lootSequence, type LootStep } from './loot-rules.ts';
 
 const LEGENDARY_GLOW_AFTER_POP_S = 0.35;
@@ -137,12 +138,13 @@ function useLootPlayback(userId: string, sequence: LootSequence | null) {
 
 interface LootPanelProps {
   userId: string;
+  sessionIds: readonly string[];
   drops: readonly DropSummary[];
   items: LoadedItems;
   delayS: number;
 }
 
-export function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
+export function LootPanel({ userId, sessionIds, drops, items, delayS }: LootPanelProps) {
   const heading = useRef<HTMLHeadingElement>(null);
   const sequence = Array.isArray(items) ? lootSequence(drops, items) : null;
   const { phase, open } = useLootPlayback(userId, sequence);
@@ -151,6 +153,7 @@ export function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
   const fanfare = opened ? (sequence?.fanfare ?? null) : null;
 
   const openLoot = () => {
+    markFinishLootOpened(userId, sessionIds);
     open();
     heading.current?.focus({ preventScroll: true });
     heading.current?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });

@@ -1,13 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import {
   daysInMonth,
+  deviceLocalDate,
   localDateIn,
+  newestDate,
   monthKey,
   monthTitle,
   shiftMonth,
   weekKey,
   weekStartIn,
 } from '../../web/src/lib/ui/date-bucket-rules.ts';
+
+describe('newestDate', () => {
+  it('is the latest of the dates, in any order', () => {
+    expect(newestDate(['2026-10-02', '2026-11-18', '2026-10-30'])).toBe('2026-11-18');
+    expect(newestDate(['2026-10-02'])).toBe('2026-10-02');
+  });
+
+  it('is nothing without dates', () => {
+    expect(newestDate([])).toBeNull();
+  });
+});
+
+describe('deviceLocalDate', () => {
+  it('is the calendar day on the device clock', () => {
+    expect(deviceLocalDate(new Date(2026, 10, 18, 23, 59))).toBe('2026-11-18');
+    expect(deviceLocalDate(new Date(2026, 0, 1, 0, 0))).toBe('2026-01-01');
+    expect(deviceLocalDate(new Date(2024, 1, 29, 12))).toBe('2024-02-29');
+  });
+});
 
 describe('localDateIn', () => {
   it('is the calendar day in the profile time zone, the day a synced workout is stored on', () => {

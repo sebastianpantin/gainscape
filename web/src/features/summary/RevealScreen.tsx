@@ -460,7 +460,13 @@ export function RevealScreen({ userId }: RevealScreenProps) {
         </section>
       )}
       {questReveal && <QuestPanel reveal={questReveal} delayS={timeline.lootDelayS} />}
-      <LootPanel userId={userId} drops={freshDrops ?? summary.drops ?? []} items={items} delayS={timeline.lootDelayS} />
+      <LootPanel
+        userId={userId}
+        sessionIds={outcome?.sessionIds ?? []}
+        drops={freshDrops ?? summary.drops ?? []}
+        items={items}
+        delayS={timeline.lootDelayS}
+      />
       {summary.days && summary.days.length > 1 && (
         <ul className="menu-list" aria-label="Workouts saved">
           {summary.days.map((day) => (

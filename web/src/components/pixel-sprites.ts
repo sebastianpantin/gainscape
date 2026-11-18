@@ -267,6 +267,11 @@ export const LOOT_CHEST: Sprite = fromRows(
   { K: INK, L: ACCENT_LIGHT, D: ACCENT_DARK, G: GOLD, Y: '#ffe27a' },
 );
 
+export const QUEST_SCROLL: Sprite = fromRows(
+  ['....R....', '.KKKRKKK.', 'KPPPPPPPK', 'KPKKKKPPK', 'KPPPPPPPK', 'KPKKKPPPK', 'KpppppppK', '.KKKKKKK.'],
+  { K: INK, P: PARCHMENT, p: PARCHMENT_SHADE, R: DANGER_FILL },
+);
+
 export const LOOT_CHEST_OPEN: Sprite = fromRows(
   [
     '..KKKKKKKK..',

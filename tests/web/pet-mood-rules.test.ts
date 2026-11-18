@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { petCompanionLabel, petMood, petMoodFrom } from '../../web/src/features/workout/pet-mood-rules.ts';
+import {
+  lastTrainedDateFrom,
+  petCompanionLabel,
+  petMood,
+  petMoodFrom,
+} from '../../web/src/features/workout/pet-mood-rules.ts';
 
 const TODAY = '2026-10-21';
 
@@ -34,22 +39,35 @@ describe('petMood', () => {
   });
 });
 
-describe('petMoodFrom', () => {
-  it('has no mood until the local day and the training days are known', () => {
-    expect(petMoodFrom(null, [TODAY], null)).toBeNull();
-    expect(petMoodFrom(TODAY, undefined, null)).toBeNull();
+describe('lastTrainedDateFrom', () => {
+  it('is unknown until the local day and the training days are known', () => {
+    expect(lastTrainedDateFrom(null, [TODAY], null)).toBeUndefined();
+    expect(lastTrainedDateFrom(TODAY, undefined, null)).toBeUndefined();
   });
 
   it('reads the newest training day up to today', () => {
-    expect(petMoodFrom(TODAY, ['2026-10-02', TODAY], undefined)).toBe('excited');
-    expect(petMoodFrom(TODAY, ['2026-10-02', '2026-10-19'], undefined)).toBe('content');
+    expect(lastTrainedDateFrom(TODAY, ['2026-10-02', TODAY, '2026-10-25'], undefined)).toBe(TODAY);
+    expect(lastTrainedDateFrom(TODAY, ['2026-10-02', '2026-10-19'], '2026-08-21')).toBe('2026-10-19');
   });
 
   it('waits for the older workout lookup when the training days hold none', () => {
-    expect(petMoodFrom(TODAY, [], undefined)).toBeNull();
-    expect(petMoodFrom(TODAY, [], '2026-10-19')).toBe('content');
-    expect(petMoodFrom(TODAY, [], '2026-08-21')).toBe('sleepy');
-    expect(petMoodFrom(TODAY, [], null)).toBe('sleepy');
+    expect(lastTrainedDateFrom(TODAY, [], undefined)).toBeUndefined();
+    expect(lastTrainedDateFrom(TODAY, [], '2026-08-21')).toBe('2026-08-21');
+    expect(lastTrainedDateFrom(TODAY, [], null)).toBeNull();
+  });
+});
+
+describe('petMoodFrom', () => {
+  it('has no mood until the local day and the last workout are known', () => {
+    expect(petMoodFrom(null, TODAY)).toBeNull();
+    expect(petMoodFrom(TODAY, undefined)).toBeNull();
+  });
+
+  it('reads the mood from the last workout', () => {
+    expect(petMoodFrom(TODAY, TODAY)).toBe('excited');
+    expect(petMoodFrom(TODAY, '2026-10-19')).toBe('content');
+    expect(petMoodFrom(TODAY, '2026-08-21')).toBe('sleepy');
+    expect(petMoodFrom(TODAY, null)).toBe('sleepy');
   });
 });
 

@@ -2,7 +2,7 @@ import type { Skill } from '../../lib/exercises/catalog-rules.ts';
 import { cardProfileOf, standingOfView } from '../../lib/profile/profile-view.ts';
 import type { ProfileView } from '../../lib/social/social.ts';
 import { collectionPercent } from '../../lib/collection/collection-rules.ts';
-import { monogramFor } from '../../lib/progress/standing-rules.ts';
+import { monogramFor, skillLevelsByKey } from '../../lib/progress/standing-rules.ts';
 import { ProfileCard } from './ProfileCard.tsx';
 
 const TOP_SKILL_COUNT = 3;
@@ -27,6 +27,7 @@ export function ProfileWithTopSkills({ skills, profile, headingId, nameIsPageTit
         combatLevel={standing.combatLevel}
         collectionPercent={collectionPercent(profile.collection.filledSlots, profile.collection.totalSlots)}
         questPoints={profile.questPoints}
+        skillLevels={skillLevelsByKey(standing.skills)}
       />
       <section className="panel stack" aria-labelledby={headingId}>
         <h2 id={headingId}>Top skills</h2>

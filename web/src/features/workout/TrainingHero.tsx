@@ -1,39 +1,56 @@
 import { levelProgress } from '@domain/index.ts';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CharacterFigure, GymScene } from '../../components/PixelArt.tsx';
+import { type CharacterPose } from '../../components/character-sprites.ts';
+import { CharacterFigure, GymScene, LootChestIcon, QuestScrollIcon } from '../../components/PixelArt.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { characterLabel, characterLinkLabel, characterLook } from '../../lib/collection/character-rules.ts';
 import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
-import { type Scene, sceneFor, sceneLabel } from '../../lib/progress/scene-rules.ts';
+import { type Scene, sceneFor, type SceneInput, sceneLabel } from '../../lib/progress/scene-rules.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
+import { activeStreakWeeks } from '../../lib/progress/weekly-goal-rules.ts';
+import { type SkillLevels, skillLevelsByKey } from '../../lib/progress/standing-rules.ts';
 import {
   loadoutQuery,
   profileQuery,
   questPointsQuery,
   questsQuery,
   recordTimelineQuery,
+  weeklyGoalQuery,
 } from '../../lib/query/queries.ts';
 import { activeQuestLine } from '../../lib/quests/quest-rules.ts';
+import { deviceLocalDate } from '../../lib/ui/date-bucket-rules.ts';
 import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
 import { useCountUp } from '../../lib/ui/use-count-up.ts';
+import { hasUnopenedFinishLoot } from '../../offline/finish-outcome.ts';
+import { characterPoseFrom } from './character-pose-rules.ts';
 import { PetCompanion } from './PetCompanion.tsx';
+import { petMoodFrom } from './pet-mood-rules.ts';
 import { useCompanionPet } from './use-companion-pet.ts';
-import { usePetMood } from './use-pet-mood.ts';
+import { useLastTrainedDate } from './use-last-trained-date.ts';
 import { useSceneGrowth } from './use-scene-growth.ts';
 import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
 
 const SCENE_CHARACTER_SIZE = 96;
+const SCENE_CHEST_SIZE = 36;
 
-function CharacterLink({ slots, badgeColor }: { slots: readonly EquippedGear[]; badgeColor: BadgeColor }) {
+interface CharacterLinkProps {
+  slots: readonly EquippedGear[];
+  badgeColor: BadgeColor;
+  skillLevels: SkillLevels | null;
+  pose: CharacterPose;
+}
+
+function CharacterLink({ slots, badgeColor, skillLevels, pose }: CharacterLinkProps) {
   return (
-    <Link className="hero-character-link" to="/collection/items" aria-label={characterLinkLabel(slots)}>
+    <Link className="hero-character-link" to="/collection/items" aria-label={characterLinkLabel(slots, pose)}>
       <CharacterFigure
-        look={characterLook(slots, badgeColor)}
-        label={characterLabel(slots)}
+        look={characterLook(slots, badgeColor, skillLevels)}
+        label={characterLabel(slots, pose)}
+        pose={pose}
         size={SCENE_CHARACTER_SIZE}
       />
     </Link>
@@ -61,35 +78,84 @@ function LevelUpBar({ userId, levelUp }: { userId: string; levelUp: NearestLevel
   );
 }
 
+function useActiveQuest(userId: string, unit: UnitPref) {
+  const questLog = useQuery(questsQuery(userId)).data?.loaded;
+  return questLog ? activeQuestLine(questLog, unit) : null;
+}
+
+function QuestScrollLink({ userId, unit }: { userId: string; unit: UnitPref }) {
+  const quest = useActiveQuest(userId, unit);
+  if (!quest) return null;
+  return (
+    <Link className="scene-quest" to="/skills/quests" aria-label={`Quest: ${quest.questName}. Open Quests`}>
+      <span className="scene-quest-art" aria-hidden="true">
+        <QuestScrollIcon />
+      </span>
+    </Link>
+  );
+}
+
+function LootChestLink({ userId }: { userId: string }) {
+  const [waiting] = useState(() => hasUnopenedFinishLoot(userId));
+  if (!waiting) return null;
+  return (
+    <Link className="scene-chest" to="/reveal" aria-label="Loot from your last workout. Open the reveal">
+      <span className="scene-chest-art" aria-hidden="true">
+        <LootChestIcon size={SCENE_CHEST_SIZE} />
+      </span>
+    </Link>
+  );
+}
+
 interface TrainingHeroProps {
   userId: string;
   standing: StandingState;
+  unit: UnitPref;
   today: string | null;
   trainedDates: readonly string[] | undefined;
-  hour: number;
+  now: Date;
 }
 
-function useScene(userId: string, standing: StandingState, hour: number): Scene | null {
-  const records = useInfiniteQuery(recordTimelineQuery(userId)).data?.pages[0]?.loaded;
+function useRecordDates(userId: string): readonly string[] | undefined {
+  const records = useInfiniteQuery(recordTimelineQuery(userId));
+  return records.data?.pages[0]?.loaded.map((record) => record.local_date) ?? (records.isError ? [] : undefined);
+}
+
+type SceneFacts = Pick<SceneInput, 'totalLevel' | 'skillLevels' | 'recordDates' | 'today' | 'hour'>;
+
+function useScene(userId: string, facts: SceneFacts | null): Scene | null {
   const questPoints = useQuery(questPointsQuery(userId)).data;
-  if (standing.status !== 'ready') return null;
+  const weeklyGoal = useQuery(weeklyGoalQuery).data;
+  if (facts === null) return null;
   return sceneFor({
-    totalLevel: standing.standing.totalLevel,
-    recordCount: records?.length ?? 0,
+    ...facts,
     questPoints: questPoints ?? 0,
-    hour,
+    streakWeeks: activeStreakWeeks(weeklyGoal),
   });
 }
 
-export function TrainingHero({ userId, standing, today, trainedDates, hour }: TrainingHeroProps) {
+export function TrainingHero({ userId, standing, unit, today, trainedDates, now }: TrainingHeroProps) {
   const headingId = useId();
   const pet = useCompanionPet(userId);
-  const mood = usePetMood(userId, today, trainedDates);
+  const lastTrainedDate = useLastTrainedDate(userId, today, trainedDates);
+  const recordDates = useRecordDates(userId);
   const loadout = useQuery(loadoutQuery(userId));
   const equipped = loadout.isSuccess ? (loadout.data?.slots ?? []) : null;
   const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
-  const scene = useScene(userId, standing, hour);
-  const growthText = useSceneGrowth(userId, scene?.stage ?? null);
+  const levels = standing.status === 'ready' ? standing.standing : null;
+  const skillLevels = levels && skillLevelsByKey(levels.skills);
+  const scene = useScene(
+    userId,
+    levels &&
+      skillLevels && {
+        totalLevel: levels.totalLevel,
+        skillLevels,
+        recordDates: recordDates ?? [],
+        today: today ?? deviceLocalDate(now),
+        hour: now.getHours(),
+      },
+  );
+  const growthText = useSceneGrowth(userId, scene);
 
   return (
     <section className="panel training-hero" aria-labelledby={headingId}>
@@ -98,16 +164,23 @@ export function TrainingHero({ userId, standing, today, trainedDates, hour }: Tr
       </h2>
       <div className="training-scene">
         <GymScene scene={scene} label={scene && sceneLabel(scene)} />
-        {badgeColor !== null && equipped !== null && (
+        {badgeColor !== null && equipped !== null && standing.status !== 'loading' && (
           <span className="scene-character">
-            <CharacterLink slots={equipped} badgeColor={badgeColor} />
+            <CharacterLink
+              slots={equipped}
+              badgeColor={badgeColor}
+              skillLevels={skillLevels}
+              pose={characterPoseFrom(today, lastTrainedDate, recordDates)}
+            />
           </span>
         )}
         {pet && (
           <span className="scene-pet">
-            <PetCompanion pet={pet} mood={mood} />
+            <PetCompanion pet={pet} mood={petMoodFrom(today, lastTrainedDate)} />
           </span>
         )}
+        <QuestScrollLink userId={userId} unit={unit} />
+        <LootChestLink userId={userId} />
       </div>
       {growthText && (
         <p className="notice scene-grew" role="status">
@@ -135,8 +208,7 @@ export function NextLevelCard({ userId, standing }: { userId: string; standing: 
 
 export function ActiveQuestCard({ userId, unit }: { userId: string; unit: UnitPref }) {
   const headingId = useId();
-  const questLog = useQuery(questsQuery(userId)).data?.loaded;
-  const quest = questLog ? activeQuestLine(questLog, unit) : null;
+  const quest = useActiveQuest(userId, unit);
 
   if (!quest) return null;
   return (

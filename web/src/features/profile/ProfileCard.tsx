@@ -1,6 +1,8 @@
+import { type SkillLevels } from '../../lib/progress/standing-rules.ts';
 import { BADGE_COLORS, type BadgeColor, initialsFor, TRAINING_FOCUS_LABELS } from '../../lib/profile/profile.ts';
 import type { CardProfile } from '../../lib/profile/profile-view.ts';
 import { ProfileCharacter } from './ProfileCharacter.tsx';
+import {} from '../../lib/collection/character-rules.ts';
 
 interface ProfileCardProps {
   userId: string;
@@ -9,6 +11,7 @@ interface ProfileCardProps {
   combatLevel: number | null;
   collectionPercent: number | null;
   questPoints: number | null;
+  skillLevels: SkillLevels | null | undefined;
   nameIsPageTitle?: boolean;
 }
 
@@ -66,6 +69,7 @@ export function ProfileCard({
   combatLevel,
   collectionPercent,
   questPoints,
+  skillLevels,
   nameIsPageTitle = false,
 }: ProfileCardProps) {
   const NameHeading = nameIsPageTitle ? 'h1' : 'h2';
@@ -78,7 +82,7 @@ export function ProfileCard({
           <span className="muted">@{profile.username}</span>
           <span className="tiny">{detailLine(profile)}</span>
         </div>
-        <ProfileCharacter userId={userId} badgeColor={profile.badgeColor} />
+        <ProfileCharacter userId={userId} badgeColor={profile.badgeColor} skillLevels={skillLevels} />
       </div>
       {profile.bio && <p>{profile.bio}</p>}
       <dl className="stat-tiles">

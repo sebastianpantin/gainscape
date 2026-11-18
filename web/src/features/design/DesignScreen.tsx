@@ -3,6 +3,7 @@ import { type ReactNode, useId, useRef, useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { EmptyState } from '../../components/EmptyState.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
+import { BUILD_TIERS, CHARACTER_POSES, type CharacterPose } from '../../components/character-sprites.ts';
 import { CharacterFigure, GymScene } from '../../components/PixelArt.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
@@ -13,8 +14,13 @@ import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { capitalized } from '../../lib/names.ts';
 import { BADGE_COLOR_KEYS, type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import {
+  EQUIPMENT_MIN_SKILL_LEVEL,
+  EQUIPMENT_SKILL,
+  PENNANT_QUEST_POINTS,
+  SCENE_EQUIPMENT,
   SCENE_STAGE_MIN_TOTAL_LEVEL,
   SCENE_STAGES,
+  type SceneEquipment,
   type SceneInput,
   sceneFor,
   sceneLabel,
@@ -62,10 +68,17 @@ function sampleLoadout(tier: ItemTier): EquippedGear[] {
   }));
 }
 
-function SampleCharacter({ slots, badge, caption }: { slots: EquippedGear[]; badge: BadgeColor; caption: string }) {
+interface SampleCharacterProps {
+  slots: EquippedGear[];
+  badge: BadgeColor;
+  caption: string;
+  pose?: CharacterPose;
+}
+
+function SampleCharacter({ slots, badge, caption, pose = 'idle' }: SampleCharacterProps) {
   return (
     <figure className="stack design-character">
-      <CharacterFigure look={characterLook(slots, badge)} label={characterLabel(slots)} />
+      <CharacterFigure look={characterLook(slots, badge)} label={characterLabel(slots, pose)} pose={pose} />
       <figcaption className="muted tiny">{caption}</figcaption>
     </figure>
   );
@@ -94,6 +107,31 @@ function SampleCharacters() {
           <SampleCharacter key={tier} slots={sampleLoadout(tier)} badge="stone" caption={`Full ${tier}`} />
         ))}
       </div>
+      <div className="row wrap">
+        {BUILD_TIERS.flatMap((frame) =>
+          BUILD_TIERS.map((arms) => (
+            <figure key={`${frame}-${arms}`} className="stack design-character">
+              <CharacterFigure
+                look={{ ...characterLook(sampleLoadout('forged'), 'rust'), build: { arms, frame } }}
+                label={`Character with ${arms} arms on a ${frame} frame`}
+              />
+              <figcaption className="muted tiny">{`${capitalized(arms)} arms, ${frame} frame`}</figcaption>
+            </figure>
+          )),
+        )}
+      </div>
+      <div className="row wrap">
+        {CHARACTER_POSES.flatMap((pose) => [
+          <SampleCharacter key={pose} slots={[]} badge="green" caption={capitalized(pose)} pose={pose} />,
+          <SampleCharacter
+            key={`${pose}-dressed`}
+            slots={sampleLoadout('titan')}
+            badge="green"
+            caption={`${capitalized(pose)}, full titan`}
+            pose={pose}
+          />,
+        ])}
+      </div>
     </>
   );
 }
@@ -112,8 +150,22 @@ function SampleScene({ input, caption }: { input: SceneInput; caption: string })
   );
 }
 
+const SAMPLE_SCENE_TODAY = '2026-11-18';
+const SAMPLE_RECORD_DATES = ['2026-11-18', '2026-11-01', '2026-06-01'] as const;
+
+function sampleSkillLevels(equipment: readonly SceneEquipment[]): Record<string, number> {
+  return Object.fromEntries(equipment.map((piece) => [EQUIPMENT_SKILL[piece], EQUIPMENT_MIN_SKILL_LEVEL]));
+}
+
 function SampleScenes() {
-  const fullest = { totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL.skyline, recordCount: 3, questPoints: 15 };
+  const fullest = {
+    totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL.skyline,
+    recordDates: SAMPLE_RECORD_DATES,
+    questPoints: PENNANT_QUEST_POINTS[PENNANT_QUEST_POINTS.length - 1],
+    streakWeeks: 12,
+    skillLevels: sampleSkillLevels(SCENE_EQUIPMENT),
+    today: SAMPLE_SCENE_TODAY,
+  };
   return (
     <>
       {SCENE_STAGES.map((stage, index) => (
@@ -121,8 +173,11 @@ function SampleScenes() {
           key={stage}
           input={{
             totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL[stage],
-            recordCount: index,
+            recordDates: SAMPLE_RECORD_DATES.slice(SAMPLE_RECORD_DATES.length - index),
             questPoints: index * index,
+            streakWeeks: index * 3,
+            skillLevels: sampleSkillLevels(SCENE_EQUIPMENT.slice(0, index * 2)),
+            today: SAMPLE_SCENE_TODAY,
             hour: 12,
           }}
           caption={`${capitalized(stage)}, total level ${SCENE_STAGE_MIN_TOTAL_LEVEL[stage]}`}

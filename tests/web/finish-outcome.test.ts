@@ -17,6 +17,8 @@ import {
   type FinishSummary,
   forgetFinishOutcomeCovering,
   forgetFinishOutcomeOf,
+  hasUnopenedFinishLoot,
+  markFinishLootOpened,
   recallFinishOutcome,
 } from '../../web/src/offline/finish-outcome.ts';
 import { type ItemsCache, readItemsCache, saveItemsCache } from '../../web/src/offline/items-cache.ts';
@@ -344,6 +346,74 @@ describe('the loot of a Finish outcome', () => {
     const loot = await finishOutcomeLoot(async () => [drop('c1')], USER_ID, ['session-c'], tab);
     expect(loot).toEqual([drop('c1')]);
     expect(recallFinishOutcome(USER_ID, tab)?.summary.drops).toEqual([drop('kept')]);
+  });
+});
+
+describe('the unopened loot of a Finish outcome', () => {
+  function remembered(drops: DropSummary[], userId = USER_ID) {
+    const tab = new MemoryStorage();
+    tab.setItem(LAST_SUMMARY_KEY, JSON.stringify({ userId, summary: summaryOfDays(['session-a'], drops) }));
+    return tab;
+  }
+
+  it('waits while the remembered workout dropped loot nobody opened', () => {
+    expect(hasUnopenedFinishLoot(USER_ID, remembered([drop('a1')]))).toBe(true);
+  });
+
+  it('is nothing without drops, without a remembered workout or for another account', () => {
+    expect(hasUnopenedFinishLoot(USER_ID, remembered([]))).toBe(false);
+    expect(hasUnopenedFinishLoot(USER_ID, new MemoryStorage())).toBe(false);
+    expect(hasUnopenedFinishLoot(OTHER_USER_ID, remembered([drop('a1')]))).toBe(false);
+  });
+
+  it('is gone once the loot is opened, and stays gone when the drops are fetched again', async () => {
+    const tab = remembered([drop('a1')]);
+    markFinishLootOpened(USER_ID, ['session-a'], tab);
+    expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(false);
+    expect(recallFinishOutcome(USER_ID, tab)?.summary.drops).toEqual([drop('a1')]);
+
+    await finishOutcomeLoot(async () => [drop('a1'), drop('a2')], USER_ID, ['session-a'], tab);
+    expect(recallFinishOutcome(USER_ID, tab)?.summary.drops).toEqual([drop('a1'), drop('a2')]);
+    expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(false);
+  });
+
+  it('is not opened by the loot of an earlier workout, reached with the back button', () => {
+    const tab = remembered([drop('a1')]);
+    markFinishLootOpened(USER_ID, ['session-earlier'], tab);
+    expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(true);
+    markFinishLootOpened(USER_ID, [], tab);
+    expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(true);
+  });
+
+  it('is not opened by another account', () => {
+    const tab = remembered([drop('a1')]);
+    markFinishLootOpened(OTHER_USER_ID, ['session-a'], tab);
+    expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(true);
+  });
+
+  it('waits again after the next workout', async () => {
+    const { io, tab } = fakeIo({ kind: 'ok', data: { ...oneDaySummary('session-b'), drops: [drop('b1')] } });
+    tab.setItem(
+      LAST_SUMMARY_KEY,
+      JSON.stringify({
+        userId: USER_ID,
+        summary: { ...summaryOfDays(['session-a'], [drop('a1')]), lootOpened: true },
+      }),
+    );
+    await completeFinishedDraft(USER_ID, monday(), io);
+    expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(true);
+  });
+
+  it('degrades silently when tab storage throws or is missing', () => {
+    expect(hasUnopenedFinishLoot(USER_ID, throwingStorage('getItem'))).toBe(false);
+    expect(() => markFinishLootOpened(USER_ID, ['session-a'], throwingStorage('getItem', 'setItem'))).not.toThrow();
+    const full = remembered([drop('a1')]);
+    full.setItem = () => {
+      throw new Error('blocked');
+    };
+    expect(() => markFinishLootOpened(USER_ID, ['session-a'], full)).not.toThrow();
+    expect(hasUnopenedFinishLoot(USER_ID, full)).toBe(true);
+    expect(hasUnopenedFinishLoot(USER_ID, null)).toBe(false);
   });
 });
 

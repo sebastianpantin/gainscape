@@ -78,7 +78,10 @@ test('your gym sits above the week strip with your character and pet; the next l
   await openTab(page, 'Train');
 
   await expect(gym.getByRole('link', { name: /^[\w ]+, your companion, excited$/ })).toBeVisible();
-  const character = gym.getByRole('link', { name: 'Character wearing Rookie belt. Open Items', exact: true });
+  const character = gym.getByRole('link', {
+    name: 'Character wearing Rookie belt, lifting. Open Items',
+    exact: true,
+  });
   await expectAboveTabBar(page, character);
   await expectAboveTabBar(page, start);
   expect((await gym.boundingBox())!.y).toBeLessThan((await thisWeek(page).boundingBox())!.y);
@@ -101,6 +104,11 @@ test('your gym sits above the week strip with your character and pet; the next l
   await expectNoAxeViolations(page, 'train home, progress');
 
   await questCard.getByRole('link', { name: 'X Marks the Squat', exact: true }).click();
+  await expect(page).toHaveURL(/\/skills\/quests$/);
+  await openTab(page, 'Train');
+  const questScroll = gym.getByRole('link', { name: 'Quest: X Marks the Squat. Open Quests', exact: true });
+  await expectAboveTabBar(page, questScroll);
+  await questScroll.click();
   await expect(page).toHaveURL(/\/skills\/quests$/);
   await openTab(page, 'Train');
   await character.click();
@@ -130,8 +138,38 @@ test('your gym grows with your total level, says so once, and hangs your records
 
   await logBench(page, 90);
   await openTab(page, 'Train');
-  await expect(gym.getByRole('img', { name: /^Your gym: a rack, plates on the wall and 1 trophy, / })).toBeVisible();
+  await expect(
+    gym.getByRole('img', { name: /^Your gym: a rack, plates on the wall and 1 gold trophy, / }),
+  ).toBeVisible();
   await expect(gym.getByRole('status')).toHaveCount(0);
+  await expect(
+    gym.getByRole('link', { name: 'Character with no gear, flexing after a record. Open Items', exact: true }),
+  ).toBeVisible();
+});
+
+test('loot nobody opened waits as a chest in the gym until it is opened', async ({ page }) => {
+  await register(page, uniqueUsername('home_chest'));
+  const gym = page.getByRole('region', { name: 'Your gym' });
+  const chest = gym.getByRole('link', { name: 'Loot from your last workout. Open the reveal', exact: true });
+  await expect(gym.getByRole('img', { name: /^Your gym: / })).toBeVisible();
+  await expect(chest).toHaveCount(0);
+
+  await logBench(page);
+  await openTab(page, 'Train');
+  await logBench(page, 80);
+  const openLoot = page.getByRole('button', { name: 'Open loot' });
+  await expect(openLoot).toBeVisible();
+  await openTab(page, 'Train');
+  await expectAboveTabBar(page, chest);
+  await expectNoAxeViolations(page, 'train home, loot chest');
+
+  await chest.click();
+  await expect(page).toHaveURL(/\/reveal$/);
+  await openLoot.click();
+  await expect(page.getByRole('heading', { name: 'Loot', exact: true })).toBeFocused();
+  await openTab(page, 'Train');
+  await expect(gym.getByRole('img', { name: /^Your gym: / })).toBeVisible();
+  await expect(chest).toHaveCount(0);
 });
 
 test('Train never shows a gearless character while the loadout is unknown', async ({ page }) => {

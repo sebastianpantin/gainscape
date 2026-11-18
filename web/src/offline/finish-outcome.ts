@@ -14,6 +14,7 @@ export interface FinishSummary extends SessionSummary, RememberedTiming {
   programLinked?: boolean;
   completedAt?: string;
   storedContentDiffers?: true;
+  lootOpened?: true;
   days?: SavedDay[];
   plannedChallenge?: DraftChallenge | null;
 }
@@ -149,4 +150,19 @@ export async function finishOutcomeLoot(
   if (remembered?.sessionIds.join() === sessionIds.join())
     rememberSummary(tab, userId, { ...remembered.summary, drops });
   return drops;
+}
+
+export function markFinishLootOpened(
+  userId: string,
+  sessionIds: readonly string[],
+  tab: Storage | null = tabStorage(),
+): void {
+  const remembered = recallFinishOutcome(userId, tab);
+  if (remembered?.sessionIds.join() === sessionIds.join())
+    rememberSummary(tab, userId, { ...remembered.summary, lootOpened: true });
+}
+
+export function hasUnopenedFinishLoot(userId: string, tab: Storage | null = tabStorage()): boolean {
+  const summary = recallFinishOutcome(userId, tab)?.summary;
+  return !summary?.lootOpened && (summary?.drops ?? []).length > 0;
 }

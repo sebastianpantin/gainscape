@@ -48,6 +48,10 @@ export function weeklyGoalStatus(rows: readonly WeeklyGoalWeekRow[]): WeeklyGoal
   };
 }
 
+export function activeStreakWeeks(status: WeeklyGoalStatus | null | undefined): number {
+  return status?.goal != null ? status.streakWeeks : 0;
+}
+
 export function workoutWord(count: number): string {
   return count === 1 ? 'workout' : 'workouts';
 }

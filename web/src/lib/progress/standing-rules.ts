@@ -13,6 +13,12 @@ export interface Standing {
   combatLevel: number;
 }
 
+export type SkillLevels = Readonly<Record<string, number>>;
+
+export function skillLevelsByKey(skills: readonly SkillStanding[]): SkillLevels {
+  return Object.fromEntries(skills.map(({ skill, progress }) => [skill.key, progress.level]));
+}
+
 const MONOGRAMS: Record<string, string> = {
   chest: 'CH',
   back: 'BK',

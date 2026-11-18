@@ -149,6 +149,19 @@
   block-size: 100%;
 }
 
+.scene-frame {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  animation: two-frame-first 1.6s step-end infinite;
+}
+
+.scene-frame.second {
+  visibility: hidden;
+  animation-name: two-frame-second;
+}
+
 .scene-character {
   position: absolute;
   inset-block-end: calc(2 * var(--scene-pixel));
@@ -166,6 +179,40 @@
   justify-content: flex-end;
   min-block-size: var(--tap-target);
   min-inline-size: var(--tap-target);
+}
+
+.scene-quest,
+.scene-chest {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  min-block-size: var(--tap-target);
+  min-inline-size: var(--tap-target);
+  line-height: 0;
+  text-decoration: none;
+}
+
+.scene-quest {
+  inset-block-start: 0;
+  inset-inline-start: calc(min(50% + 48 * var(--scene-pixel), 100%) - var(--tap-target));
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.scene-chest {
+  inset-block-end: var(--scene-pixel);
+  inset-inline-start: calc(50% + 27 * var(--scene-pixel) - var(--tap-target) / 2);
+  align-items: flex-end;
+}
+
+.scene-quest-art,
+.scene-chest-art {
+  display: inline-flex;
+}
+
+.scene-chest-art {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 60%, transparent));
+  animation: pet-bob 1.2s steps(2, jump-none) infinite;
 }
 
 .hero-character-link {
@@ -218,15 +265,27 @@
 
 .character-frame {
   grid-area: 1 / 1;
-  animation: character-idle-still 1.6s step-end infinite;
+  animation: two-frame-first 1.6s step-end infinite;
 }
 
 .character-frame.bobbed {
   visibility: hidden;
-  animation-name: character-idle-bobbed;
+  animation-name: two-frame-second;
 }
 
-@keyframes character-idle-still {
+.character.lifting .character-frame {
+  animation-duration: 1.2s;
+}
+
+.character.flexing .character-frame {
+  animation-duration: 0.8s;
+}
+
+.character.resting .character-frame {
+  animation-duration: 3.2s;
+}
+
+@keyframes two-frame-first {
   0% {
     visibility: visible;
   }
@@ -235,7 +294,7 @@
   }
 }
 
-@keyframes character-idle-bobbed {
+@keyframes two-frame-second {
   0% {
     visibility: hidden;
   }

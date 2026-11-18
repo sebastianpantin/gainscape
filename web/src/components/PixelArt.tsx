@@ -1,6 +1,6 @@
 import { type Scene } from '../lib/progress/scene-rules.ts';
 import { monogramFor } from '../lib/progress/standing-rules.ts';
-import { type CharacterLook, characterFrames } from './character-sprites.ts';
+import { type CharacterLook, type CharacterPose, characterFrames } from './character-sprites.ts';
 import {
   isSkillKey,
   type ItemIconKind,
@@ -9,11 +9,12 @@ import {
   LOGO,
   LOOT_CHEST,
   LOOT_CHEST_OPEN,
+  QUEST_SCROLL,
   SKILL_SPRITES,
   type Sprite,
   TROPHY,
 } from './pixel-sprites.ts';
-import { sceneSprite } from './scene-sprites.ts';
+import { sceneArt } from './scene-sprites.ts';
 
 function PixelRects({ sprite }: { sprite: Sprite }) {
   return sprite.pixels.map((pixel, index) => (
@@ -74,18 +75,29 @@ export function LevelUpIcon() {
   return <PixelGrid sprite={LEVEL_UP} size={24} />;
 }
 
-export function LootChestIcon() {
-  return <PixelGrid sprite={LOOT_CHEST} size={56} />;
+export function LootChestIcon({ size = 56 }: { size?: number }) {
+  return <PixelGrid sprite={LOOT_CHEST} size={size} />;
+}
+
+export function QuestScrollIcon() {
+  return <PixelGrid sprite={QUEST_SCROLL} size={24} />;
 }
 
 export function OpenLootChestIcon() {
   return <PixelGrid sprite={LOOT_CHEST_OPEN} size={56} />;
 }
 
-export function CharacterFigure({ look, label, size = 128 }: { look: CharacterLook; label: string; size?: number }) {
-  const [still, bobbed] = characterFrames(look);
+interface CharacterFigureProps {
+  look: CharacterLook;
+  label: string;
+  pose?: CharacterPose;
+  size?: number;
+}
+
+export function CharacterFigure({ look, label, pose = 'idle', size = 128 }: CharacterFigureProps) {
+  const [still, bobbed] = characterFrames(look, pose);
   return (
-    <span className="character" role="img" aria-label={label}>
+    <span className={`character ${pose}`} role="img" aria-label={label}>
       <span className="character-frame still">
         <PixelGrid sprite={still} size={size} />
       </span>
@@ -96,11 +108,10 @@ export function CharacterFigure({ look, label, size = 128 }: { look: CharacterLo
   );
 }
 
-export function GymScene({ scene, label }: { scene: Scene | null; label: string | null }) {
-  const sprite = sceneSprite(scene);
-  const art = (
+function SceneLayer({ sprite, className }: { sprite: Sprite; className: string }) {
+  return (
     <svg
-      className="scene-art"
+      className={className}
       viewBox={`0 0 ${sprite.cols} ${sprite.rows}`}
       preserveAspectRatio="xMidYMax slice"
       shapeRendering="crispEdges"
@@ -109,10 +120,17 @@ export function GymScene({ scene, label }: { scene: Scene | null; label: string 
       <PixelRects sprite={sprite} />
     </svg>
   );
-  if (label === null) return art;
+}
+
+export function GymScene({ scene, label }: { scene: Scene | null; label: string | null }) {
+  const { still, frames } = sceneArt(scene);
+  if (label === null) return <SceneLayer sprite={still} className="scene-art" />;
+  const moves = frames.some((frame) => frame.pixels.length > 0);
   return (
     <span className="scene-art-label" role="img" aria-label={label}>
-      {art}
+      <SceneLayer sprite={still} className="scene-art" />
+      {moves && <SceneLayer sprite={frames[0]} className="scene-frame" />}
+      {moves && <SceneLayer sprite={frames[1]} className="scene-frame second" />}
     </span>
   );
 }
