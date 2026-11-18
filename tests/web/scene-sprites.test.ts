@@ -11,6 +11,7 @@ import {
 } from '../../web/src/components/scene-sprites.ts';
 import {
   EQUIPMENT_SKILL,
+  PENNANT_QUEST_POINTS,
   SCENE_EQUIPMENT,
   SCENE_STAGES,
   type Scene,
@@ -35,23 +36,27 @@ const LIGHT_HOUR: Record<SceneLight, number> = { dawn: 6, day: 12, dusk: 19, nig
 function sceneAt(stage: SceneStage, extras: Partial<Omit<SceneInput, 'totalLevel'>> = {}) {
   return sceneFor({
     totalLevel: STAGE_TOTAL_LEVEL[stage],
-    recordCount: 0,
+    recordDates: [],
     questPoints: 0,
     streakWeeks: 0,
     skillLevels: {},
+    today: TODAY,
     hour: 12,
     ...extras,
   });
 }
 
+const TODAY = '2026-11-18';
+const THREE_RECORDS = [TODAY, '2026-11-01', '2026-06-01'];
 const EVERY_SKILL_MAXED = Object.fromEntries(Object.values(EQUIPMENT_SKILL).map((skill) => [skill, 99]));
 
 const FULLEST: Scene = sceneFor({
   totalLevel: 990,
-  recordCount: 9,
+  recordDates: THREE_RECORDS,
   questPoints: 99,
   streakWeeks: 52,
   skillLevels: EVERY_SKILL_MAXED,
+  today: TODAY,
   hour: 23,
 });
 
@@ -77,8 +82,8 @@ describe('sceneSprite', () => {
     for (const light of Object.keys(LIGHT_HOUR) as SceneLight[]) {
       const sprite = sceneSprite(
         sceneAt(stage, {
-          recordCount: 3,
-          questPoints: 15,
+          recordDates: THREE_RECORDS,
+          questPoints: 21,
           streakWeeks: 12,
           skillLevels: EVERY_SKILL_MAXED,
           hour: LIGHT_HOUR[light],
@@ -116,7 +121,11 @@ describe('sceneSprite', () => {
 
   it('hangs a trophy for each one the scene holds', () => {
     const counts = [0, 1, 2, 3].map(
-      (recordCount) => addedPixels(sceneSprite(sceneAt('bare')), sceneSprite(sceneAt('bare', { recordCount }))).length,
+      (count) =>
+        addedPixels(
+          sceneSprite(sceneAt('bare')),
+          sceneSprite(sceneAt('bare', { recordDates: THREE_RECORDS.slice(0, count) })),
+        ).length,
     );
     expect(counts[0]).toBe(0);
     expect(counts[1]).toBeGreaterThan(0);
@@ -124,13 +133,19 @@ describe('sceneSprite', () => {
     expect(counts[3]).toBeGreaterThan(counts[2]);
   });
 
+  it('casts each trophy in its own metal', () => {
+    const pictures = ['2026-11-18', '2026-11-01', '2026-06-01'].map((recordDate) =>
+      JSON.stringify(sceneSprite(sceneAt('bare', { recordDates: [recordDate] }))),
+    );
+    expect(new Set(pictures).size).toBe(3);
+  });
+
   it('strings up a pennant for each one the scene holds', () => {
-    const counts = [0, 1, 5, 15].map(
+    const counts = [0, ...PENNANT_QUEST_POINTS].map(
       (questPoints) => addedPixels(sceneSprite(sceneAt('bare')), sceneSprite(sceneAt('bare', { questPoints }))).length,
     );
     expect(counts[0]).toBe(0);
-    expect(counts[2]).toBeGreaterThan(counts[1]);
-    expect(counts[3]).toBeGreaterThan(counts[2]);
+    for (let index = 1; index < counts.length; index++) expect(counts[index]).toBeGreaterThan(counts[index - 1]);
   });
 
   it.each([...SCENE_EQUIPMENT])('draws the %s once its skill brings it in', (piece) => {

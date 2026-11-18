@@ -138,7 +138,9 @@ test('your gym grows with your total level, says so once, and hangs your records
 
   await logBench(page, 90);
   await openTab(page, 'Train');
-  await expect(gym.getByRole('img', { name: /^Your gym: a rack, plates on the wall and 1 trophy, / })).toBeVisible();
+  await expect(
+    gym.getByRole('img', { name: /^Your gym: a rack, plates on the wall and 1 gold trophy, / }),
+  ).toBeVisible();
   await expect(gym.getByRole('status')).toHaveCount(0);
   await expect(
     gym.getByRole('link', { name: 'Character with no gear, flexing after a record. Open Items', exact: true }),

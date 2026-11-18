@@ -14,7 +14,7 @@ import {
 import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
-import { type Scene, sceneFor, sceneLabel } from '../../lib/progress/scene-rules.ts';
+import { type Scene, sceneFor, type SceneInput, sceneLabel } from '../../lib/progress/scene-rules.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
 import { skillLevelsByKey } from '../../lib/progress/standing-rules.ts';
 import {
@@ -26,6 +26,7 @@ import {
   weeklyGoalQuery,
 } from '../../lib/query/queries.ts';
 import { activeQuestLine } from '../../lib/quests/quest-rules.ts';
+import { deviceLocalDate } from '../../lib/ui/date-bucket-rules.ts';
 import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
 import { useCountUp } from '../../lib/ui/use-count-up.ts';
 import { hasUnopenedFinishLoot } from '../../offline/finish-outcome.ts';
@@ -113,7 +114,7 @@ interface TrainingHeroProps {
   unit: UnitPref;
   today: string | null;
   trainedDates: readonly string[] | undefined;
-  hour: number;
+  now: Date;
 }
 
 function useRecordDates(userId: string): readonly string[] | undefined {
@@ -122,12 +123,7 @@ function useRecordDates(userId: string): readonly string[] | undefined {
   return records.data?.pages[0]?.loaded.map((record) => record.local_date);
 }
 
-interface SceneFacts {
-  totalLevel: number;
-  skillLevels: SkillLevels;
-  recordCount: number;
-  hour: number;
-}
+type SceneFacts = Pick<SceneInput, 'totalLevel' | 'skillLevels' | 'recordDates' | 'today' | 'hour'>;
 
 function useScene(userId: string, facts: SceneFacts | null): Scene | null {
   const questPoints = useQuery(questPointsQuery(userId)).data;
@@ -140,7 +136,7 @@ function useScene(userId: string, facts: SceneFacts | null): Scene | null {
   });
 }
 
-export function TrainingHero({ userId, standing, unit, today, trainedDates, hour }: TrainingHeroProps) {
+export function TrainingHero({ userId, standing, unit, today, trainedDates, now }: TrainingHeroProps) {
   const headingId = useId();
   const pet = useCompanionPet(userId);
   const lastTrainedDate = useLastTrainedDate(userId, today, trainedDates);
@@ -153,7 +149,13 @@ export function TrainingHero({ userId, standing, unit, today, trainedDates, hour
   const scene = useScene(
     userId,
     levels &&
-      skillLevels && { totalLevel: levels.totalLevel, skillLevels, recordCount: recordDates?.length ?? 0, hour },
+      skillLevels && {
+        totalLevel: levels.totalLevel,
+        skillLevels,
+        recordDates: recordDates ?? [],
+        today: today ?? deviceLocalDate(now),
+        hour: now.getHours(),
+      },
   );
   const growthText = useSceneGrowth(userId, scene);
 

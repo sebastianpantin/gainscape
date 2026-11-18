@@ -16,9 +16,11 @@ import { BADGE_COLOR_KEYS, type BadgeColor } from '../../lib/profile/profile-rul
 import {
   EQUIPMENT_MIN_SKILL_LEVEL,
   EQUIPMENT_SKILL,
+  PENNANT_QUEST_POINTS,
   SCENE_EQUIPMENT,
   SCENE_STAGE_MIN_TOTAL_LEVEL,
   SCENE_STAGES,
+  type SceneEquipment,
   type SceneInput,
   sceneFor,
   sceneLabel,
@@ -148,13 +150,21 @@ function SampleScene({ input, caption }: { input: SceneInput; caption: string })
   );
 }
 
+const SAMPLE_SCENE_TODAY = '2026-11-18';
+const SAMPLE_RECORD_DATES = ['2026-11-18', '2026-11-01', '2026-06-01'] as const;
+
+function sampleSkillLevels(equipment: readonly SceneEquipment[]): Record<string, number> {
+  return Object.fromEntries(equipment.map((piece) => [EQUIPMENT_SKILL[piece], EQUIPMENT_MIN_SKILL_LEVEL]));
+}
+
 function SampleScenes() {
   const fullest = {
     totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL.skyline,
-    recordCount: 3,
-    questPoints: 15,
+    recordDates: SAMPLE_RECORD_DATES,
+    questPoints: PENNANT_QUEST_POINTS[PENNANT_QUEST_POINTS.length - 1],
     streakWeeks: 12,
-    skillLevels: Object.fromEntries(Object.values(EQUIPMENT_SKILL).map((skill) => [skill, EQUIPMENT_MIN_SKILL_LEVEL])),
+    skillLevels: sampleSkillLevels(SCENE_EQUIPMENT),
+    today: SAMPLE_SCENE_TODAY,
   };
   return (
     <>
@@ -163,12 +173,11 @@ function SampleScenes() {
           key={stage}
           input={{
             totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL[stage],
-            recordCount: index,
+            recordDates: SAMPLE_RECORD_DATES.slice(SAMPLE_RECORD_DATES.length - index),
             questPoints: index * index,
             streakWeeks: index * 3,
-            skillLevels: Object.fromEntries(
-              SCENE_EQUIPMENT.slice(0, index * 2).map((piece) => [EQUIPMENT_SKILL[piece], EQUIPMENT_MIN_SKILL_LEVEL]),
-            ),
+            skillLevels: sampleSkillLevels(SCENE_EQUIPMENT.slice(0, index * 2)),
+            today: SAMPLE_SCENE_TODAY,
             hour: 12,
           }}
           caption={`${capitalized(stage)}, total level ${SCENE_STAGE_MIN_TOTAL_LEVEL[stage]}`}

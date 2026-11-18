@@ -28,6 +28,10 @@ export function localDateIn(timeZone: string, now: number): string {
     .slice(0, ISO_DATE_LENGTH);
 }
 
+export function deviceLocalDate(now: Date): string {
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())).toISOString().slice(0, ISO_DATE_LENGTH);
+}
+
 export function weekStartIn(timeZone: string, now: number): string {
   return weekKey(localDateIn(timeZone, now));
 }

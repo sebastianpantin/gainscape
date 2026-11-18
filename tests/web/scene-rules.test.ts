@@ -1,6 +1,8 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
+  GOLD_TROPHY_DAYS,
+  SILVER_TROPHY_DAYS,
   EQUIPMENT_MIN_SKILL_LEVEL,
   EQUIPMENT_SKILL,
   equipmentMask,
@@ -20,12 +22,15 @@ import {
   sceneStageIndex,
 } from '../../web/src/lib/progress/scene-rules.ts';
 
+const TODAY = '2026-11-18';
+
 const NEW_LIFTER: SceneInput = {
   totalLevel: 10,
-  recordCount: 0,
+  recordDates: [],
   questPoints: 0,
   streakWeeks: 0,
   skillLevels: {},
+  today: TODAY,
   hour: 12,
 };
 
@@ -47,7 +52,7 @@ describe('sceneFor', () => {
       stage: 'bare',
       props: ['rack'],
       equipment: [],
-      trophies: 0,
+      trophies: [],
       pennants: 0,
       torch: null,
       light: 'day',
@@ -93,20 +98,30 @@ describe('sceneFor', () => {
     );
   });
 
-  it('hangs one trophy per recent record, at most three', () => {
-    expect(sceneFor({ ...NEW_LIFTER, recordCount: 1 }).trophies).toBe(1);
-    expect(sceneFor({ ...NEW_LIFTER, recordCount: 3 }).trophies).toBe(3);
-    expect(sceneFor({ ...NEW_LIFTER, recordCount: 40 }).trophies).toBe(MAX_SCENE_TROPHIES);
+  it('hangs a trophy for each of the three newest records, newest first', () => {
+    expect(sceneFor({ ...NEW_LIFTER, recordDates: [TODAY] }).trophies).toEqual(['gold']);
+    expect(
+      sceneFor({ ...NEW_LIFTER, recordDates: ['2026-06-01', TODAY, '2026-10-30', '2026-02-01'] }).trophies,
+    ).toEqual(['gold', 'silver', 'bronze']);
     expect(MAX_SCENE_TROPHIES).toBe(3);
   });
 
-  it('strings up a pennant at 1, 5 and 15 quest points, at most three', () => {
-    expect(sceneFor({ ...NEW_LIFTER, questPoints: 0 }).pennants).toBe(0);
-    expect(sceneFor({ ...NEW_LIFTER, questPoints: 1 }).pennants).toBe(1);
-    expect(sceneFor({ ...NEW_LIFTER, questPoints: 4 }).pennants).toBe(1);
-    expect(sceneFor({ ...NEW_LIFTER, questPoints: 5 }).pennants).toBe(2);
-    expect(sceneFor({ ...NEW_LIFTER, questPoints: 15 }).pennants).toBe(3);
-    expect(sceneFor({ ...NEW_LIFTER, questPoints: 500 }).pennants).toBe(MAX_SCENE_PENNANTS);
+  it('keeps a trophy gold for a week and silver for thirty days, then bronze', () => {
+    const metalAt = (recordDate: string) => sceneFor({ ...NEW_LIFTER, recordDates: [recordDate] }).trophies[0];
+    expect([GOLD_TROPHY_DAYS, SILVER_TROPHY_DAYS]).toEqual([7, 30]);
+    expect(metalAt('2026-11-11')).toBe('gold');
+    expect(metalAt('2026-11-10')).toBe('silver');
+    expect(metalAt('2026-10-19')).toBe('silver');
+    expect(metalAt('2026-10-18')).toBe('bronze');
+    expect(metalAt('2026-11-19')).toBe('gold');
+  });
+
+  it('strings up a pennant at 1, 3, 6, 10, 15 and 21 quest points', () => {
+    const pennantsAt = (questPoints: number) => sceneFor({ ...NEW_LIFTER, questPoints }).pennants;
+    expect([0, 1, 2, 3, 5, 6, 9, 10, 14, 15, 20, 21, 500].map(pennantsAt)).toEqual([
+      0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
+    ]);
+    expect(MAX_SCENE_PENNANTS).toBe(6);
   });
 
   it('brings in a piece of equipment for each skill at level 20, in a fixed order', () => {
@@ -221,12 +236,16 @@ describe('sceneLabel', () => {
   });
 
   it('lists what has grown, with trophies, pennants and the light', () => {
-    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 300, recordCount: 1, questPoints: 6, hour: 22 }))).toBe(
-      'Your gym: a rack, plates on the wall, a banner, a window onto the city, 1 trophy and 2 quest pennants, at night',
+    expect(
+      sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 300, recordDates: ['2026-11-01'], questPoints: 3, hour: 22 })),
+    ).toBe(
+      'Your gym: a rack, plates on the wall, a banner, a window onto the city, 1 silver trophy and 2 quest pennants, at night',
     );
-    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 100, recordCount: 3, hour: 6 }))).toBe(
-      'Your gym: a rack, plates on the wall, a banner, a window and 3 trophies, at dawn',
-    );
+    expect(
+      sceneLabel(
+        sceneFor({ ...NEW_LIFTER, totalLevel: 100, recordDates: [TODAY, '2026-11-15', '2026-01-05'], hour: 6 }),
+      ),
+    ).toBe('Your gym: a rack, plates on the wall, a banner, a window, 2 gold trophies and 1 bronze trophy, at dawn');
     expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 15, questPoints: 1, hour: 19 }))).toBe(
       'Your gym: a rack, plates on the wall and 1 quest pennant, at dusk',
     );
@@ -237,8 +256,10 @@ describe('sceneLabel', () => {
       'Your gym: a rack and a kettlebell, in daylight',
     );
     expect(
-      sceneLabel(sceneFor({ ...NEW_LIFTER, recordCount: 1, skillLevels: skilled('bar-plates', 'bench', 'cones') })),
-    ).toBe('Your gym: a rack, a bench, more plates on the bar, cones and 1 trophy, in daylight');
+      sceneLabel(
+        sceneFor({ ...NEW_LIFTER, recordDates: [TODAY], skillLevels: skilled('bar-plates', 'bench', 'cones') }),
+      ),
+    ).toBe('Your gym: a rack, a bench, more plates on the bar, cones and 1 gold trophy, in daylight');
     expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 15, skillLevels: skilled(...SCENE_EQUIPMENT) }))).toBe(
       'Your gym: a rack, plates on the wall and 10 pieces of equipment, in daylight',
     );
@@ -248,8 +269,16 @@ describe('sceneLabel', () => {
     expect(sceneLabel(sceneFor({ ...NEW_LIFTER, streakWeeks: 3 }))).toBe(
       'Your gym: a rack and a torch lit for a 3 week streak, in daylight',
     );
-    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 15, recordCount: 2, streakWeeks: 12, hour: 22 }))).toBe(
-      'Your gym: a rack, plates on the wall, 2 trophies and a torch lit for a 12 week streak, at night',
-    );
+    expect(
+      sceneLabel(
+        sceneFor({
+          ...NEW_LIFTER,
+          totalLevel: 15,
+          recordDates: ['2026-01-05', '2026-01-09'],
+          streakWeeks: 12,
+          hour: 22,
+        }),
+      ),
+    ).toBe('Your gym: a rack, plates on the wall, 2 bronze trophies and a torch lit for a 12 week streak, at night');
   });
 });

@@ -1,4 +1,10 @@
-import { type Scene, type SceneEquipment, type SceneLight, type TorchFlame } from '../lib/progress/scene-rules.ts';
+import {
+  type Scene,
+  type SceneEquipment,
+  type SceneLight,
+  type TorchFlame,
+  type TrophyMetal,
+} from '../lib/progress/scene-rules.ts';
 import { fromRows, type Pixel, type Sprite } from './pixel-sprites.ts';
 
 export const SCENE_COLS = 176;
@@ -19,6 +25,7 @@ const STEEL_DARK = '#6b5f4b';
 const PLATE_RED = '#d64541';
 const PLATE_BLUE = '#3d7dd8';
 const PLATE_YELLOW = '#f2c230';
+const PLATE_WHITE = '#ece6da';
 const GOLD = '#ffb000';
 const GOLD_LIGHT = '#ffd166';
 const GOLD_DARK = '#b87d00';
@@ -214,25 +221,31 @@ function windowWithView(light: SceneLight, seesCity: boolean): Pixel[] {
 
 const TROPHY_ROWS = ['GGGGG', 'GLGGG', '.GGG.', '..D..', '.GGG.', '.DDD.'];
 const TROPHY_COLS = [113, 106, 120] as const;
+const TROPHY_PALETTE: Record<TrophyMetal, Record<string, string>> = {
+  gold: { G: GOLD, L: GOLD_LIGHT, D: GOLD_DARK },
+  silver: { G: STEEL, L: PLATE_WHITE, D: STEEL_DARK },
+  bronze: { G: GOLD_DARK, L: UNLIT_WINDOW, D: WOOD_DARK },
+};
 
-function trophies(count: number): Pixel[] {
-  if (count === 0) return [];
+function trophies(metals: readonly TrophyMetal[]): Pixel[] {
+  if (metals.length === 0) return [];
   return [
     rect(103, 7, 23, 1, WOOD),
     rect(103, 8, 23, 1, WOOD_DARK),
     rect(105, 9, 1, 1, WOOD_DARK),
     rect(123, 9, 1, 1, WOOD_DARK),
-    ...TROPHY_COLS.slice(0, count).flatMap((left) =>
-      placed(TROPHY_ROWS, { G: GOLD, L: GOLD_LIGHT, D: GOLD_DARK }, left, 1),
-    ),
+    ...metals.flatMap((metal, index) => placed(TROPHY_ROWS, TROPHY_PALETTE[metal], TROPHY_COLS[index], 1)),
   ];
 }
 
 const PENNANT_ROWS = ['PPPPP', '.PPP.', '..P..'];
 const PENNANTS = [
-  { left: 77, fill: XP },
-  { left: 60, fill: RARE },
-  { left: 85, fill: GOLD },
+  { left: 70, fill: GOLD },
+  { left: 76, fill: XP },
+  { left: 64, fill: RARE },
+  { left: 82, fill: RARE },
+  { left: 58, fill: XP },
+  { left: 88, fill: GOLD },
 ] as const;
 
 function pennants(count: number): Pixel[] {

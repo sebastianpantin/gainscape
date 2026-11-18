@@ -1,4 +1,5 @@
 import { formatCount } from '../format.ts';
+import { daysBetween } from '../ui/date-bucket-rules.ts';
 
 export const SCENE_STAGES = ['bare', 'plates', 'banners', 'window', 'skyline'] as const;
 export type SceneStage = (typeof SCENE_STAGES)[number];
@@ -17,6 +18,8 @@ export const SCENE_EQUIPMENT = [
   'mat',
 ] as const;
 export type SceneEquipment = (typeof SCENE_EQUIPMENT)[number];
+export const TROPHY_METALS = ['gold', 'silver', 'bronze'] as const;
+export type TrophyMetal = (typeof TROPHY_METALS)[number];
 export const TORCH_FLAMES = ['small', 'steady', 'roaring'] as const;
 export type TorchFlame = (typeof TORCH_FLAMES)[number];
 
@@ -28,7 +31,10 @@ export interface SceneTorch {
 export const EQUIPMENT_MIN_SKILL_LEVEL = 20;
 export const MAX_EQUIPMENT_NAMED = 3;
 export const MAX_SCENE_TROPHIES = 3;
-export const MAX_SCENE_PENNANTS = 3;
+export const GOLD_TROPHY_DAYS = 7;
+export const SILVER_TROPHY_DAYS = 30;
+export const PENNANT_QUEST_POINTS = [1, 3, 6, 10, 15, 21] as const;
+export const MAX_SCENE_PENNANTS = PENNANT_QUEST_POINTS.length;
 
 export const SCENE_STAGE_MIN_TOTAL_LEVEL: Record<SceneStage, number> = {
   bare: 0,
@@ -95,7 +101,6 @@ const LIGHT_PHRASE: Record<SceneLight, string> = {
 
 export const TORCH_FLAME_MIN_STREAK_WEEKS: Record<TorchFlame, number> = { small: 1, steady: 4, roaring: 12 };
 
-const PENNANT_QUEST_POINTS = [1, 5, 15] as const;
 const HOURS_IN_DAY = 24;
 const DAWN_FROM_HOUR = 5;
 const DAY_FROM_HOUR = 8;
@@ -106,10 +111,11 @@ const PHRASE_LIST = new Intl.ListFormat('en-GB', { type: 'conjunction' });
 
 export interface SceneInput {
   totalLevel: number;
-  recordCount: number;
+  recordDates: readonly string[];
   questPoints: number;
   streakWeeks: number;
   skillLevels: Readonly<Record<string, number>>;
+  today: string;
   hour: number;
 }
 
@@ -117,7 +123,7 @@ export interface Scene {
   stage: SceneStage;
   props: readonly SceneProp[];
   equipment: readonly SceneEquipment[];
-  trophies: number;
+  trophies: readonly TrophyMetal[];
   pennants: number;
   torch: SceneTorch | null;
   light: SceneLight;
@@ -151,8 +157,22 @@ function torchFor(streakWeeks: number): SceneTorch | null {
   return { streakWeeks, flame };
 }
 
+function trophyMetal(recordDate: string, today: string): TrophyMetal {
+  const daysOld = daysBetween(recordDate, today);
+  if (daysOld <= GOLD_TROPHY_DAYS) return 'gold';
+  return daysOld <= SILVER_TROPHY_DAYS ? 'silver' : 'bronze';
+}
+
+function trophiesFor(recordDates: readonly string[], today: string): TrophyMetal[] {
+  return [...recordDates]
+    .sort()
+    .reverse()
+    .slice(0, MAX_SCENE_TROPHIES)
+    .map((recordDate) => trophyMetal(recordDate, today));
+}
+
 export function sceneFor(input: SceneInput): Scene {
-  const { totalLevel, recordCount, questPoints, streakWeeks, skillLevels, hour } = input;
+  const { totalLevel, recordDates, questPoints, streakWeeks, skillLevels, today, hour } = input;
   const stage = stageFor(totalLevel);
   return {
     stage,
@@ -160,8 +180,8 @@ export function sceneFor(input: SceneInput): Scene {
     equipment: SCENE_EQUIPMENT.filter(
       (equipment) => (skillLevels[EQUIPMENT_SKILL[equipment]] ?? 0) >= EQUIPMENT_MIN_SKILL_LEVEL,
     ),
-    trophies: Math.min(Math.max(recordCount, 0), MAX_SCENE_TROPHIES),
-    pennants: Math.min(PENNANT_QUEST_POINTS.filter((points) => questPoints >= points).length, MAX_SCENE_PENNANTS),
+    trophies: trophiesFor(recordDates, today),
+    pennants: PENNANT_QUEST_POINTS.filter((points) => questPoints >= points).length,
     torch: torchFor(streakWeeks),
     light: sceneLightFor(hour),
   };
@@ -211,15 +231,19 @@ function propPhrases(props: readonly SceneProp[]): string[] {
   });
 }
 
-function trophiesText(count: number): string {
-  return count === 1 ? '1 trophy' : `${count} trophies`;
+function trophyPhrases(trophies: readonly TrophyMetal[]): string[] {
+  return TROPHY_METALS.flatMap((metal) => {
+    const count = trophies.filter((trophy) => trophy === metal).length;
+    if (count === 0) return [];
+    return [count === 1 ? `1 ${metal} trophy` : `${count} ${metal} trophies`];
+  });
 }
 
 export function sceneLabel(scene: Scene): string {
   const light = LIGHT_PHRASE[scene.light];
   const extras = [
     ...equipmentPhrases(scene.equipment),
-    ...(scene.trophies > 0 ? [trophiesText(scene.trophies)] : []),
+    ...trophyPhrases(scene.trophies),
     ...(scene.pennants > 0 ? [formatCount(scene.pennants, 'quest pennant')] : []),
     ...(scene.torch ? [`a torch lit for a ${scene.torch.streakWeeks} week streak`] : []),
   ];
