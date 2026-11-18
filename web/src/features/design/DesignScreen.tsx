@@ -3,7 +3,7 @@ import { type ReactNode, useId, useRef, useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { EmptyState } from '../../components/EmptyState.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
-import { CHARACTER_POSES, type CharacterPose } from '../../components/character-sprites.ts';
+import { BUILD_TIERS, CHARACTER_POSES, type CharacterPose } from '../../components/character-sprites.ts';
 import { CharacterFigure, GymScene } from '../../components/PixelArt.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
@@ -104,6 +104,19 @@ function SampleCharacters() {
         {ITEM_TIERS.map((tier) => (
           <SampleCharacter key={tier} slots={sampleLoadout(tier)} badge="stone" caption={`Full ${tier}`} />
         ))}
+      </div>
+      <div className="row wrap">
+        {BUILD_TIERS.flatMap((frame) =>
+          BUILD_TIERS.map((arms) => (
+            <figure key={`${frame}-${arms}`} className="stack design-character">
+              <CharacterFigure
+                look={{ ...characterLook(sampleLoadout('forged'), 'rust'), build: { arms, frame } }}
+                label={`Character with ${arms} arms on a ${frame} frame`}
+              />
+              <figcaption className="muted tiny">{`${capitalized(arms)} arms, ${frame} frame`}</figcaption>
+            </figure>
+          )),
+        )}
       </div>
       <div className="row wrap">
         {CHARACTER_POSES.flatMap((pose) => [

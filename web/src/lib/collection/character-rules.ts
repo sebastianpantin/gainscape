@@ -1,6 +1,9 @@
 import type { GearSlot } from '@domain/crafting.ts';
 import {
+  BUILD_TIERS,
+  type BuildTier,
   CHARACTER_ROWS,
+  type CharacterBuild,
   type CharacterLook,
   type CharacterPose,
   gearLandingRow,
@@ -18,11 +21,35 @@ const POSE_PHRASE: Record<CharacterPose, string | null> = {
   resting: 'resting',
 };
 
-export function characterLook(slots: readonly EquippedGear[], badgeColor: BadgeColor): CharacterLook {
+export const BUILD_TIER_MIN_LEVEL: Record<BuildTier, number> = { lean: 0, fit: 30, built: 60 };
+
+const ARM_SKILLS = ['arms', 'shoulders'] as const;
+const FRAME_SKILLS = ['chest', 'back', 'legs', 'core'] as const;
+
+export type SkillLevels = Readonly<Record<string, number>>;
+
+function buildTier(skills: readonly string[], skillLevels: SkillLevels): BuildTier {
+  const meanLevel = skills.reduce((sum, skill) => sum + (skillLevels[skill] ?? 0), 0) / skills.length;
+  return BUILD_TIERS.reduce<BuildTier>(
+    (reached, tier) => (meanLevel >= BUILD_TIER_MIN_LEVEL[tier] ? tier : reached),
+    'lean',
+  );
+}
+
+export function characterBuild(skillLevels: SkillLevels): CharacterBuild {
+  return { arms: buildTier(ARM_SKILLS, skillLevels), frame: buildTier(FRAME_SKILLS, skillLevels) };
+}
+
+export function characterLook(
+  slots: readonly EquippedGear[],
+  badgeColor: BadgeColor,
+  skillLevels: SkillLevels | null = null,
+): CharacterLook {
   const { fill, dark } = BADGE_COLORS[badgeColor];
   return {
     shirt: { fill, dark },
     gear: Object.fromEntries(slots.map((equipped) => [equipped.slot, TIER_COLORS[equipped.tier]])),
+    ...(skillLevels && { build: characterBuild(skillLevels) }),
   };
 }
 

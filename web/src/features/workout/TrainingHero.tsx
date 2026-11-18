@@ -5,7 +5,12 @@ import { Link } from 'react-router-dom';
 import { type CharacterPose } from '../../components/character-sprites.ts';
 import { CharacterFigure, GymScene, LootChestIcon, QuestScrollIcon } from '../../components/PixelArt.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
-import { characterLabel, characterLinkLabel, characterLook } from '../../lib/collection/character-rules.ts';
+import {
+  characterLabel,
+  characterLinkLabel,
+  characterLook,
+  type SkillLevels,
+} from '../../lib/collection/character-rules.ts';
 import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
@@ -39,14 +44,15 @@ const SCENE_SCROLL_SIZE = 24;
 interface CharacterLinkProps {
   slots: readonly EquippedGear[];
   badgeColor: BadgeColor;
+  skillLevels: SkillLevels | null;
   pose: CharacterPose;
 }
 
-function CharacterLink({ slots, badgeColor, pose }: CharacterLinkProps) {
+function CharacterLink({ slots, badgeColor, skillLevels, pose }: CharacterLinkProps) {
   return (
     <Link className="hero-character-link" to="/collection/items" aria-label={characterLinkLabel(slots, pose)}>
       <CharacterFigure
-        look={characterLook(slots, badgeColor)}
+        look={characterLook(slots, badgeColor, skillLevels)}
         label={characterLabel(slots, pose)}
         pose={pose}
         size={SCENE_CHARACTER_SIZE}
@@ -116,17 +122,21 @@ function useRecordDates(userId: string): readonly string[] | undefined {
   return records.data?.pages[0]?.loaded.map((record) => record.local_date);
 }
 
-function useScene(userId: string, standing: StandingState, recordCount: number, hour: number): Scene | null {
+interface SceneFacts {
+  totalLevel: number;
+  skillLevels: SkillLevels;
+  recordCount: number;
+  hour: number;
+}
+
+function useScene(userId: string, facts: SceneFacts | null): Scene | null {
   const questPoints = useQuery(questPointsQuery(userId)).data;
   const weeklyGoal = useQuery(weeklyGoalQuery).data;
-  if (standing.status !== 'ready') return null;
+  if (facts === null) return null;
   return sceneFor({
-    totalLevel: standing.standing.totalLevel,
-    recordCount,
+    ...facts,
     questPoints: questPoints ?? 0,
     streakWeeks: weeklyGoal?.goal != null ? weeklyGoal.streakWeeks : 0,
-    skillLevels: skillLevelsByKey(standing.standing.skills),
-    hour,
   });
 }
 
@@ -138,7 +148,13 @@ export function TrainingHero({ userId, standing, unit, today, trainedDates, hour
   const loadout = useQuery(loadoutQuery(userId));
   const equipped = loadout.isSuccess ? (loadout.data?.slots ?? []) : null;
   const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
-  const scene = useScene(userId, standing, recordDates?.length ?? 0, hour);
+  const levels = standing.status === 'ready' ? standing.standing : null;
+  const skillLevels = levels && skillLevelsByKey(levels.skills);
+  const scene = useScene(
+    userId,
+    levels &&
+      skillLevels && { totalLevel: levels.totalLevel, skillLevels, recordCount: recordDates?.length ?? 0, hour },
+  );
   const growthText = useSceneGrowth(userId, scene);
 
   return (
@@ -148,11 +164,12 @@ export function TrainingHero({ userId, standing, unit, today, trainedDates, hour
       </h2>
       <div className="training-scene">
         <GymScene scene={scene} label={scene && sceneLabel(scene)} />
-        {badgeColor !== null && equipped !== null && (
+        {badgeColor !== null && equipped !== null && standing.status !== 'loading' && (
           <span className="scene-character">
             <CharacterLink
               slots={equipped}
               badgeColor={badgeColor}
+              skillLevels={skillLevels}
               pose={characterPoseFrom(today, lastTrainedDate, recordDates)}
             />
           </span>

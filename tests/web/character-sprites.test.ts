@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { GEAR_SLOTS, type GearSlot, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import {
+  BUILD_TIERS,
   CHARACTER_COLS,
   CHARACTER_POSES,
   CHARACTER_ROWS,
@@ -196,6 +197,54 @@ describe('character poses', () => {
       pixelsIn(sprite, '#000').filter((pixel) => pixel.y === row && pixel.w === 1 && pixel.x > 8 && pixel.x < 15);
     expect(inked(idle, eyeRow).length).toBe(2);
     expect(inked(resting, eyeRow + REST_SIT_ROWS)).toEqual([]);
+  });
+});
+
+const EVERY_BUILD = BUILD_TIERS.flatMap((arms) => BUILD_TIERS.map((frame) => ({ arms, frame })));
+const HAIR = '#7a6a52';
+
+function width(sprite: Sprite): number {
+  const left = Math.min(...sprite.pixels.map((pixel) => pixel.x));
+  const right = Math.max(...sprite.pixels.map((pixel) => pixel.x + pixel.w));
+  return right - left;
+}
+
+describe('character builds', () => {
+  it.each(EVERY_BUILD)('keeps arms $arms on a $frame frame inside the grid in every pose, fully dressed', (build) => {
+    for (const pose of CHARACTER_POSES)
+      for (const frame of characterFrames({ ...lookWith(fullLoadout(GEAR_TINT)), build }, pose)) expectInBounds(frame);
+  });
+
+  it('draws a fit build when none is given', () => {
+    expect(characterFrames({ ...lookWith({}), build: { arms: 'fit', frame: 'fit' } })).toEqual(
+      characterFrames(lookWith({})),
+    );
+  });
+
+  it.each(['arms', 'frame'] as const)('widens the character as the %s grow', (part) => {
+    const widths = BUILD_TIERS.map((tier) => {
+      const build = { arms: 'fit', frame: 'fit', [part]: tier } as const;
+      return width(characterFrames({ ...lookWith({}), build })[0]);
+    });
+    expect(widths[1]).toBe(widths[0] + 2);
+    expect(widths[2]).toBe(widths[1] + 2);
+  });
+
+  it.each(CHARACTER_POSES)('keeps the head the same size in every build while %s', (pose) => {
+    const hairOf = (build: (typeof EVERY_BUILD)[number]) =>
+      pixelsIn(characterFrames({ ...lookWith({}), build }, pose)[0], HAIR);
+    for (const build of EVERY_BUILD) expect(hairOf(build)).toEqual(hairOf({ arms: 'fit', frame: 'fit' }));
+  });
+
+  it.each(EVERY_BUILD)('keeps gloves on the hands with arms $arms on a $frame frame', (build) => {
+    const [bare] = characterFrames({ ...lookWith({}), build });
+    const [gloved] = characterFrames({ ...lookWith({ gloves: GEAR_TINT }), build });
+    const bodyCells = new Set(
+      bare.pixels.flatMap((pixel) => Array.from({ length: pixel.w }, (_, index) => `${pixel.x + index},${pixel.y}`)),
+    );
+    for (const pixel of pixelsIn(gloved, GEAR_TINT))
+      for (let x = pixel.x; x < pixel.x + pixel.w; x++)
+        expect(bodyCells.has(`${x},${pixel.y}`), `${x},${pixel.y}`).toBe(true);
   });
 });
 

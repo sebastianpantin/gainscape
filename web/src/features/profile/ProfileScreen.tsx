@@ -14,6 +14,7 @@ import {
 } from '../../lib/profile/profile.ts';
 import { collectionPercentQuery, questPointsQuery } from '../../lib/query/queries.ts';
 import { useStanding } from '../../lib/progress/standing.ts';
+import { skillLevelsByKey } from '../../lib/progress/standing-rules.ts';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
 import { formatHeight, formatWeight } from '../../lib/units.ts';
 import { BodyweightTrend } from './BodyweightTrend.tsx';
@@ -96,6 +97,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         combatLevel={levels?.combatLevel ?? null}
         collectionPercent={collection.data ?? null}
         questPoints={questPoints.data ?? null}
+        skillLevels={levels && skillLevelsByKey(levels.skills)}
       />
       <LoadoutPanel userId={userId} />
       <section className="panel stack" aria-labelledby="body-heading">

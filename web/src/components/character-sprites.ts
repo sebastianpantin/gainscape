@@ -6,9 +6,18 @@ export interface ShirtColors {
   dark: string;
 }
 
+export const BUILD_TIERS = ['lean', 'fit', 'built'] as const;
+export type BuildTier = (typeof BUILD_TIERS)[number];
+
+export interface CharacterBuild {
+  arms: BuildTier;
+  frame: BuildTier;
+}
+
 export interface CharacterLook {
   shirt: ShirtColors;
   gear: Partial<Record<GearSlot, string>>;
+  build?: CharacterBuild;
 }
 
 export const CHARACTER_POSES = ['idle', 'lifting', 'flexing', 'resting'] as const;
@@ -296,6 +305,31 @@ const POSES: Record<CharacterPose, Pose> = {
   },
 };
 
+const ARM_COLUMNS = [4, 19] as const;
+const FRAME_COLUMNS = [9, 14] as const;
+const BESIDE_HEAD_COLUMNS = [7, 16] as const;
+const SHOULDER_ROW = 9;
+const COLUMNS_ADDED: Record<BuildTier, -1 | 0 | 1> = { lean: -1, fit: 0, built: 1 };
+
+function resizedRow(row: string, [left, right]: readonly [number, number], added: -1 | 0 | 1): string {
+  if (added === 0) return row;
+  const kept = added > 0 ? 1 : 0;
+  const widened = `${row.slice(0, left + kept)}${row.slice(left + 1 - kept, right + kept)}${row.slice(right + 1 - kept)}`;
+  return added > 0 ? widened.slice(1, -1) : `.${widened}.`;
+}
+
+function built(layer: Layer, build: CharacterBuild): Layer {
+  const rows = layer.rows.map((row, index) => {
+    const frameColumns = layer.top + index < SHOULDER_ROW ? BESIDE_HEAD_COLUMNS : FRAME_COLUMNS;
+    return resizedRow(
+      resizedRow(row, ARM_COLUMNS, COLUMNS_ADDED[build.arms]),
+      frameColumns,
+      COLUMNS_ADDED[build.frame],
+    );
+  });
+  return { top: layer.top, rows };
+}
+
 const GEAR_DRAW_ORDER: readonly GearSlot[] = ['sleeves', 'shoes', 'belt', 'chalk', 'gloves', 'straps'];
 
 function layerPixels(layer: Layer, palette: Record<string, string>): Pixel[] {
@@ -329,9 +363,13 @@ function lowered(pixels: readonly Pixel[], rows: number): Pixel[] {
   return rows === 0 ? [...pixels] : pixels.map((pixel) => ({ ...pixel, y: pixel.y + rows }));
 }
 
+const DEFAULT_BUILD: CharacterBuild = { arms: 'fit', frame: 'fit' };
+
 function characterFrame(look: CharacterLook, pose: Pose, frame: PoseFrame): Sprite {
   const palette = artPalette(look.shirt);
+  const build = look.build ?? DEFAULT_BUILD;
   const art = (layers: readonly Layer[]) => layers.flatMap((layer) => layerPixels(layer, palette));
+  const body = (layers: readonly Layer[]) => art(layers.map((layer) => built(layer, build)));
   const worn = GEAR_DRAW_ORDER.flatMap((slot) => {
     const color = look.gear[slot];
     return color ? GEAR_PARTS[slot].map((part) => ({ part, color })) : [];
@@ -339,9 +377,9 @@ function characterFrame(look: CharacterLook, pose: Pose, frame: PoseFrame): Spri
   const gearThat = (moves: boolean) =>
     worn
       .filter(({ part }) => part.moves === moves)
-      .flatMap(({ part, color }) => gearPixels((pose.armsRaised && part.raised) || part.worn, color));
-  const upper = [...art([pose.upper]), ...gearThat(true), ...art(pose.carried)];
-  const figure = [...art(pose.behind), ...art([BODY_LOWER]), ...gearThat(false), ...lowered(upper, frame.dip)];
+      .flatMap(({ part, color }) => gearPixels(built((pose.armsRaised && part.raised) || part.worn, build), color));
+  const upper = [...body([pose.upper]), ...gearThat(true), ...body(pose.carried)];
+  const figure = [...art(pose.behind), ...body([BODY_LOWER]), ...gearThat(false), ...lowered(upper, frame.dip)];
   return {
     cols: CHARACTER_COLS,
     rows: CHARACTER_ROWS,
