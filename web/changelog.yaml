@@ -1,3 +1,14 @@
+- prs: [242, 243]
+  version: 0.29.0
+  date: 2026-11-18
+  title: A gym that lives
+  items:
+    - Your character now reacts to your training. They lift after a workout today, flex after a record and doze on a bench when you have been away for a few days.
+    - Your character fills out as you level up. Arms and Shoulders build the arms, and Chest, Back, Legs and Core build the frame.
+    - Your gym gathers equipment. Each skill that reaches level 20 brings its own piece, from a bench for Chest to a kettlebell for Core, and Train tells you when something new arrives.
+    - There is more to tap in the gym. Your active quest hangs as a scroll, loot you have not opened waits as a chest, and a weekly streak lights a torch that burns higher the longer it lasts.
+    - Trophies show how fresh your records are, gold for this week, silver for this month and bronze after that. Quests can now earn up to six pennants.
+    - The gym moves. The torch flickers, clouds drift, stars and city lights twinkle, and it snows in winter. The install tip now sits below Start workout, so Start is always on the first screen.
 - prs: [214, 215, 216, 217, 218]
   version: 0.28.0
   date: 2026-11-15
