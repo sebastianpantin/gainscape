@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   clearEffortAction,
+  hasScrolledSince,
   rowToFocusAfterRemoving,
   SET_MENU_GAP_PX,
   setMenuPlacement,
@@ -43,6 +44,18 @@ describe('setMenuPlacement', () => {
 
   it('never lets the menu start past the left or right edge of the screen', () => {
     expect(setMenuPlacement({ top: 200, bottom: 244, right: 500 }, VIEWPORT, MENU_HEIGHT).right).toBe(0);
+  });
+});
+
+describe('hasScrolledSince', () => {
+  it('is false for a scroll event that arrives after the page already stopped where the menu opened', () => {
+    expect(hasScrolledSince({ x: 0, y: 91 }, { x: 0, y: 91 })).toBe(false);
+  });
+
+  it('is true once the page moved either way', () => {
+    expect(hasScrolledSince({ x: 0, y: 91 }, { x: 0, y: 92 })).toBe(true);
+    expect(hasScrolledSince({ x: 0, y: 91 }, { x: 0, y: 34 })).toBe(true);
+    expect(hasScrolledSince({ x: 0, y: 91 }, { x: 3, y: 91 })).toBe(true);
   });
 });
 

@@ -31,6 +31,15 @@ export function setMenuPlacement(
   return { top: null, bottom: viewport.height - anchor.top + SET_MENU_GAP_PX, right };
 }
 
+interface ScrollOffset {
+  x: number;
+  y: number;
+}
+
+export function hasScrolledSince(opened: ScrollOffset, now: ScrollOffset): boolean {
+  return opened.x !== now.x || opened.y !== now.y;
+}
+
 export function rowToFocusAfterRemoving(rowIds: readonly string[], removedId: string): string | null {
   const index = rowIds.indexOf(removedId);
   if (index === -1) return null;

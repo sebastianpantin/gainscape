@@ -1,5 +1,5 @@
 import { type Ref, useEffect, useId, useRef, useState } from 'react';
-import { setMenuPlacement } from './set-menu-rules.ts';
+import { hasScrolledSince, setMenuPlacement } from './set-menu-rules.ts';
 
 interface SetMenuAction {
   label: string;
@@ -24,7 +24,12 @@ export function SetMenu({ name, actions, buttonRef }: SetMenuProps) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
-    const close = () => panel.current?.hidePopover();
+    const opened = { x: window.scrollX, y: window.scrollY };
+    const close = (event: Event) => {
+      const innerScroll = event.target !== document;
+      if (innerScroll || hasScrolledSince(opened, { x: window.scrollX, y: window.scrollY }))
+        panel.current?.hidePopover();
+    };
     window.addEventListener('scroll', close, { passive: true, capture: true });
     return () => window.removeEventListener('scroll', close, { capture: true });
   }, [open]);

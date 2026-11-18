@@ -24,6 +24,13 @@ test('an open set menu closes when the page scrolls instead of drifting away fro
 
   const row = setRow(card, 1);
   await openSetOptions(row, 1);
+  await expect(row.getByRole('button', { name: 'Warm-up set 1', exact: true })).toBeFocused();
+  await page.evaluate(async () => {
+    await new Promise(requestAnimationFrame);
+    document.dispatchEvent(new Event('scroll'));
+    await new Promise(requestAnimationFrame);
+  });
+  await expect(row.getByRole('group', { name: 'Set 1 options', exact: true })).toBeVisible();
   await page.evaluate(() => window.scrollBy(0, 120));
   await expect(row.getByRole('group', { name: 'Set 1 options', exact: true })).toBeHidden();
 });
