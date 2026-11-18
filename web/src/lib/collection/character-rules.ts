@@ -9,6 +9,8 @@ import {
   gearLandingRow,
 } from '../../components/character-sprites.ts';
 import { type BadgeColor, BADGE_COLORS } from '../profile/profile-rules.ts';
+import { type SkillLevels } from '../progress/standing-rules.ts';
+import { highestReached } from '../progress/tier-rules.ts';
 import { type EquippedGear, loadoutBySlot } from './gear-rules.ts';
 import { TIER_COLORS } from './item-rules.ts';
 
@@ -26,14 +28,9 @@ export const BUILD_TIER_MIN_LEVEL: Record<BuildTier, number> = { lean: 0, fit: 3
 const ARM_SKILLS = ['arms', 'shoulders'] as const;
 const FRAME_SKILLS = ['chest', 'back', 'legs', 'core'] as const;
 
-export type SkillLevels = Readonly<Record<string, number>>;
-
 function buildTier(skills: readonly string[], skillLevels: SkillLevels): BuildTier {
   const meanLevel = skills.reduce((sum, skill) => sum + (skillLevels[skill] ?? 0), 0) / skills.length;
-  return BUILD_TIERS.reduce<BuildTier>(
-    (reached, tier) => (meanLevel >= BUILD_TIER_MIN_LEVEL[tier] ? tier : reached),
-    'lean',
-  );
+  return highestReached(BUILD_TIERS, BUILD_TIER_MIN_LEVEL, meanLevel) ?? 'lean';
 }
 
 export function characterBuild(skillLevels: SkillLevels): CharacterBuild {

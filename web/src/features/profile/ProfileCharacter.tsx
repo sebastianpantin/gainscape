@@ -1,6 +1,7 @@
+import { type SkillLevels } from '../../lib/progress/standing-rules.ts';
 import { useQuery } from '@tanstack/react-query';
 import { CharacterFigure } from '../../components/PixelArt.tsx';
-import { characterLabel, characterLook, type SkillLevels } from '../../lib/collection/character-rules.ts';
+import { characterLabel, characterLook } from '../../lib/collection/character-rules.ts';
 import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { loadoutQuery } from '../../lib/query/queries.ts';
 

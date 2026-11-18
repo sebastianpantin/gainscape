@@ -3,12 +3,24 @@ import {
   daysInMonth,
   deviceLocalDate,
   localDateIn,
+  newestDate,
   monthKey,
   monthTitle,
   shiftMonth,
   weekKey,
   weekStartIn,
 } from '../../web/src/lib/ui/date-bucket-rules.ts';
+
+describe('newestDate', () => {
+  it('is the latest of the dates, in any order', () => {
+    expect(newestDate(['2026-10-02', '2026-11-18', '2026-10-30'])).toBe('2026-11-18');
+    expect(newestDate(['2026-10-02'])).toBe('2026-10-02');
+  });
+
+  it('is nothing without dates', () => {
+    expect(newestDate([])).toBeNull();
+  });
+});
 
 describe('deviceLocalDate', () => {
   it('is the calendar day on the device clock', () => {

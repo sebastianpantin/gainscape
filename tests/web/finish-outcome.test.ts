@@ -387,7 +387,10 @@ describe('the unopened loot of a Finish outcome', () => {
     const { io, tab } = fakeIo({ kind: 'ok', data: { ...oneDaySummary('session-b'), drops: [drop('b1')] } });
     tab.setItem(
       LAST_SUMMARY_KEY,
-      JSON.stringify({ userId: USER_ID, summary: summaryOfDays(['session-a'], [drop('a1')]), lootOpened: true }),
+      JSON.stringify({
+        userId: USER_ID,
+        summary: { ...summaryOfDays(['session-a'], [drop('a1')]), lootOpened: true },
+      }),
     );
     await completeFinishedDraft(USER_ID, monday(), io);
     expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(true);

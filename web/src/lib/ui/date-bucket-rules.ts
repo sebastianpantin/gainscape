@@ -28,6 +28,10 @@ export function localDateIn(timeZone: string, now: number): string {
     .slice(0, ISO_DATE_LENGTH);
 }
 
+export function newestDate(dates: readonly string[]): string | null {
+  return dates.reduce<string | null>((newest, date) => (newest === null || date > newest ? date : newest), null);
+}
+
 export function deviceLocalDate(now: Date): string {
   return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())).toISOString().slice(0, ISO_DATE_LENGTH);
 }

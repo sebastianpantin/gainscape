@@ -8,7 +8,6 @@ import {
   SCENE_VISIBLE_FROM_COL,
   SCENE_VISIBLE_TO_COL,
   sceneArt,
-  sceneSprite,
 } from '../../web/src/components/scene-sprites.ts';
 import {
   EQUIPMENT_SKILL,
@@ -60,6 +59,11 @@ const FULLEST: Scene = sceneFor({
   today: TODAY,
   hour: 23,
 });
+
+function sceneSprite(scene: Scene | null): Sprite {
+  const { still, frames } = sceneArt(scene);
+  return { ...still, pixels: [...still.pixels, ...frames[0].pixels] };
+}
 
 function expectInBounds(sprite: Sprite) {
   expect([sprite.cols, sprite.rows]).toEqual([SCENE_COLS, SCENE_ROWS]);
@@ -195,11 +199,6 @@ describe('sceneArt', () => {
   const WINTER = '2026-12-24';
   const framesOf = (scene: Scene | null) => sceneArt(scene).frames.map((frame) => JSON.stringify(frame.pixels));
   const moves = (scene: Scene | null) => new Set(framesOf(scene)).size === 2;
-
-  it('is the still picture plus the first frame', () => {
-    const { still, frames } = sceneArt(FULLEST);
-    expect(sceneSprite(FULLEST).pixels).toEqual([...still.pixels, ...frames[0].pixels]);
-  });
 
   it.each([...SCENE_STAGES])('keeps both frames of the %s stage in the grid, in token colours', (stage) => {
     for (const light of Object.keys(LIGHT_HOUR) as SceneLight[]) {

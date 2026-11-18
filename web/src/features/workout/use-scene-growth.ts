@@ -14,7 +14,7 @@ import {
   SCENE_STAGE_METRIC,
 } from '../../lib/ui/last-seen-number-store.ts';
 
-interface SeenScene {
+interface ShownScene {
   userId: string;
   stageIndex: number;
   equipmentMask: number;
@@ -28,7 +28,7 @@ function lastSeenScene(userId: string): SceneSeen | null {
 }
 
 export function useSceneGrowth(userId: string, scene: Scene | null): string | null {
-  const [seen, setSeen] = useState<SeenScene | null>(null);
+  const [seen, setSeen] = useState<ShownScene | null>(null);
   let current = seen;
   if (scene !== null) {
     const stageIndex = sceneStageIndex(scene.stage);

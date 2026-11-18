@@ -1,9 +1,7 @@
-import { daysBetween } from '../../lib/ui/date-bucket-rules.ts';
+import { daysBetween, newestDate } from '../../lib/ui/date-bucket-rules.ts';
 
 export function latestTrainedDate(trainedDates: readonly string[], today: string): string | null {
-  return trainedDates
-    .filter((date) => date <= today)
-    .reduce<string | null>((newest, date) => (newest === null || date > newest ? date : newest), null);
+  return newestDate(trainedDates.filter((date) => date <= today));
 }
 
 export function lastWorkoutText(

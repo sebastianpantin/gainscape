@@ -5,18 +5,14 @@ import { Link } from 'react-router-dom';
 import { type CharacterPose } from '../../components/character-sprites.ts';
 import { CharacterFigure, GymScene, LootChestIcon, QuestScrollIcon } from '../../components/PixelArt.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
-import {
-  characterLabel,
-  characterLinkLabel,
-  characterLook,
-  type SkillLevels,
-} from '../../lib/collection/character-rules.ts';
+import { characterLabel, characterLinkLabel, characterLook } from '../../lib/collection/character-rules.ts';
 import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
 import { type Scene, sceneFor, type SceneInput, sceneLabel } from '../../lib/progress/scene-rules.ts';
 import { type StandingState } from '../../lib/progress/standing.ts';
-import { skillLevelsByKey } from '../../lib/progress/standing-rules.ts';
+import { activeStreakWeeks } from '../../lib/progress/weekly-goal-rules.ts';
+import { type SkillLevels, skillLevelsByKey } from '../../lib/progress/standing-rules.ts';
 import {
   loadoutQuery,
   profileQuery,
@@ -40,7 +36,6 @@ import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUp
 
 const SCENE_CHARACTER_SIZE = 96;
 const SCENE_CHEST_SIZE = 36;
-const SCENE_SCROLL_SIZE = 24;
 
 interface CharacterLinkProps {
   slots: readonly EquippedGear[];
@@ -83,14 +78,18 @@ function LevelUpBar({ userId, levelUp }: { userId: string; levelUp: NearestLevel
   );
 }
 
-function QuestScrollLink({ userId, unit }: { userId: string; unit: UnitPref }) {
+function useActiveQuest(userId: string, unit: UnitPref) {
   const questLog = useQuery(questsQuery(userId)).data?.loaded;
-  const quest = questLog ? activeQuestLine(questLog, unit) : null;
+  return questLog ? activeQuestLine(questLog, unit) : null;
+}
+
+function QuestScrollLink({ userId, unit }: { userId: string; unit: UnitPref }) {
+  const quest = useActiveQuest(userId, unit);
   if (!quest) return null;
   return (
     <Link className="scene-quest" to="/skills/quests" aria-label={`Quest: ${quest.questName}. Open Quests`}>
       <span className="scene-quest-art" aria-hidden="true">
-        <QuestScrollIcon size={SCENE_SCROLL_SIZE} />
+        <QuestScrollIcon />
       </span>
     </Link>
   );
@@ -132,7 +131,7 @@ function useScene(userId: string, facts: SceneFacts | null): Scene | null {
   return sceneFor({
     ...facts,
     questPoints: questPoints ?? 0,
-    streakWeeks: weeklyGoal?.goal != null ? weeklyGoal.streakWeeks : 0,
+    streakWeeks: activeStreakWeeks(weeklyGoal),
   });
 }
 
@@ -210,8 +209,7 @@ export function NextLevelCard({ userId, standing }: { userId: string; standing: 
 
 export function ActiveQuestCard({ userId, unit }: { userId: string; unit: UnitPref }) {
   const headingId = useId();
-  const questLog = useQuery(questsQuery(userId)).data?.loaded;
-  const quest = questLog ? activeQuestLine(questLog, unit) : null;
+  const quest = useActiveQuest(userId, unit);
 
   if (!quest) return null;
   return (

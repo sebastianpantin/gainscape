@@ -14,6 +14,7 @@ export interface FinishSummary extends SessionSummary, RememberedTiming {
   programLinked?: boolean;
   completedAt?: string;
   storedContentDiffers?: true;
+  lootOpened?: true;
   days?: SavedDay[];
   plannedChallenge?: DraftChallenge | null;
 }
@@ -66,9 +67,9 @@ function completedSummary(draft: WorkoutDraft, summary: FinishSummary): FinishSu
   return { ...summary, ...days, ...plannedChallenge };
 }
 
-function rememberSummary(tab: Storage | null, userId: string, summary: FinishSummary, lootOpened = false): void {
+function rememberSummary(tab: Storage | null, userId: string, summary: FinishSummary): void {
   try {
-    tab?.setItem(LAST_SUMMARY_KEY, JSON.stringify(lootOpened ? { userId, summary, lootOpened } : { userId, summary }));
+    tab?.setItem(LAST_SUMMARY_KEY, JSON.stringify({ userId, summary }));
   } catch {
     return;
   }
@@ -92,7 +93,6 @@ export function finishOutcomeOf(summary: FinishSummary): FinishOutcome {
 interface RememberedEntry {
   userId?: unknown;
   summary?: FinishSummary;
-  lootOpened?: boolean;
 }
 
 function rememberedEntry(tab: Storage | null): RememberedEntry | null {
@@ -148,25 +148,16 @@ export async function finishOutcomeLoot(
   const drops = dropsBySession.flatMap((sessionDrops) => sessionDrops ?? []);
   const remembered = recallFinishOutcome(userId, tab);
   if (remembered?.sessionIds.join() === sessionIds.join())
-    rememberSummary(tab, userId, { ...remembered.summary, drops }, isFinishLootOpened(userId, tab));
+    rememberSummary(tab, userId, { ...remembered.summary, drops });
   return drops;
-}
-
-function isFinishLootOpened(userId: string, tab: Storage | null): boolean {
-  try {
-    const entry = rememberedEntry(tab);
-    return entry?.userId === userId && entry.lootOpened === true;
-  } catch {
-    return false;
-  }
 }
 
 export function markFinishLootOpened(userId: string, tab: Storage | null = tabStorage()): void {
   const remembered = recallFinishOutcome(userId, tab);
-  if (remembered) rememberSummary(tab, userId, remembered.summary, true);
+  if (remembered) rememberSummary(tab, userId, { ...remembered.summary, lootOpened: true });
 }
 
 export function hasUnopenedFinishLoot(userId: string, tab: Storage | null = tabStorage()): boolean {
-  const drops = recallFinishOutcome(userId, tab)?.summary.drops ?? [];
-  return drops.length > 0 && !isFinishLootOpened(userId, tab);
+  const summary = recallFinishOutcome(userId, tab)?.summary;
+  return !summary?.lootOpened && (summary?.drops ?? []).length > 0;
 }

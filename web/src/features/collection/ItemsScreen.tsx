@@ -51,8 +51,8 @@ import { type CacheFirstLoad, cacheFirstNotice } from '../../offline/cache-first
 import { LoadoutPanel } from '../profile/LoadoutPanel.tsx';
 import { wrote } from '../../lib/query/writes.ts';
 import { itemsQuery, loadoutQuery, profileQuery, standingQuery } from '../../lib/query/queries.ts';
-import { type SkillLevels } from '../../lib/collection/character-rules.ts';
-import { skillLevelsByKey } from '../../lib/progress/standing-rules.ts';
+import {} from '../../lib/collection/character-rules.ts';
+import { type SkillLevels, skillLevelsByKey } from '../../lib/progress/standing-rules.ts';
 import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { type BadgeColor } from '../../lib/profile/profile-rules.ts';
 import { GearTryOn } from './GearTryOn.tsx';

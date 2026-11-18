@@ -13,7 +13,9 @@ export interface Standing {
   combatLevel: number;
 }
 
-export function skillLevelsByKey(skills: readonly SkillStanding[]): Record<string, number> {
+export type SkillLevels = Readonly<Record<string, number>>;
+
+export function skillLevelsByKey(skills: readonly SkillStanding[]): SkillLevels {
   return Object.fromEntries(skills.map(({ skill, progress }) => [skill.key, progress.level]));
 }
 

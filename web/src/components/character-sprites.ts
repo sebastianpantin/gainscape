@@ -161,12 +161,34 @@ interface GearPart {
   raised?: Layer;
 }
 
+const RAISED_FIST_TOP = 1;
+
+function flipped(layer: Layer, top: number): Layer {
+  return { top, rows: [...layer.rows].reverse() };
+}
+
+const CHALKED_HANDS: Layer = {
+  top: 20,
+  rows: ['....WW............WW....', '...WWW............WWW...', '...W.W............W.W...'],
+};
+
+const GLOVED_HANDS: Layer = {
+  top: 19,
+  rows: [
+    '...GGG............GGG...',
+    '...KggK..........KggK...',
+    '..KGGGK..........KGGGK..',
+    '..KGGGK..........KGGGK..',
+    '...KgK............KgK...',
+  ],
+};
+
 const GEAR_PARTS: Record<GearSlot, readonly GearPart[]> = {
   chalk: [
     {
       moves: true,
-      worn: { top: 20, rows: ['....WW............WW....', '...WWW............WWW...', '...W.W............W.W...'] },
-      raised: { top: 1, rows: ['...W.W............W.W...', '...WWW............WWW...', '....WW............WW....'] },
+      worn: CHALKED_HANDS,
+      raised: flipped(CHALKED_HANDS, RAISED_FIST_TOP),
     },
     {
       moves: true,
@@ -186,26 +208,8 @@ const GEAR_PARTS: Record<GearSlot, readonly GearPart[]> = {
   gloves: [
     {
       moves: true,
-      worn: {
-        top: 19,
-        rows: [
-          '...GGG............GGG...',
-          '...KggK..........KggK...',
-          '..KGGGK..........KGGGK..',
-          '..KGGGK..........KGGGK..',
-          '...KgK............KgK...',
-        ],
-      },
-      raised: {
-        top: 1,
-        rows: [
-          '...KgK............KgK...',
-          '..KGGGK..........KGGGK..',
-          '..KGGGK..........KGGGK..',
-          '...KggK..........KggK...',
-          '...GGG............GGG...',
-        ],
-      },
+      worn: GLOVED_HANDS,
+      raised: flipped(GLOVED_HANDS, RAISED_FIST_TOP),
     },
   ],
   straps: [
@@ -360,7 +364,7 @@ function artPalette(shirt: ShirtColors): Record<string, string> {
 }
 
 function lowered(pixels: readonly Pixel[], rows: number): Pixel[] {
-  return rows === 0 ? [...pixels] : pixels.map((pixel) => ({ ...pixel, y: pixel.y + rows }));
+  return pixels.map((pixel) => ({ ...pixel, y: pixel.y + rows }));
 }
 
 const DEFAULT_BUILD: CharacterBuild = { arms: 'fit', frame: 'fit' };

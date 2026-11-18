@@ -1,7 +1,8 @@
+import { type SkillLevels } from '../../lib/progress/standing-rules.ts';
 import { BADGE_COLORS, type BadgeColor, initialsFor, TRAINING_FOCUS_LABELS } from '../../lib/profile/profile.ts';
 import type { CardProfile } from '../../lib/profile/profile-view.ts';
 import { ProfileCharacter } from './ProfileCharacter.tsx';
-import { type SkillLevels } from '../../lib/collection/character-rules.ts';
+import {} from '../../lib/collection/character-rules.ts';
 
 interface ProfileCardProps {
   userId: string;

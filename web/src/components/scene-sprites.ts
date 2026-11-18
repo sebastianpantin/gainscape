@@ -169,7 +169,10 @@ type FramePair = readonly [Pixel[], Pixel[]];
 
 const STILL: FramePair = [[], []];
 
-function dots(cells: readonly (readonly [number, number])[], fill: string): Pixel[] {
+type Cell = readonly [number, number];
+type CellFrames = readonly [readonly Cell[], readonly Cell[]];
+
+function dots(cells: readonly Cell[], fill: string): Pixel[] {
   return cells.map(([x, y]) => rect(x, y, 1, 1, fill));
 }
 
@@ -178,7 +181,7 @@ const STEADY_STARS = [
   [79, 8],
   [60, 10],
 ] as const;
-const TWINKLING_STARS: readonly [readonly (readonly [number, number])[], readonly (readonly [number, number])[]] = [
+const TWINKLING_STARS: CellFrames = [
   [
     [69, 8],
     [90, 9],
@@ -209,7 +212,7 @@ function skyFrames(light: SceneLight): FramePair {
   return [drifted(0), drifted(1)];
 }
 
-const SNOWFLAKES: readonly [readonly (readonly [number, number])[], readonly (readonly [number, number])[]] = [
+const SNOWFLAKES: CellFrames = [
   [
     [60, 8],
     [66, 11],
@@ -240,9 +243,7 @@ const SNOWFLAKES: readonly [readonly (readonly [number, number])[], readonly (re
   ],
 ];
 
-function snowFrames(): FramePair {
-  return [dots(SNOWFLAKES[0], CLOUD), dots(SNOWFLAKES[1], CLOUD)];
-}
+const SNOW_FRAMES: FramePair = [dots(SNOWFLAKES[0], CLOUD), dots(SNOWFLAKES[1], CLOUD)];
 
 const BUILDINGS: readonly { left: number; top: number; width: number; far: boolean }[] = [
   { left: 61, top: 12, width: 5, far: true },
@@ -255,14 +256,12 @@ const BUILDINGS: readonly { left: number; top: number; width: number; far: boole
   { left: 87, top: 13, width: 5, far: false },
 ];
 
-function cityWindows(): (readonly [number, number])[] {
-  return BUILDINGS.filter(({ far }) => !far).flatMap(({ left, top, width }) => {
-    const cells: [number, number][] = [];
-    for (let y = top + 2; y < GLASS.bottom - 1; y += 3)
-      for (let x = left + 1; x < left + width - 1; x += 2) if ((x + y) % 4 !== 0) cells.push([x, y]);
-    return cells;
-  });
-}
+const CITY_WINDOWS: readonly Cell[] = BUILDINGS.filter(({ far }) => !far).flatMap(({ left, top, width }) => {
+  const cells: Cell[] = [];
+  for (let y = top + 2; y < GLASS.bottom - 1; y += 3)
+    for (let x = left + 1; x < left + width - 1; x += 2) if ((x + y) % 4 !== 0) cells.push([x, y]);
+  return cells;
+});
 
 function cityIsLit(light: SceneLight): boolean {
   return light === 'night' || light === 'dusk';
@@ -273,7 +272,7 @@ function skyline(light: SceneLight): Pixel[] {
     ...BUILDINGS.map(({ left, top, width, far }) =>
       rect(left, top, width, GLASS.bottom - top, far ? BUILDING_FAR : BUILDING),
     ),
-    ...dots(cityWindows(), cityIsLit(light) ? GOLD_LIGHT : UNLIT_WINDOW),
+    ...dots(CITY_WINDOWS, cityIsLit(light) ? GOLD_LIGHT : UNLIT_WINDOW),
   ];
 }
 
@@ -284,7 +283,7 @@ function cityFrames(light: SceneLight): FramePair {
   return [
     [],
     dots(
-      cityWindows().filter(([x, y]) => (x + 2 * y) % CITY_FLICKER_EVERY === 0),
+      CITY_WINDOWS.filter(([x, y]) => (x + 2 * y) % CITY_FLICKER_EVERY === 0),
       BUILDING_FAR,
     ),
   ];
@@ -484,7 +483,7 @@ function movingPixels(scene: Scene | null): FramePair {
   const moving = [
     hasWindow ? skyFrames(scene.light) : STILL,
     scene.props.includes('skyline') ? cityFrames(scene.light) : STILL,
-    hasWindow && scene.weather === 'snow' ? snowFrames() : STILL,
+    scene.weather === 'snow' ? SNOW_FRAMES : STILL,
     trophyFrames(scene.trophies),
     scene.torch ? torchFrames(scene.torch.flame) : STILL,
   ];
@@ -503,9 +502,4 @@ export interface SceneArt {
 export function sceneArt(scene: Scene | null): SceneArt {
   const [first, second] = movingPixels(scene);
   return { still: sprite(stillPixels(scene)), frames: [sprite(first), sprite(second)] };
-}
-
-export function sceneSprite(scene: Scene | null): Sprite {
-  const { still, frames } = sceneArt(scene);
-  return sprite([...still.pixels, ...frames[0].pixels]);
 }

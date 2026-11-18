@@ -79,8 +79,8 @@ export function LootChestIcon({ size = 56 }: { size?: number }) {
   return <PixelGrid sprite={LOOT_CHEST} size={size} />;
 }
 
-export function QuestScrollIcon({ size = 24 }: { size?: number }) {
-  return <PixelGrid sprite={QUEST_SCROLL} size={size} />;
+export function QuestScrollIcon() {
+  return <PixelGrid sprite={QUEST_SCROLL} size={24} />;
 }
 
 export function OpenLootChestIcon() {

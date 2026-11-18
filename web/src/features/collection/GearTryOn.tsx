@@ -1,11 +1,7 @@
+import { type SkillLevels } from '../../lib/progress/standing-rules.ts';
 import { type CSSProperties } from 'react';
 import { CharacterFigure, ItemIcon } from '../../components/PixelArt.tsx';
-import {
-  characterLabel,
-  characterLook,
-  gearLandingTop,
-  type SkillLevels,
-} from '../../lib/collection/character-rules.ts';
+import { characterLabel, characterLook, gearLandingTop } from '../../lib/collection/character-rules.ts';
 import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
 import { type CatalogItem, colorFor } from '../../lib/collection/item-rules.ts';
 import { type BadgeColor } from '../../lib/profile/profile-rules.ts';

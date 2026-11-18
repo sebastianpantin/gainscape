@@ -2,12 +2,12 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   GOLD_TROPHY_DAYS,
+  PENNANT_QUEST_POINTS,
   SILVER_TROPHY_DAYS,
   EQUIPMENT_MIN_SKILL_LEVEL,
   EQUIPMENT_SKILL,
   equipmentMask,
   MAX_EQUIPMENT_NAMED,
-  MAX_SCENE_PENNANTS,
   MAX_SCENE_TROPHIES,
   SCENE_EQUIPMENT,
   SCENE_STAGES,
@@ -123,7 +123,7 @@ describe('sceneFor', () => {
     expect([0, 1, 2, 3, 5, 6, 9, 10, 14, 15, 20, 21, 500].map(pennantsAt)).toEqual([
       0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
     ]);
-    expect(MAX_SCENE_PENNANTS).toBe(6);
+    expect(PENNANT_QUEST_POINTS).toHaveLength(6);
   });
 
   it('brings in a piece of equipment for each skill at level 20, in a fixed order', () => {
@@ -167,7 +167,11 @@ describe('sceneWeatherFor', () => {
     ['2026-11-30', 'clear'],
   ] as const)('on %s the weather is %s', (today, weather) => {
     expect(sceneWeatherFor(today)).toBe(weather);
-    expect(sceneFor({ ...NEW_LIFTER, today }).weather).toBe(weather);
+    expect(sceneFor({ ...NEW_LIFTER, totalLevel: 100, today }).weather).toBe(weather);
+  });
+
+  it('stays clear in a room without a window to see it through', () => {
+    expect(sceneFor({ ...NEW_LIFTER, totalLevel: 99, today: '2026-12-24' }).weather).toBe('clear');
   });
 });
 

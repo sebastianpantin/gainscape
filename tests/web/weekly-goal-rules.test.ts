@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activeStreakWeeks,
   goalFromChoice,
   goalSettingHint,
   goalToChoice,
@@ -12,6 +13,18 @@ import {
 function week(weekStart: string, goal: number | null, sessions: number, isCurrent = false): WeeklyGoalWeekRow {
   return { week_start: weekStart, goal, sessions, is_current: isCurrent };
 }
+
+describe('activeStreakWeeks', () => {
+  it('is the streak while a goal is set', () => {
+    expect(activeStreakWeeks(weeklyGoalStatus([week('2026-09-28', 3, 3), week('2026-10-05', 3, 1, true)]))).toBe(1);
+  });
+
+  it('is nothing without a status, or once the goal is off this week', () => {
+    expect(activeStreakWeeks(null)).toBe(0);
+    expect(activeStreakWeeks(undefined)).toBe(0);
+    expect(activeStreakWeeks(weeklyGoalStatus([week('2026-09-28', 3, 3), week('2026-10-05', null, 1, true)]))).toBe(0);
+  });
+});
 
 describe('weekly goal status', () => {
   it('has no status before a goal was ever set', () => {

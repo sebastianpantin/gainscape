@@ -1,5 +1,5 @@
 import { type CharacterPose } from '../../components/character-sprites.ts';
-import { daysBetween } from '../../lib/ui/date-bucket-rules.ts';
+import { daysBetween, newestDate } from '../../lib/ui/date-bucket-rules.ts';
 import { CONTENT_FOR_DAYS } from './pet-mood-rules.ts';
 
 export function characterPose(
@@ -20,9 +20,5 @@ export function characterPoseFrom(
   recordDates: readonly string[] | undefined,
 ): CharacterPose {
   if (today === null || lastTrainedDate === undefined || recordDates === undefined) return 'idle';
-  const latestRecordDate = recordDates.reduce<string | null>(
-    (newest, date) => (newest === null || date > newest ? date : newest),
-    null,
-  );
-  return characterPose(today, lastTrainedDate, latestRecordDate);
+  return characterPose(today, lastTrainedDate, newestDate(recordDates));
 }

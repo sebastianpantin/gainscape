@@ -1,5 +1,8 @@
 import { formatCount } from '../format.ts';
 import { daysBetween } from '../ui/date-bucket-rules.ts';
+import { type SkillLevels } from './standing-rules.ts';
+import { highestReached } from './tier-rules.ts';
+import { streakText } from './weekly-goal-rules.ts';
 
 export const SCENE_STAGES = ['bare', 'plates', 'banners', 'window', 'skyline'] as const;
 export type SceneStage = (typeof SCENE_STAGES)[number];
@@ -35,7 +38,6 @@ export const MAX_SCENE_TROPHIES = 3;
 export const GOLD_TROPHY_DAYS = 7;
 export const SILVER_TROPHY_DAYS = 30;
 export const PENNANT_QUEST_POINTS = [1, 3, 6, 10, 15, 21] as const;
-export const MAX_SCENE_PENNANTS = PENNANT_QUEST_POINTS.length;
 
 export const SCENE_STAGE_MIN_TOTAL_LEVEL: Record<SceneStage, number> = {
   bare: 0,
@@ -116,7 +118,7 @@ export interface SceneInput {
   recordDates: readonly string[];
   questPoints: number;
   streakWeeks: number;
-  skillLevels: Readonly<Record<string, number>>;
+  skillLevels: SkillLevels;
   today: string;
   hour: number;
 }
@@ -137,10 +139,7 @@ export function sceneStageIndex(stage: SceneStage): number {
 }
 
 function stageFor(totalLevel: number): SceneStage {
-  return SCENE_STAGES.reduce<SceneStage>(
-    (reached, stage) => (totalLevel >= SCENE_STAGE_MIN_TOTAL_LEVEL[stage] ? stage : reached),
-    'bare',
-  );
+  return highestReached(SCENE_STAGES, SCENE_STAGE_MIN_TOTAL_LEVEL, totalLevel) ?? 'bare';
 }
 
 export function sceneLightFor(hour: number): SceneLight {
@@ -156,12 +155,8 @@ export function sceneWeatherFor(today: string): SceneWeather {
 }
 
 function torchFor(streakWeeks: number): SceneTorch | null {
-  if (streakWeeks < TORCH_FLAME_MIN_STREAK_WEEKS.small) return null;
-  const flame = TORCH_FLAMES.reduce<TorchFlame>(
-    (reached, size) => (streakWeeks >= TORCH_FLAME_MIN_STREAK_WEEKS[size] ? size : reached),
-    'small',
-  );
-  return { streakWeeks, flame };
+  const flame = highestReached(TORCH_FLAMES, TORCH_FLAME_MIN_STREAK_WEEKS, streakWeeks);
+  return flame && { streakWeeks, flame };
 }
 
 function trophyMetal(recordDate: string, today: string): TrophyMetal {
@@ -181,9 +176,10 @@ function trophiesFor(recordDates: readonly string[], today: string): TrophyMetal
 export function sceneFor(input: SceneInput): Scene {
   const { totalLevel, recordDates, questPoints, streakWeeks, skillLevels, today, hour } = input;
   const stage = stageFor(totalLevel);
+  const props = SCENE_STAGES.slice(0, sceneStageIndex(stage) + 1).map((reached) => PROP_ADDED_BY_STAGE[reached]);
   return {
     stage,
-    props: SCENE_STAGES.slice(0, sceneStageIndex(stage) + 1).map((reached) => PROP_ADDED_BY_STAGE[reached]),
+    props,
     equipment: SCENE_EQUIPMENT.filter(
       (equipment) => (skillLevels[EQUIPMENT_SKILL[equipment]] ?? 0) >= EQUIPMENT_MIN_SKILL_LEVEL,
     ),
@@ -191,7 +187,7 @@ export function sceneFor(input: SceneInput): Scene {
     pennants: PENNANT_QUEST_POINTS.filter((points) => questPoints >= points).length,
     torch: torchFor(streakWeeks),
     light: sceneLightFor(hour),
-    weather: sceneWeatherFor(today),
+    weather: props.includes('window') ? sceneWeatherFor(today) : 'clear',
   };
 }
 
@@ -207,9 +203,7 @@ export function equipmentMask(equipment: readonly SceneEquipment[]): number {
 function arrivalsText(seenMask: number | null, equipment: readonly SceneEquipment[]): string | null {
   if (seenMask === null) return null;
   const arrived = equipment.filter((piece) => (seenMask & equipmentMask([piece])) === 0);
-  if (arrived.length === 0) return null;
-  if (arrived.length > MAX_EQUIPMENT_NAMED) return `${arrived.length} pieces of equipment arrived`;
-  return `${PHRASE_LIST.format(arrived.map((piece) => EQUIPMENT_PHRASE[piece]))} arrived`;
+  return arrived.length === 0 ? null : `${PHRASE_LIST.format(equipmentPhrases(arrived))} arrived`;
 }
 
 function stageGrowthText(seenStageIndex: number, stage: SceneStage): string | null {
@@ -248,13 +242,12 @@ function trophyPhrases(trophies: readonly TrophyMetal[]): string[] {
 }
 
 export function sceneLabel(scene: Scene): string {
-  const snows = scene.weather === 'snow' && scene.props.includes('window');
-  const light = snows ? `${LIGHT_PHRASE[scene.light]} with snow outside` : LIGHT_PHRASE[scene.light];
+  const light = scene.weather === 'snow' ? `${LIGHT_PHRASE[scene.light]} with snow outside` : LIGHT_PHRASE[scene.light];
   const extras = [
     ...equipmentPhrases(scene.equipment),
     ...trophyPhrases(scene.trophies),
     ...(scene.pennants > 0 ? [formatCount(scene.pennants, 'quest pennant')] : []),
-    ...(scene.torch ? [`a torch lit for a ${scene.torch.streakWeeks} week streak`] : []),
+    ...(scene.torch ? [`a torch lit for a ${streakText(scene.torch.streakWeeks)}`] : []),
   ];
   if (scene.stage === 'bare' && extras.length === 0) return `Your gym: a bare room with a rack, ${light}`;
   return `Your gym: ${PHRASE_LIST.format([...propPhrases(scene.props), ...extras])}, ${light}`;
