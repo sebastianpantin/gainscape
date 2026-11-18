@@ -4,6 +4,13 @@ export const SCENE_STAGES = ['bare', 'plates', 'banners', 'window', 'skyline'] a
 export type SceneStage = (typeof SCENE_STAGES)[number];
 export type SceneProp = 'rack' | 'wall-plates' | 'banner' | 'window' | 'skyline';
 export type SceneLight = 'dawn' | 'day' | 'dusk' | 'night';
+export const TORCH_FLAMES = ['small', 'steady', 'roaring'] as const;
+export type TorchFlame = (typeof TORCH_FLAMES)[number];
+
+export interface SceneTorch {
+  streakWeeks: number;
+  flame: TorchFlame;
+}
 
 export const MAX_SCENE_TROPHIES = 3;
 export const MAX_SCENE_PENNANTS = 3;
@@ -45,6 +52,8 @@ const LIGHT_PHRASE: Record<SceneLight, string> = {
   night: 'at night',
 };
 
+export const TORCH_FLAME_MIN_STREAK_WEEKS: Record<TorchFlame, number> = { small: 1, steady: 4, roaring: 12 };
+
 const PENNANT_QUEST_POINTS = [1, 5, 15] as const;
 const HOURS_IN_DAY = 24;
 const DAWN_FROM_HOUR = 5;
@@ -58,6 +67,7 @@ export interface SceneInput {
   totalLevel: number;
   recordCount: number;
   questPoints: number;
+  streakWeeks: number;
   hour: number;
 }
 
@@ -66,6 +76,7 @@ export interface Scene {
   props: readonly SceneProp[];
   trophies: number;
   pennants: number;
+  torch: SceneTorch | null;
   light: SceneLight;
 }
 
@@ -88,13 +99,23 @@ export function sceneLightFor(hour: number): SceneLight {
   return 'dusk';
 }
 
-export function sceneFor({ totalLevel, recordCount, questPoints, hour }: SceneInput): Scene {
+function torchFor(streakWeeks: number): SceneTorch | null {
+  if (streakWeeks < TORCH_FLAME_MIN_STREAK_WEEKS.small) return null;
+  const flame = TORCH_FLAMES.reduce<TorchFlame>(
+    (reached, size) => (streakWeeks >= TORCH_FLAME_MIN_STREAK_WEEKS[size] ? size : reached),
+    'small',
+  );
+  return { streakWeeks, flame };
+}
+
+export function sceneFor({ totalLevel, recordCount, questPoints, streakWeeks, hour }: SceneInput): Scene {
   const stage = stageFor(totalLevel);
   return {
     stage,
     props: SCENE_STAGES.slice(0, sceneStageIndex(stage) + 1).map((reached) => PROP_ADDED_BY_STAGE[reached]),
     trophies: Math.min(Math.max(recordCount, 0), MAX_SCENE_TROPHIES),
     pennants: Math.min(PENNANT_QUEST_POINTS.filter((points) => questPoints >= points).length, MAX_SCENE_PENNANTS),
+    torch: torchFor(streakWeeks),
     light: sceneLightFor(hour),
   };
 }
@@ -123,6 +144,7 @@ export function sceneLabel(scene: Scene): string {
   const extras = [
     ...(scene.trophies > 0 ? [trophiesText(scene.trophies)] : []),
     ...(scene.pennants > 0 ? [formatCount(scene.pennants, 'quest pennant')] : []),
+    ...(scene.torch ? [`a torch lit for a ${scene.torch.streakWeeks} week streak`] : []),
   ];
   if (scene.stage === 'bare' && extras.length === 0) return `Your gym: a bare room with a rack, ${light}`;
   return `Your gym: ${PHRASE_LIST.format([...propPhrases(scene.props), ...extras])}, ${light}`;

@@ -12,9 +12,12 @@ import {
 import {
   SCENE_STAGES,
   type Scene,
+  type SceneInput,
   type SceneLight,
   type SceneStage,
   sceneFor,
+  TORCH_FLAME_MIN_STREAK_WEEKS,
+  TORCH_FLAMES,
 } from '../../web/src/lib/progress/scene-rules.ts';
 
 const root = join(import.meta.dirname, '../..');
@@ -27,11 +30,18 @@ const tokenColours = new Set(
 const STAGE_TOTAL_LEVEL: Record<SceneStage, number> = { bare: 10, plates: 15, banners: 40, window: 100, skyline: 300 };
 const LIGHT_HOUR: Record<SceneLight, number> = { dawn: 6, day: 12, dusk: 19, night: 23 };
 
-function sceneAt(stage: SceneStage, extras: Partial<{ recordCount: number; questPoints: number; hour: number }> = {}) {
-  return sceneFor({ totalLevel: STAGE_TOTAL_LEVEL[stage], recordCount: 0, questPoints: 0, hour: 12, ...extras });
+function sceneAt(stage: SceneStage, extras: Partial<Omit<SceneInput, 'totalLevel'>> = {}) {
+  return sceneFor({
+    totalLevel: STAGE_TOTAL_LEVEL[stage],
+    recordCount: 0,
+    questPoints: 0,
+    streakWeeks: 0,
+    hour: 12,
+    ...extras,
+  });
 }
 
-const FULLEST: Scene = sceneFor({ totalLevel: 990, recordCount: 9, questPoints: 99, hour: 23 });
+const FULLEST: Scene = sceneFor({ totalLevel: 990, recordCount: 9, questPoints: 99, streakWeeks: 52, hour: 23 });
 
 function expectInBounds(sprite: Sprite) {
   expect([sprite.cols, sprite.rows]).toEqual([SCENE_COLS, SCENE_ROWS]);
@@ -53,7 +63,9 @@ function addedPixels(before: Sprite, after: Sprite) {
 describe('sceneSprite', () => {
   it.each([...SCENE_STAGES])('paints the %s stage inside the grid in token colours only', (stage) => {
     for (const light of Object.keys(LIGHT_HOUR) as SceneLight[]) {
-      const sprite = sceneSprite(sceneAt(stage, { recordCount: 3, questPoints: 15, hour: LIGHT_HOUR[light] }));
+      const sprite = sceneSprite(
+        sceneAt(stage, { recordCount: 3, questPoints: 15, streakWeeks: 12, hour: LIGHT_HOUR[light] }),
+      );
       expectInBounds(sprite);
       for (const pixel of sprite.pixels) expect(tokenColours.has(pixel.fill.toLowerCase()), pixel.fill).toBe(true);
     }
@@ -101,6 +113,17 @@ describe('sceneSprite', () => {
     expect(counts[0]).toBe(0);
     expect(counts[2]).toBeGreaterThan(counts[1]);
     expect(counts[3]).toBeGreaterThan(counts[2]);
+  });
+
+  it('lights a torch that burns higher with the streak', () => {
+    const bare = sceneSprite(sceneAt('bare'));
+    const flames = TORCH_FLAMES.map(
+      (flame) =>
+        addedPixels(bare, sceneSprite(sceneAt('bare', { streakWeeks: TORCH_FLAME_MIN_STREAK_WEEKS[flame] }))).length,
+    );
+    expect(flames[0]).toBeGreaterThan(0);
+    expect(flames[1]).toBeGreaterThan(flames[0]);
+    expect(flames[2]).toBeGreaterThan(flames[1]);
   });
 
   it('changes the light with the time of day, also before the window', () => {

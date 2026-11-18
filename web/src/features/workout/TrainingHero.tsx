@@ -1,9 +1,9 @@
 import { levelProgress } from '@domain/index.ts';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { type CharacterPose } from '../../components/character-sprites.ts';
-import { CharacterFigure, GymScene } from '../../components/PixelArt.tsx';
+import { CharacterFigure, GymScene, LootChestIcon, QuestScrollIcon } from '../../components/PixelArt.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { characterLabel, characterLinkLabel, characterLook } from '../../lib/collection/character-rules.ts';
 import { type EquippedGear } from '../../lib/collection/gear-rules.ts';
@@ -17,10 +17,12 @@ import {
   questPointsQuery,
   questsQuery,
   recordTimelineQuery,
+  weeklyGoalQuery,
 } from '../../lib/query/queries.ts';
 import { activeQuestLine } from '../../lib/quests/quest-rules.ts';
 import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
 import { useCountUp } from '../../lib/ui/use-count-up.ts';
+import { hasUnopenedFinishLoot } from '../../offline/finish-outcome.ts';
 import { characterPoseFrom } from './character-pose-rules.ts';
 import { PetCompanion } from './PetCompanion.tsx';
 import { petMoodFrom } from './pet-mood-rules.ts';
@@ -30,6 +32,8 @@ import { useSceneGrowth } from './use-scene-growth.ts';
 import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
 
 const SCENE_CHARACTER_SIZE = 96;
+const SCENE_CHEST_SIZE = 36;
+const SCENE_SCROLL_SIZE = 24;
 
 interface CharacterLinkProps {
   slots: readonly EquippedGear[];
@@ -71,9 +75,35 @@ function LevelUpBar({ userId, levelUp }: { userId: string; levelUp: NearestLevel
   );
 }
 
+function QuestScrollLink({ userId, unit }: { userId: string; unit: UnitPref }) {
+  const questLog = useQuery(questsQuery(userId)).data?.loaded;
+  const quest = questLog ? activeQuestLine(questLog, unit) : null;
+  if (!quest) return null;
+  return (
+    <Link className="scene-quest" to="/skills/quests" aria-label={`Quest: ${quest.questName}. Open Quests`}>
+      <span className="scene-quest-art" aria-hidden="true">
+        <QuestScrollIcon size={SCENE_SCROLL_SIZE} />
+      </span>
+    </Link>
+  );
+}
+
+function LootChestLink({ userId }: { userId: string }) {
+  const [waiting] = useState(() => hasUnopenedFinishLoot(userId));
+  if (!waiting) return null;
+  return (
+    <Link className="scene-chest" to="/reveal" aria-label="Loot from your last workout. Open the reveal">
+      <span className="scene-chest-art" aria-hidden="true">
+        <LootChestIcon size={SCENE_CHEST_SIZE} />
+      </span>
+    </Link>
+  );
+}
+
 interface TrainingHeroProps {
   userId: string;
   standing: StandingState;
+  unit: UnitPref;
   today: string | null;
   trainedDates: readonly string[] | undefined;
   hour: number;
@@ -87,11 +117,18 @@ function useRecordDates(userId: string): readonly string[] | undefined {
 
 function useScene(userId: string, standing: StandingState, recordCount: number, hour: number): Scene | null {
   const questPoints = useQuery(questPointsQuery(userId)).data;
+  const weeklyGoal = useQuery(weeklyGoalQuery).data;
   if (standing.status !== 'ready') return null;
-  return sceneFor({ totalLevel: standing.standing.totalLevel, recordCount, questPoints: questPoints ?? 0, hour });
+  return sceneFor({
+    totalLevel: standing.standing.totalLevel,
+    recordCount,
+    questPoints: questPoints ?? 0,
+    streakWeeks: weeklyGoal?.goal != null ? weeklyGoal.streakWeeks : 0,
+    hour,
+  });
 }
 
-export function TrainingHero({ userId, standing, today, trainedDates, hour }: TrainingHeroProps) {
+export function TrainingHero({ userId, standing, unit, today, trainedDates, hour }: TrainingHeroProps) {
   const headingId = useId();
   const pet = useCompanionPet(userId);
   const lastTrainedDate = useLastTrainedDate(userId, today, trainedDates);
@@ -123,6 +160,8 @@ export function TrainingHero({ userId, standing, today, trainedDates, hour }: Tr
             <PetCompanion pet={pet} mood={petMoodFrom(today, lastTrainedDate)} />
           </span>
         )}
+        <QuestScrollLink userId={userId} unit={unit} />
+        <LootChestLink userId={userId} />
       </div>
       {growthText && (
         <p className="notice scene-grew" role="status">

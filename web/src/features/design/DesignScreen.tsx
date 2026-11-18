@@ -133,7 +133,12 @@ function SampleScene({ input, caption }: { input: SceneInput; caption: string })
 }
 
 function SampleScenes() {
-  const fullest = { totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL.skyline, recordCount: 3, questPoints: 15 };
+  const fullest = {
+    totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL.skyline,
+    recordCount: 3,
+    questPoints: 15,
+    streakWeeks: 12,
+  };
   return (
     <>
       {SCENE_STAGES.map((stage, index) => (
@@ -143,6 +148,7 @@ function SampleScenes() {
             totalLevel: SCENE_STAGE_MIN_TOTAL_LEVEL[stage],
             recordCount: index,
             questPoints: index * index,
+            streakWeeks: index * 3,
             hour: 12,
           }}
           caption={`${capitalized(stage)}, total level ${SCENE_STAGE_MIN_TOTAL_LEVEL[stage]}`}

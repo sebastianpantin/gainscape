@@ -12,7 +12,7 @@ import {
   sceneStageIndex,
 } from '../../web/src/lib/progress/scene-rules.ts';
 
-const NEW_LIFTER: SceneInput = { totalLevel: 10, recordCount: 0, questPoints: 0, hour: 12 };
+const NEW_LIFTER: SceneInput = { totalLevel: 10, recordCount: 0, questPoints: 0, streakWeeks: 0, hour: 12 };
 
 describe('sceneFor', () => {
   it('starts a new lifter in a bare room with only a rack', () => {
@@ -21,6 +21,7 @@ describe('sceneFor', () => {
       props: ['rack'],
       trophies: 0,
       pennants: 0,
+      torch: null,
       light: 'day',
     });
   });
@@ -79,6 +80,16 @@ describe('sceneFor', () => {
     expect(sceneFor({ ...NEW_LIFTER, questPoints: 15 }).pennants).toBe(3);
     expect(sceneFor({ ...NEW_LIFTER, questPoints: 500 }).pennants).toBe(MAX_SCENE_PENNANTS);
   });
+
+  it('lights a torch for a streak, bigger at 4 and at 12 weeks', () => {
+    expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 0 }).torch).toBeNull();
+    expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 1 }).torch).toEqual({ streakWeeks: 1, flame: 'small' });
+    expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 3 }).torch).toEqual({ streakWeeks: 3, flame: 'small' });
+    expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 4 }).torch).toEqual({ streakWeeks: 4, flame: 'steady' });
+    expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 11 }).torch).toEqual({ streakWeeks: 11, flame: 'steady' });
+    expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 12 }).torch).toEqual({ streakWeeks: 12, flame: 'roaring' });
+    expect(sceneFor({ ...NEW_LIFTER, streakWeeks: 80 }).torch).toEqual({ streakWeeks: 80, flame: 'roaring' });
+  });
 });
 
 describe('sceneLightFor', () => {
@@ -127,14 +138,23 @@ describe('sceneLabel', () => {
   });
 
   it('lists what has grown, with trophies, pennants and the light', () => {
-    expect(sceneLabel(sceneFor({ totalLevel: 300, recordCount: 1, questPoints: 6, hour: 22 }))).toBe(
+    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 300, recordCount: 1, questPoints: 6, hour: 22 }))).toBe(
       'Your gym: a rack, plates on the wall, a banner, a window onto the city, 1 trophy and 2 quest pennants, at night',
     );
-    expect(sceneLabel(sceneFor({ totalLevel: 100, recordCount: 3, questPoints: 0, hour: 6 }))).toBe(
+    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 100, recordCount: 3, hour: 6 }))).toBe(
       'Your gym: a rack, plates on the wall, a banner, a window and 3 trophies, at dawn',
     );
-    expect(sceneLabel(sceneFor({ totalLevel: 15, recordCount: 0, questPoints: 1, hour: 19 }))).toBe(
+    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 15, questPoints: 1, hour: 19 }))).toBe(
       'Your gym: a rack, plates on the wall and 1 quest pennant, at dusk',
+    );
+  });
+
+  it('names the torch and the streak that lit it', () => {
+    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, streakWeeks: 3 }))).toBe(
+      'Your gym: a rack and a torch lit for a 3 week streak, in daylight',
+    );
+    expect(sceneLabel(sceneFor({ ...NEW_LIFTER, totalLevel: 15, recordCount: 2, streakWeeks: 12, hour: 22 }))).toBe(
+      'Your gym: a rack, plates on the wall, 2 trophies and a torch lit for a 12 week streak, at night',
     );
   });
 });

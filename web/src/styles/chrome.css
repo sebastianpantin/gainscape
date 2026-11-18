@@ -168,6 +168,40 @@
   min-inline-size: var(--tap-target);
 }
 
+.scene-quest,
+.scene-chest {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  min-block-size: var(--tap-target);
+  min-inline-size: var(--tap-target);
+  line-height: 0;
+  text-decoration: none;
+}
+
+.scene-quest {
+  inset-block-start: 0;
+  inset-inline-start: calc(50% + 48 * var(--scene-pixel) - var(--tap-target));
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.scene-chest {
+  inset-block-end: var(--scene-pixel);
+  inset-inline-start: calc(50% + 27 * var(--scene-pixel) - var(--tap-target) / 2);
+  align-items: flex-end;
+}
+
+.scene-quest-art,
+.scene-chest-art {
+  display: inline-flex;
+}
+
+.scene-chest-art {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 60%, transparent));
+  animation: pet-bob 1.2s steps(2, jump-none) infinite;
+}
+
 .hero-character-link {
   display: inline-flex;
   min-height: var(--tap-target);

@@ -110,6 +110,7 @@ export function TodayView({
       <TrainingHero
         userId={userId}
         standing={standing}
+        unit={unit}
         today={today}
         trainedDates={trainedDates}
         hour={now.getHours()}

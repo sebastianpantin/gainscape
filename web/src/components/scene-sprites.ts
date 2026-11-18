@@ -1,4 +1,4 @@
-import { type Scene, type SceneLight } from '../lib/progress/scene-rules.ts';
+import { type Scene, type SceneLight, type TorchFlame } from '../lib/progress/scene-rules.ts';
 import { fromRows, type Pixel, type Sprite } from './pixel-sprites.ts';
 
 export const SCENE_COLS = 176;
@@ -239,6 +239,26 @@ function pennants(count: number): Pixel[] {
   ];
 }
 
+const TORCH_LEFT = 96;
+const TORCH_HOLDER_TOP = 4;
+const TORCH_HOLDER_ROWS = ['KKKKK', '.KWK.', '..W..', '.KWK.'];
+const TORCH_FLAME_ROWS: Record<TorchFlame, readonly string[]> = {
+  small: ['..F..', '.FYF.'],
+  steady: ['..F..', '.FYF.', '.FYF.'],
+  roaring: ['..F..', '.FYF.', 'FYLYF', 'FYLYF'],
+};
+const TORCH_GLOW_OPACITY = 0.12;
+
+function torch(flame: TorchFlame): Pixel[] {
+  const flameRows = TORCH_FLAME_ROWS[flame];
+  const flameTop = TORCH_HOLDER_TOP - flameRows.length;
+  return [
+    rect(TORCH_LEFT - 2, flameTop, 9, flameRows.length + 2, GOLD_LIGHT, TORCH_GLOW_OPACITY),
+    ...placed(flameRows, { F: GOLD, Y: GOLD_LIGHT, L: MOON }, TORCH_LEFT, flameTop),
+    ...placed(TORCH_HOLDER_ROWS, { K: INK, W: WOOD }, TORCH_LEFT, TORCH_HOLDER_TOP),
+  ];
+}
+
 function lightTint(light: SceneLight): Pixel[] {
   const tint = LIGHT_TINT[light];
   return tint ? [rect(0, 0, SCENE_COLS, SCENE_ROWS, tint.fill, tint.opacity)] : [];
@@ -252,6 +272,7 @@ export function sceneSprite(scene: Scene | null): Sprite {
     if (has('banner')) pixels.push(...banner());
     if (has('wall-plates')) pixels.push(...wallPlates());
     pixels.push(...pennants(scene.pennants), ...trophies(scene.trophies), ...rack(), ...lightTint(scene.light));
+    if (scene.torch) pixels.push(...torch(scene.torch.flame));
   }
   return { cols: SCENE_COLS, rows: SCENE_ROWS, pixels };
 }
