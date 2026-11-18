@@ -138,12 +138,13 @@ function useLootPlayback(userId: string, sequence: LootSequence | null) {
 
 interface LootPanelProps {
   userId: string;
+  sessionIds: readonly string[];
   drops: readonly DropSummary[];
   items: LoadedItems;
   delayS: number;
 }
 
-export function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
+export function LootPanel({ userId, sessionIds, drops, items, delayS }: LootPanelProps) {
   const heading = useRef<HTMLHeadingElement>(null);
   const sequence = Array.isArray(items) ? lootSequence(drops, items) : null;
   const { phase, open } = useLootPlayback(userId, sequence);
@@ -152,7 +153,7 @@ export function LootPanel({ userId, drops, items, delayS }: LootPanelProps) {
   const fanfare = opened ? (sequence?.fanfare ?? null) : null;
 
   const openLoot = () => {
-    markFinishLootOpened(userId);
+    markFinishLootOpened(userId, sessionIds);
     open();
     heading.current?.focus({ preventScroll: true });
     heading.current?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });

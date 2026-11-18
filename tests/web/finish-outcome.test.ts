@@ -368,7 +368,7 @@ describe('the unopened loot of a Finish outcome', () => {
 
   it('is gone once the loot is opened, and stays gone when the drops are fetched again', async () => {
     const tab = remembered([drop('a1')]);
-    markFinishLootOpened(USER_ID, tab);
+    markFinishLootOpened(USER_ID, ['session-a'], tab);
     expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(false);
     expect(recallFinishOutcome(USER_ID, tab)?.summary.drops).toEqual([drop('a1')]);
 
@@ -377,9 +377,17 @@ describe('the unopened loot of a Finish outcome', () => {
     expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(false);
   });
 
+  it('is not opened by the loot of an earlier workout, reached with the back button', () => {
+    const tab = remembered([drop('a1')]);
+    markFinishLootOpened(USER_ID, ['session-earlier'], tab);
+    expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(true);
+    markFinishLootOpened(USER_ID, [], tab);
+    expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(true);
+  });
+
   it('is not opened by another account', () => {
     const tab = remembered([drop('a1')]);
-    markFinishLootOpened(OTHER_USER_ID, tab);
+    markFinishLootOpened(OTHER_USER_ID, ['session-a'], tab);
     expect(hasUnopenedFinishLoot(USER_ID, tab)).toBe(true);
   });
 
@@ -398,12 +406,12 @@ describe('the unopened loot of a Finish outcome', () => {
 
   it('degrades silently when tab storage throws or is missing', () => {
     expect(hasUnopenedFinishLoot(USER_ID, throwingStorage('getItem'))).toBe(false);
-    expect(() => markFinishLootOpened(USER_ID, throwingStorage('getItem', 'setItem'))).not.toThrow();
+    expect(() => markFinishLootOpened(USER_ID, ['session-a'], throwingStorage('getItem', 'setItem'))).not.toThrow();
     const full = remembered([drop('a1')]);
     full.setItem = () => {
       throw new Error('blocked');
     };
-    expect(() => markFinishLootOpened(USER_ID, full)).not.toThrow();
+    expect(() => markFinishLootOpened(USER_ID, ['session-a'], full)).not.toThrow();
     expect(hasUnopenedFinishLoot(USER_ID, full)).toBe(true);
     expect(hasUnopenedFinishLoot(USER_ID, null)).toBe(false);
   });

@@ -194,7 +194,7 @@
 
 .scene-quest {
   inset-block-start: 0;
-  inset-inline-start: calc(50% + 48 * var(--scene-pixel) - var(--tap-target));
+  inset-inline-start: calc(min(50% + 48 * var(--scene-pixel), 100%) - var(--tap-target));
   justify-content: flex-end;
   align-items: flex-start;
 }

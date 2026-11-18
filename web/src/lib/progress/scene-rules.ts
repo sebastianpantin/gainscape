@@ -247,7 +247,7 @@ export function sceneLabel(scene: Scene): string {
     ...equipmentPhrases(scene.equipment),
     ...trophyPhrases(scene.trophies),
     ...(scene.pennants > 0 ? [formatCount(scene.pennants, 'quest pennant')] : []),
-    ...(scene.torch ? [`a torch lit for a ${streakText(scene.torch.streakWeeks)}`] : []),
+    ...(scene.torch ? [`a torch for your ${streakText(scene.torch.streakWeeks)}`] : []),
   ];
   if (scene.stage === 'bare' && extras.length === 0) return `Your gym: a bare room with a rack, ${light}`;
   return `Your gym: ${PHRASE_LIST.format([...propPhrases(scene.props), ...extras])}, ${light}`;

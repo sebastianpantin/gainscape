@@ -136,7 +136,7 @@ interface ItemDetailProps {
   equipped: boolean | null;
   wearing: readonly EquippedGear[] | null;
   badgeColor: BadgeColor | null;
-  skillLevels: SkillLevels | null;
+  skillLevels: SkillLevels | null | undefined;
   offline: boolean;
   draftOpen: boolean | null;
   justCrafted: CraftMoment;
@@ -270,7 +270,7 @@ function ItemDetail({
           {ITEM_ACTIONS_OFFLINE_TEXT}
         </p>
       )}
-      {showsEquip && wearing && badgeColor && (
+      {showsEquip && wearing && badgeColor && skillLevels !== undefined && (
         <GearTryOn
           slots={wearing}
           badgeColor={badgeColor}
@@ -346,8 +346,9 @@ export function ItemsScreen({ userId }: ItemsScreenProps) {
   const draftOpen = draftState.status === 'ready' ? draftState.draft !== null : null;
   const loadout = useQuery(loadoutQuery(userId));
   const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
-  const skills = useQuery(standingQuery(userId)).data?.loaded.skills;
-  const skillLevels = skills ? skillLevelsByKey(skills) : null;
+  const standing = useQuery(standingQuery(userId));
+  const knownSkillLevels = standing.data ? skillLevelsByKey(standing.data.loaded.skills) : null;
+  const skillLevels = standing.isPending ? undefined : knownSkillLevels;
   const wroteLoadout = () => wrote(queryClient, { change: 'gear-changed', userId });
 
   const refetchCatalog = async () => {

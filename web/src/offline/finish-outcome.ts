@@ -152,9 +152,14 @@ export async function finishOutcomeLoot(
   return drops;
 }
 
-export function markFinishLootOpened(userId: string, tab: Storage | null = tabStorage()): void {
+export function markFinishLootOpened(
+  userId: string,
+  sessionIds: readonly string[],
+  tab: Storage | null = tabStorage(),
+): void {
   const remembered = recallFinishOutcome(userId, tab);
-  if (remembered) rememberSummary(tab, userId, { ...remembered.summary, lootOpened: true });
+  if (remembered?.sessionIds.join() === sessionIds.join())
+    rememberSummary(tab, userId, { ...remembered.summary, lootOpened: true });
 }
 
 export function hasUnopenedFinishLoot(userId: string, tab: Storage | null = tabStorage()): boolean {

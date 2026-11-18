@@ -97,7 +97,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         combatLevel={levels?.combatLevel ?? null}
         collectionPercent={collection.data ?? null}
         questPoints={questPoints.data ?? null}
-        skillLevels={levels && skillLevelsByKey(levels.skills)}
+        skillLevels={standing.status === 'loading' ? undefined : levels && skillLevelsByKey(levels.skills)}
       />
       <LoadoutPanel userId={userId} />
       <section className="panel stack" aria-labelledby="body-heading">

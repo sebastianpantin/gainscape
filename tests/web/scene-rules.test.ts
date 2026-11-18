@@ -296,7 +296,7 @@ describe('sceneLabel', () => {
 
   it('names the torch and the streak that lit it', () => {
     expect(sceneLabel(sceneFor({ ...NEW_LIFTER, streakWeeks: 3 }))).toBe(
-      'Your gym: a rack and a torch lit for a 3 week streak, in daylight',
+      'Your gym: a rack and a torch for your 3 week streak, in daylight',
     );
     expect(
       sceneLabel(
@@ -308,6 +308,6 @@ describe('sceneLabel', () => {
           hour: 22,
         }),
       ),
-    ).toBe('Your gym: a rack, plates on the wall, 2 bronze trophies and a torch lit for a 12 week streak, at night');
+    ).toBe('Your gym: a rack, plates on the wall, 2 bronze trophies and a torch for your 12 week streak, at night');
   });
 });

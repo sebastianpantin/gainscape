@@ -11,7 +11,7 @@ interface ProfileCardProps {
   combatLevel: number | null;
   collectionPercent: number | null;
   questPoints: number | null;
-  skillLevels: SkillLevels | null;
+  skillLevels: SkillLevels | null | undefined;
   nameIsPageTitle?: boolean;
 }
 

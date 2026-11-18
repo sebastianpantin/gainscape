@@ -118,8 +118,7 @@ interface TrainingHeroProps {
 
 function useRecordDates(userId: string): readonly string[] | undefined {
   const records = useInfiniteQuery(recordTimelineQuery(userId));
-  if (records.isError) return [];
-  return records.data?.pages[0]?.loaded.map((record) => record.local_date);
+  return records.data?.pages[0]?.loaded.map((record) => record.local_date) ?? (records.isError ? [] : undefined);
 }
 
 type SceneFacts = Pick<SceneInput, 'totalLevel' | 'skillLevels' | 'recordDates' | 'today' | 'hour'>;

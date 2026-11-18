@@ -28,7 +28,7 @@ export const CHARACTER_ROWS = 32;
 export const IDLE_BOB_ROWS = 1;
 export const LIFT_DIP_ROWS = 3;
 export const FLEX_HOP_ROWS = 1;
-export const REST_SIT_ROWS = 4;
+export const REST_SIT_ROWS = 3;
 
 const INK = '#000';
 const SKIN = '#d8c8a8';
