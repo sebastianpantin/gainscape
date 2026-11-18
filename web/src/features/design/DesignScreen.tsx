@@ -3,6 +3,7 @@ import { type ReactNode, useId, useRef, useState } from 'react';
 import { ConfirmDialog } from '../../components/ConfirmDialog.tsx';
 import { EmptyState } from '../../components/EmptyState.tsx';
 import { NumberTextField } from '../../components/NumberTextField.tsx';
+import { CHARACTER_POSES, type CharacterPose } from '../../components/character-sprites.ts';
 import { CharacterFigure, GymScene } from '../../components/PixelArt.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
@@ -62,10 +63,17 @@ function sampleLoadout(tier: ItemTier): EquippedGear[] {
   }));
 }
 
-function SampleCharacter({ slots, badge, caption }: { slots: EquippedGear[]; badge: BadgeColor; caption: string }) {
+interface SampleCharacterProps {
+  slots: EquippedGear[];
+  badge: BadgeColor;
+  caption: string;
+  pose?: CharacterPose;
+}
+
+function SampleCharacter({ slots, badge, caption, pose = 'idle' }: SampleCharacterProps) {
   return (
     <figure className="stack design-character">
-      <CharacterFigure look={characterLook(slots, badge)} label={characterLabel(slots)} />
+      <CharacterFigure look={characterLook(slots, badge)} label={characterLabel(slots, pose)} pose={pose} />
       <figcaption className="muted tiny">{caption}</figcaption>
     </figure>
   );
@@ -93,6 +101,18 @@ function SampleCharacters() {
         {ITEM_TIERS.map((tier) => (
           <SampleCharacter key={tier} slots={sampleLoadout(tier)} badge="stone" caption={`Full ${tier}`} />
         ))}
+      </div>
+      <div className="row wrap">
+        {CHARACTER_POSES.flatMap((pose) => [
+          <SampleCharacter key={pose} slots={[]} badge="green" caption={capitalized(pose)} pose={pose} />,
+          <SampleCharacter
+            key={`${pose}-dressed`}
+            slots={sampleLoadout('titan')}
+            badge="green"
+            caption={`${capitalized(pose)}, full titan`}
+            pose={pose}
+          />,
+        ])}
       </div>
     </>
   );

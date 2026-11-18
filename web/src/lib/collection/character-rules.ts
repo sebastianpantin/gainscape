@@ -1,10 +1,22 @@
 import type { GearSlot } from '@domain/crafting.ts';
-import { CHARACTER_ROWS, type CharacterLook, gearLandingRow } from '../../components/character-sprites.ts';
+import {
+  CHARACTER_ROWS,
+  type CharacterLook,
+  type CharacterPose,
+  gearLandingRow,
+} from '../../components/character-sprites.ts';
 import { type BadgeColor, BADGE_COLORS } from '../profile/profile-rules.ts';
 import { type EquippedGear, loadoutBySlot } from './gear-rules.ts';
 import { TIER_COLORS } from './item-rules.ts';
 
 const GEAR_LIST = new Intl.ListFormat('en-GB', { type: 'conjunction' });
+
+const POSE_PHRASE: Record<CharacterPose, string | null> = {
+  idle: null,
+  lifting: 'lifting',
+  flexing: 'flexing after a record',
+  resting: 'resting',
+};
 
 export function characterLook(slots: readonly EquippedGear[], badgeColor: BadgeColor): CharacterLook {
   const { fill, dark } = BADGE_COLORS[badgeColor];
@@ -14,14 +26,19 @@ export function characterLook(slots: readonly EquippedGear[], badgeColor: BadgeC
   };
 }
 
-export function characterLabel(slots: readonly EquippedGear[] | null): string {
+function wornText(slots: readonly EquippedGear[] | null): string {
   if (slots === null) return 'Character, gear hidden';
   const names = loadoutBySlot(slots).flatMap((row) => row.gear?.name ?? []);
   return names.length === 0 ? 'Character with no gear' : `Character wearing ${GEAR_LIST.format(names)}`;
 }
 
-export function characterLinkLabel(slots: readonly EquippedGear[]): string {
-  return `${characterLabel(slots)}. Open Items`;
+export function characterLabel(slots: readonly EquippedGear[] | null, pose: CharacterPose = 'idle'): string {
+  const doing = POSE_PHRASE[pose];
+  return doing === null ? wornText(slots) : `${wornText(slots)}, ${doing}`;
+}
+
+export function characterLinkLabel(slots: readonly EquippedGear[], pose: CharacterPose = 'idle'): string {
+  return `${characterLabel(slots, pose)}. Open Items`;
 }
 
 export function gearLandingTop(slot: GearSlot): string {

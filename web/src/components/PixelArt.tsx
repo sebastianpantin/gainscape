@@ -1,6 +1,6 @@
 import { type Scene } from '../lib/progress/scene-rules.ts';
 import { monogramFor } from '../lib/progress/standing-rules.ts';
-import { type CharacterLook, characterFrames } from './character-sprites.ts';
+import { type CharacterLook, type CharacterPose, characterFrames } from './character-sprites.ts';
 import {
   isSkillKey,
   type ItemIconKind,
@@ -82,10 +82,17 @@ export function OpenLootChestIcon() {
   return <PixelGrid sprite={LOOT_CHEST_OPEN} size={56} />;
 }
 
-export function CharacterFigure({ look, label, size = 128 }: { look: CharacterLook; label: string; size?: number }) {
-  const [still, bobbed] = characterFrames(look);
+interface CharacterFigureProps {
+  look: CharacterLook;
+  label: string;
+  pose?: CharacterPose;
+  size?: number;
+}
+
+export function CharacterFigure({ look, label, pose = 'idle', size = 128 }: CharacterFigureProps) {
+  const [still, bobbed] = characterFrames(look, pose);
   return (
-    <span className="character" role="img" aria-label={label}>
+    <span className={`character ${pose}`} role="img" aria-label={label}>
       <span className="character-frame still">
         <PixelGrid sprite={still} size={size} />
       </span>

@@ -63,12 +63,20 @@ describe('characterLabel', () => {
       'Character wearing Rookie belt, Forged chalk and Titan gloves',
     );
   });
+
+  it('says what the character is doing when it is not standing idle', () => {
+    expect(characterLabel([], 'idle')).toBe('Character with no gear');
+    expect(characterLabel([], 'lifting')).toBe('Character with no gear, lifting');
+    expect(characterLabel([rookieBelt], 'flexing')).toBe('Character wearing Rookie belt, flexing after a record');
+    expect(characterLabel([rookieBelt], 'resting')).toBe('Character wearing Rookie belt, resting');
+  });
 });
 
 describe('characterLinkLabel', () => {
   it('names the character and where the link goes', () => {
     expect(characterLinkLabel([])).toBe('Character with no gear. Open Items');
     expect(characterLinkLabel([rookieBelt])).toBe('Character wearing Rookie belt. Open Items');
+    expect(characterLinkLabel([rookieBelt], 'lifting')).toBe('Character wearing Rookie belt, lifting. Open Items');
   });
 });
 

@@ -226,6 +226,18 @@
   animation-name: character-idle-bobbed;
 }
 
+.character.lifting .character-frame {
+  animation-duration: 1.2s;
+}
+
+.character.flexing .character-frame {
+  animation-duration: 0.8s;
+}
+
+.character.resting .character-frame {
+  animation-duration: 3.2s;
+}
+
 @keyframes character-idle-still {
   0% {
     visibility: visible;

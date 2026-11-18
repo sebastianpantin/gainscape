@@ -2,6 +2,7 @@ import { levelProgress } from '@domain/index.ts';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
+import { type CharacterPose } from '../../components/character-sprites.ts';
 import { CharacterFigure, GymScene } from '../../components/PixelArt.tsx';
 import { ProgressBar } from '../../components/ProgressBar.tsx';
 import { characterLabel, characterLinkLabel, characterLook } from '../../lib/collection/character-rules.ts';
@@ -20,20 +21,29 @@ import {
 import { activeQuestLine } from '../../lib/quests/quest-rules.ts';
 import { skillXpMetric } from '../../lib/ui/last-seen-number-store.ts';
 import { useCountUp } from '../../lib/ui/use-count-up.ts';
+import { characterPoseFrom } from './character-pose-rules.ts';
 import { PetCompanion } from './PetCompanion.tsx';
+import { petMoodFrom } from './pet-mood-rules.ts';
 import { useCompanionPet } from './use-companion-pet.ts';
-import { usePetMood } from './use-pet-mood.ts';
+import { useLastTrainedDate } from './use-last-trained-date.ts';
 import { useSceneGrowth } from './use-scene-growth.ts';
 import { type NearestLevelUp, nearestLevelUp, nearestLevelUpText, nearestLevelUpValueText } from './today-rules.ts';
 
 const SCENE_CHARACTER_SIZE = 96;
 
-function CharacterLink({ slots, badgeColor }: { slots: readonly EquippedGear[]; badgeColor: BadgeColor }) {
+interface CharacterLinkProps {
+  slots: readonly EquippedGear[];
+  badgeColor: BadgeColor;
+  pose: CharacterPose;
+}
+
+function CharacterLink({ slots, badgeColor, pose }: CharacterLinkProps) {
   return (
-    <Link className="hero-character-link" to="/collection/items" aria-label={characterLinkLabel(slots)}>
+    <Link className="hero-character-link" to="/collection/items" aria-label={characterLinkLabel(slots, pose)}>
       <CharacterFigure
         look={characterLook(slots, badgeColor)}
-        label={characterLabel(slots)}
+        label={characterLabel(slots, pose)}
+        pose={pose}
         size={SCENE_CHARACTER_SIZE}
       />
     </Link>
@@ -69,26 +79,27 @@ interface TrainingHeroProps {
   hour: number;
 }
 
-function useScene(userId: string, standing: StandingState, hour: number): Scene | null {
-  const records = useInfiniteQuery(recordTimelineQuery(userId)).data?.pages[0]?.loaded;
+function useRecordDates(userId: string): readonly string[] | undefined {
+  const records = useInfiniteQuery(recordTimelineQuery(userId));
+  if (records.isError) return [];
+  return records.data?.pages[0]?.loaded.map((record) => record.local_date);
+}
+
+function useScene(userId: string, standing: StandingState, recordCount: number, hour: number): Scene | null {
   const questPoints = useQuery(questPointsQuery(userId)).data;
   if (standing.status !== 'ready') return null;
-  return sceneFor({
-    totalLevel: standing.standing.totalLevel,
-    recordCount: records?.length ?? 0,
-    questPoints: questPoints ?? 0,
-    hour,
-  });
+  return sceneFor({ totalLevel: standing.standing.totalLevel, recordCount, questPoints: questPoints ?? 0, hour });
 }
 
 export function TrainingHero({ userId, standing, today, trainedDates, hour }: TrainingHeroProps) {
   const headingId = useId();
   const pet = useCompanionPet(userId);
-  const mood = usePetMood(userId, today, trainedDates);
+  const lastTrainedDate = useLastTrainedDate(userId, today, trainedDates);
+  const recordDates = useRecordDates(userId);
   const loadout = useQuery(loadoutQuery(userId));
   const equipped = loadout.isSuccess ? (loadout.data?.slots ?? []) : null;
   const badgeColor = useQuery(profileQuery(userId)).data?.loaded.badgeColor ?? null;
-  const scene = useScene(userId, standing, hour);
+  const scene = useScene(userId, standing, recordDates?.length ?? 0, hour);
   const growthText = useSceneGrowth(userId, scene?.stage ?? null);
 
   return (
@@ -100,12 +111,16 @@ export function TrainingHero({ userId, standing, today, trainedDates, hour }: Tr
         <GymScene scene={scene} label={scene && sceneLabel(scene)} />
         {badgeColor !== null && equipped !== null && (
           <span className="scene-character">
-            <CharacterLink slots={equipped} badgeColor={badgeColor} />
+            <CharacterLink
+              slots={equipped}
+              badgeColor={badgeColor}
+              pose={characterPoseFrom(today, lastTrainedDate, recordDates)}
+            />
           </span>
         )}
         {pet && (
           <span className="scene-pet">
-            <PetCompanion pet={pet} mood={mood} />
+            <PetCompanion pet={pet} mood={petMoodFrom(today, lastTrainedDate)} />
           </span>
         )}
       </div>
