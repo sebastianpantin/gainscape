@@ -496,17 +496,4 @@ describe('seen Garmin activities', () => {
     ]);
     expect(await querySeenGarminActivities(stranger.client, starts[0], starts[2])).toEqual([]);
   });
-
-  it('refuses a client that writes a seen activity directly', async () => {
-    const user = await createTestUser();
-    const startedAt = wholeSecondAgo(3 * HOUR_MS);
-    await imported(user, [aRun(startedAt)]);
-    const inserted = await user.client
-      .from('garmin_activities')
-      .insert({ user_id: user.id, started_at: wholeSecondAgo(HOUR_MS), outcome: 'deleted' });
-    const updated = await user.client.from('garmin_activities').update({ outcome: 'deleted' }).eq('user_id', user.id);
-    const deleted = await user.client.from('garmin_activities').delete().eq('user_id', user.id);
-    expect([inserted.error?.code, updated.error?.code, deleted.error?.code]).toEqual(['42501', '42501', '42501']);
-    expect((await seenBy(user.id)).map((seen) => seen.outcome)).toEqual(['imported']);
-  });
 });

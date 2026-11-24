@@ -264,6 +264,16 @@ describe('garminImportCandidate', () => {
     });
   });
 
+  it('rejects an activity that starts or ends in the future as unreadable, allowing a little clock skew', () => {
+    expect(candidateOf({ startedAt: '2026-11-24T12:30:00.000Z' })).toMatchObject({
+      startedAt: null,
+      status: 'rejected',
+      rejection: 'unreadable',
+    });
+    expect(candidateOf({ startedAt: '2026-11-24T11:45:00.000Z', durationS: 1800 }).rejection).toBe('unreadable');
+    expect(candidateOf({ startedAt: '2026-11-24T11:34:00.000Z', durationS: 1800 }).status).toBe('importable');
+  });
+
   it('sets no Effort: a candidate carries only time, distance and interval', () => {
     expect(Object.keys(candidateOf()).sort()).toEqual(
       [

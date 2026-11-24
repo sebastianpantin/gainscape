@@ -65,8 +65,8 @@ async function completeDay(
 
   const now = new Date();
   assertPlausibleTiming(payload, now);
-  const { stored, timing, programLinked } = await storeNewSession(tx, userId, payload, completedAfter, now);
-  return responseFor(stored, timing, programLinked);
+  const { stored, programLinked } = await storeNewSession(tx, userId, payload, completedAfter, now);
+  return responseFor(stored, payload, programLinked);
 }
 
 function combinedResponse(responses: readonly CompleteSessionResponse[]): CompleteSessionResponse {

@@ -1,14 +1,9 @@
-import { garminImportChunks } from '@domain/index.ts';
+import { type GarminImportOutcome, garminImportChunks } from '@domain/index.ts';
 import { failFastWhenOffline } from '../../offline/cache-first.ts';
 import { REQUEST_TIMEOUT_MS } from '../platform/auth-restore.ts';
 import { invokeAsOwner } from '../platform/function-client.ts';
 import { supabase } from '../platform/supabase.ts';
-import {
-  type ActivityToImport,
-  type ImportOutcome,
-  importProblemText,
-  type ReviewContext,
-} from './import-review-rules.ts';
+import { type ActivityToImport, importProblemText, type ReviewContext } from './import-review-rules.ts';
 import { queryLastImportAt, queryReviewContext, type ReviewRange } from './review-context-rules.ts';
 
 const IMPORT_TIMEOUT_MS = 4 * REQUEST_TIMEOUT_MS;
@@ -28,15 +23,15 @@ function sentActivity({ startedAt, garminType, exerciseId, durationS, distanceM,
 }
 
 export interface ImportRun {
-  outcomes: ImportOutcome[];
+  outcomes: GarminImportOutcome[];
   problem: string | null;
 }
 
 export async function importActivities(userId: string, activities: readonly ActivityToImport[]): Promise<ImportRun> {
-  const outcomes: ImportOutcome[] = [];
+  const outcomes: GarminImportOutcome[] = [];
   for (const chunk of garminImportChunks(activities)) {
     const body = { activities: chunk.map(sentActivity) };
-    const answer = await invokeAsOwner<{ activities: ImportOutcome[] }>(
+    const answer = await invokeAsOwner<{ activities: GarminImportOutcome[] }>(
       userId,
       'import-activities',
       body,

@@ -1,40 +1,32 @@
 import {
   CARDIO_BOUNDS,
-  type CardioInterval,
   type GarminActivity,
   garminActivityEnd,
+  garminActivityIdentity,
   type GarminImportCandidate,
   garminImportCandidate,
+  type GarminImportOutcome,
   type GarminRejection,
-  METRES_PER_KM,
-  SECONDS_PER_MINUTE,
+  type GarminSeenOutcome,
+  type GarminSkipReason,
 } from '@domain/index.ts';
-import type { PaceUnit } from '../exercises/catalog-rules.ts';
+import { activeExercises, type Exercise, isCardioExercise, type PaceUnit } from '../exercises/catalog-rules.ts';
 import { formatCount, formatXp } from '../format.ts';
-import type { UnitPref } from '../profile/profile-rules.ts';
+import { capitalized } from '../names.ts';
 import type { InvokeOutcome } from '../platform/function-client-rules.ts';
 import { RATE_LIMITED_STATUS } from '../platform/rate-limit.ts';
+import type { UnitPref } from '../profile/profile-rules.ts';
 import { distanceUnitFor, formatDistance } from '../units.ts';
-import { formatDuration } from '../workout/cardio-rules.ts';
-import type { SeenGarminActivity, SeenGarminOutcome } from './seen-activities-rules.ts';
+import { describeInterval, formatDuration } from '../workout/cardio-rules.ts';
+import type { SeenGarminActivity } from './seen-activities-rules.ts';
 
-export const GARMIN_IMPORT_DAILY_CAP = 500;
-
-const SECONDS_PER_HOUR = 3600;
+const GARMIN_IMPORT_DAILY_CAP = 500;
 const DEFAULT_PACE_UNIT: PaceUnit = 'per_km';
 const UNKNOWN_MONTH = 'Unknown date';
 const UNNAMED_GARMIN_TYPE = 'Activity';
+const DAILY_CAP_REASON: GarminSkipReason = 'daily_cap';
 
-export type GreyedReason =
-  | 'already_imported'
-  | 'deleted_earlier'
-  | 'rejected_earlier'
-  | 'same_start'
-  | 'too_long'
-  | 'too_far'
-  | 'too_short'
-  | 'strength'
-  | 'unreadable';
+export type GreyedReason = GarminRejection | 'already_imported' | 'deleted_earlier' | 'rejected_earlier' | 'same_start';
 
 export interface ReviewRow {
   id: string;
@@ -43,7 +35,6 @@ export interface ReviewRow {
 }
 
 export interface ReviewSession {
-  id: string;
   startedAt: string;
   endedAt: string;
   exerciseIds: readonly string[];
@@ -67,18 +58,10 @@ export interface ReviewChoices {
   exerciseByRow: ReadonlyMap<string, string>;
 }
 
-const GREYED_BY_SEEN: Record<SeenGarminOutcome, GreyedReason> = {
+const GREYED_BY_SEEN: Record<GarminSeenOutcome, GreyedReason> = {
   imported: 'already_imported',
   deleted: 'deleted_earlier',
   rejected: 'rejected_earlier',
-};
-
-const GREYED_BY_REJECTION: Record<GarminRejection, GreyedReason> = {
-  unreadable: 'unreadable',
-  strength: 'strength',
-  too_long: 'too_long',
-  too_far: 'too_far',
-  too_short: 'too_short',
 };
 
 const GREYED_TEXT: Record<GreyedReason, string> = {
@@ -86,9 +69,9 @@ const GREYED_TEXT: Record<GreyedReason, string> = {
   deleted_earlier: 'Deleted earlier',
   rejected_earlier: 'Rejected earlier',
   same_start: 'Same start as another activity',
-  too_long: `Over ${CARDIO_BOUNDS.steadyDurationS.max / SECONDS_PER_HOUR} h`,
-  too_far: `Over ${CARDIO_BOUNDS.distanceM.max / METRES_PER_KM} km`,
-  too_short: `Under ${CARDIO_BOUNDS.steadyDurationS.min / SECONDS_PER_MINUTE} min`,
+  too_long: `Over ${formatDuration(CARDIO_BOUNDS.steadyDurationS.max)}`,
+  too_far: `Over ${formatDistance(CARDIO_BOUNDS.distanceM.max, 'km')}`,
+  too_short: `Under ${formatDuration(CARDIO_BOUNDS.steadyDurationS.min)}`,
   strength: 'Strength not imported yet',
   unreadable: 'Unreadable',
 };
@@ -104,7 +87,7 @@ export function reviewRows(activities: readonly GarminActivity[], context: Revie
     .map((activity, index): ReviewRow => {
       const candidate = garminImportCandidate(activity, context.exerciseIdByGarminType, now);
       const id = `activity-${index}`;
-      if (candidate.rejection !== null) return { id, candidate, greyed: GREYED_BY_REJECTION[candidate.rejection] };
+      if (candidate.rejection !== null) return { id, candidate, greyed: candidate.rejection };
       const startedAt = candidate.startedAt!;
       const seen = seenOutcome.get(startedAt);
       if (seen !== undefined) return { id, candidate, greyed: GREYED_BY_SEEN[seen] };
@@ -115,8 +98,33 @@ export function reviewRows(activities: readonly GarminActivity[], context: Revie
     .sort(newestFirst);
 }
 
+export function activitiesRange(activities: readonly GarminActivity[]): { from: string; to: string } | null {
+  const spans = activities.flatMap(({ startedAt, durationS }) => {
+    const identity = garminActivityIdentity(startedAt);
+    if (identity === null || !Number.isFinite(durationS) || durationS < 0) return [];
+    return [{ startedAt: identity, endedAt: garminActivityEnd({ startedAt: identity, durationS }) }];
+  });
+  if (spans.length === 0) return null;
+  return {
+    from: spans.map((span) => span.startedAt).reduce((earliest, start) => (start < earliest ? start : earliest)),
+    to: spans.map((span) => span.endedAt).reduce((latest, end) => (end > latest ? end : latest)),
+  };
+}
+
 export function exerciseOfRow(row: ReviewRow, choices: ReviewChoices): string | null {
   return row.candidate.exerciseId ?? choices.exerciseByRow.get(row.id) ?? null;
+}
+
+export function needsExercisePick(row: ReviewRow): boolean {
+  return row.greyed === null && row.candidate.exerciseId === null;
+}
+
+export function canBeChosen(row: ReviewRow, choices: ReviewChoices): boolean {
+  return row.greyed === null && exerciseOfRow(row, choices) !== null;
+}
+
+export function isChosen(row: ReviewRow, choices: ReviewChoices): boolean {
+  return canBeChosen(row, choices) && choices.selected.has(row.id);
 }
 
 function overlappingSession(
@@ -138,14 +146,6 @@ function overlappingSession(
   );
 }
 
-function canBeChosen(row: ReviewRow, choices: ReviewChoices): boolean {
-  return row.greyed === null && exerciseOfRow(row, choices) !== null;
-}
-
-export function isChosen(row: ReviewRow, choices: ReviewChoices): boolean {
-  return canBeChosen(row, choices) && choices.selected.has(row.id);
-}
-
 export function initialChoices(rows: readonly ReviewRow[], sessions: readonly ReviewSession[]): ReviewChoices {
   const selected = rows
     .filter((row) => row.greyed === null && row.candidate.exerciseId !== null)
@@ -154,42 +154,36 @@ export function initialChoices(rows: readonly ReviewRow[], sessions: readonly Re
   return { selected: new Set(selected), exerciseByRow: new Map() };
 }
 
-function withSelection(choices: ReviewChoices, rowIds: readonly string[], on: boolean): ReviewChoices {
+function withSelection(choices: ReviewChoices, rows: readonly ReviewRow[], on: boolean): ReviewChoices {
   const selected = new Set(choices.selected);
-  for (const rowId of rowIds) {
-    if (on) selected.add(rowId);
-    else selected.delete(rowId);
+  for (const row of rows) {
+    if (on) selected.add(row.id);
+    else selected.delete(row.id);
   }
   return { ...choices, selected };
 }
 
-export function withRowToggled(
-  rows: readonly ReviewRow[],
-  choices: ReviewChoices,
-  rowId: string,
-  on: boolean,
-): ReviewChoices {
-  const row = rows.find((candidate) => candidate.id === rowId);
-  if (row === undefined || !canBeChosen(row, choices)) return choices;
-  return withSelection(choices, [rowId], on);
+export function withRowToggled(choices: ReviewChoices, row: ReviewRow, on: boolean): ReviewChoices {
+  return canBeChosen(row, choices) ? withSelection(choices, [row], on) : choices;
 }
 
 export function withExercisePicked(
-  rows: readonly ReviewRow[],
   choices: ReviewChoices,
   sessions: readonly ReviewSession[],
-  rowId: string,
+  row: ReviewRow,
   exerciseId: string,
 ): ReviewChoices {
-  const row = rows.find((candidate) => candidate.id === rowId);
-  if (row === undefined || row.greyed !== null) return choices;
-  const picked = { ...choices, exerciseByRow: new Map([...choices.exerciseByRow, [rowId, exerciseId]]) };
-  return withSelection(picked, [rowId], overlappingSession(row, exerciseId, sessions) === null);
+  if (row.greyed !== null) return choices;
+  const picked = { ...choices, exerciseByRow: new Map([...choices.exerciseByRow, [row.id, exerciseId]]) };
+  return withSelection(picked, [row], overlappingSession(row, exerciseId, sessions) === null);
 }
 
 export function withAllToggled(rows: readonly ReviewRow[], choices: ReviewChoices, on: boolean): ReviewChoices {
-  const rowIds = rows.filter((row) => canBeChosen(row, choices)).map((row) => row.id);
-  return withSelection(choices, rowIds, on);
+  return withSelection(
+    choices,
+    rows.filter((row) => canBeChosen(row, choices)),
+    on,
+  );
 }
 
 export function allSelected(rows: readonly ReviewRow[], choices: ReviewChoices): boolean {
@@ -205,43 +199,36 @@ export function importButtonLabel(count: number): string {
   return `Import ${formatCount(count, 'workout')}`;
 }
 
-interface TimeParts {
-  weekday: string;
-  day: string;
-  month: string;
-  hour: string;
-  minute: string;
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+function formatterFor(
+  kind: 'start' | 'month',
+  timeZone: string | undefined,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const key = `${kind}:${timeZone ?? ''}`;
+  const known = formatters.get(key);
+  if (known !== undefined) return known;
+  const formatter = new Intl.DateTimeFormat('en-GB', { ...options, timeZone });
+  formatters.set(key, formatter);
+  return formatter;
 }
 
-function startParts(startedAt: string, timeZone: string | undefined): TimeParts {
-  const parts = new Intl.DateTimeFormat('en-GB', {
+function formatActivityStart(startedAt: string, timeZone?: string): string {
+  const parts = formatterFor('start', timeZone, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
-    timeZone,
   }).formatToParts(new Date(startedAt));
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((entry) => entry.type === type)?.value ?? '';
-  return {
-    weekday: part('weekday'),
-    day: part('day'),
-    month: part('month'),
-    hour: part('hour'),
-    minute: part('minute'),
-  };
+  return `${part('weekday')} ${part('day')} ${part('month')}, ${part('hour')}:${part('minute')}`;
 }
 
-export function formatActivityStart(startedAt: string, timeZone?: string): string {
-  const { weekday, day, month, hour, minute } = startParts(startedAt, timeZone);
-  return `${weekday} ${day} ${month}, ${hour}:${minute}`;
-}
-
-export function garminTypeLabel(garminType: string | null): string {
-  if (garminType === null) return UNNAMED_GARMIN_TYPE;
-  const words = garminType.replaceAll('_', ' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
+function garminTypeLabel(garminType: string | null): string {
+  return garminType === null ? UNNAMED_GARMIN_TYPE : capitalized(garminType.replaceAll('_', ' '));
 }
 
 export function rowTitle(row: ReviewRow, timeZone?: string): string {
@@ -249,10 +236,6 @@ export function rowTitle(row: ReviewRow, timeZone?: string): string {
   return row.candidate.startedAt === null
     ? type
     : `${formatActivityStart(row.candidate.startedAt, timeZone)} · ${type}`;
-}
-
-function intervalText(interval: CardioInterval): string {
-  return `${interval.rounds} × ${formatDuration(interval.workS)} / ${formatDuration(interval.restS)} rest`;
 }
 
 export function rowFacts(
@@ -268,7 +251,7 @@ export function rowFacts(
     exercise?.name,
     durationS === null ? null : formatDuration(durationS),
     showsDistance ? formatDistance(distanceM, distanceUnitFor(unit, exercise?.paceUnit ?? DEFAULT_PACE_UNIT)) : null,
-    interval === null ? null : intervalText(interval),
+    interval === null ? null : describeInterval(interval),
   ]
     .filter((fact) => fact !== null && fact !== undefined)
     .join(' · ');
@@ -305,31 +288,30 @@ export interface ReviewMonth {
 
 function monthLabel(startedAt: string | null, timeZone: string | undefined): string {
   if (startedAt === null) return UNKNOWN_MONTH;
-  return new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone }).format(new Date(startedAt));
+  return formatterFor('month', timeZone, { month: 'long', year: 'numeric' }).format(new Date(startedAt));
 }
 
 export function reviewMonths(rows: readonly ReviewRow[], timeZone?: string): ReviewMonth[] {
-  const months: ReviewMonth[] = [];
+  const months = new Map<string, ReviewRow[]>();
   for (const row of rows) {
     const label = monthLabel(row.candidate.startedAt, timeZone);
-    const month = months.find((entry) => entry.label === label);
-    if (month === undefined) months.push({ label, rows: [row] });
-    else month.rows.push(row);
+    months.set(label, [...(months.get(label) ?? []), row]);
   }
-  return months;
+  return [...months].map(([label, monthRows]) => ({ label, rows: monthRows }));
 }
 
-export function reviewRange(rows: readonly ReviewRow[]): { from: string; to: string } | null {
-  const spans = rows.flatMap(({ candidate: { startedAt, durationS } }) =>
-    startedAt === null || durationS === null
-      ? []
-      : [{ startedAt, endedAt: garminActivityEnd({ startedAt, durationS }) }],
+export function reviewExercises(exercises: readonly Exercise[]): Map<string, ReviewExercise> {
+  return new Map(
+    exercises
+      .filter(isCardioExercise)
+      .map(({ id, name, activity: { tracksDistance, paceUnit } }) => [id, { id, name, tracksDistance, paceUnit }]),
   );
-  if (spans.length === 0) return null;
-  return {
-    from: spans.map((span) => span.startedAt).reduce((earliest, start) => (start < earliest ? start : earliest)),
-    to: spans.map((span) => span.endedAt).reduce((latest, end) => (end > latest ? end : latest)),
-  };
+}
+
+export function pickableExercises(exercises: readonly Exercise[]): ReviewExercise[] {
+  return [...reviewExercises(activeExercises(exercises)).values()].sort((first, second) =>
+    first.name.localeCompare(second.name),
+  );
 }
 
 export interface ActivityToImport {
@@ -338,7 +320,7 @@ export interface ActivityToImport {
   exerciseId: string;
   durationS: number;
   distanceM: number | null;
-  interval: CardioInterval | null;
+  interval: GarminImportCandidate['interval'];
   historyOnly: boolean;
 }
 
@@ -368,11 +350,6 @@ export function activitiesToImport(
     .sort((first, second) => first.startedAt.localeCompare(second.startedAt));
 }
 
-export type ImportOutcome =
-  | { startedAt: string; outcome: 'imported'; sessionId: string; xp: number }
-  | { startedAt: string; outcome: 'history_only'; sessionId: string }
-  | { startedAt: string; outcome: 'skipped'; reason: string };
-
 export interface ImportSummary {
   scored: number;
   xp: number;
@@ -381,9 +358,7 @@ export interface ImportSummary {
   hitDailyCap: boolean;
 }
 
-const DAILY_CAP_REASON = 'daily_cap';
-
-export function importSummary(outcomes: readonly ImportOutcome[]): ImportSummary {
+export function importSummary(outcomes: readonly GarminImportOutcome[]): ImportSummary {
   const scored = outcomes.filter((outcome) => outcome.outcome === 'imported');
   const skipped = outcomes.filter((outcome) => outcome.outcome === 'skipped');
   return {
@@ -415,17 +390,6 @@ export function importProblemText(answer: Exclude<InvokeOutcome<unknown>, { kind
 
 export function fileSummary(fileName: string, activityCount: number): string {
   return `${fileName} · ${activityCount} ${activityCount === 1 ? 'activity' : 'activities'}`;
-}
-
-export function reviewExercises(
-  exercises: readonly { id: string; name: string; activity: { tracksDistance: boolean; paceUnit: PaceUnit } }[],
-): Map<string, ReviewExercise> {
-  return new Map(
-    exercises.map(({ id, name, activity: { tracksDistance, paceUnit } }) => [
-      id,
-      { id, name, tracksDistance, paceUnit },
-    ]),
-  );
 }
 
 export const UNREADABLE_FILE_TEXT =

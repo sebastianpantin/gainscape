@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { GarminActivity } from '@domain/index.ts';
+import type { Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
+  activitiesRange,
   activitiesToImport,
   allSelected,
+  canBeChosen,
   chosenCount,
   fileSummary,
   importButtonLabel,
@@ -11,10 +14,12 @@ import {
   importSummary,
   initialChoices,
   lastImportText,
+  needsExercisePick,
+  pickableExercises,
   type ReviewContext,
   type ReviewExercise,
+  reviewExercises,
   reviewMonths,
-  reviewRange,
   type ReviewRow,
   reviewRows,
   rowBadge,
@@ -143,7 +148,6 @@ describe('the default selection', () => {
   it('leaves a possible duplicate out: a logged workout of the same exercise whose time overlaps', () => {
     const sessions = [
       {
-        id: 'session-1',
         startedAt: '2026-11-23T06:45:00.000Z',
         endedAt: '2026-11-23T07:30:00.000Z',
         exerciseIds: [RUNNING.id],
@@ -174,7 +178,7 @@ describe('the default selection', () => {
     ],
     ['an overlapping workout of another exercise', '2026-11-23T06:45:00.000Z', '2026-11-23T07:30:00.000Z', SWIMMING.id],
   ])('does not call %s a duplicate', (_case, startedAt, endedAt, exerciseId) => {
-    const sessions = [{ id: 'session-1', startedAt, endedAt, exerciseIds: [exerciseId] }];
+    const sessions = [{ startedAt, endedAt, exerciseIds: [exerciseId] }];
     const review = reviewOf([activity()], { sessions });
     expect(chosenCount(review.rows, review.choices)).toBe(1);
     expect(rowBadge(review.rows[0], review.choices, sessions)).toBeNull();
@@ -183,7 +187,6 @@ describe('the default selection', () => {
   it('counts a workout that touches the activity at one end as overlapping', () => {
     const sessions = [
       {
-        id: 'session-1',
         startedAt: '2026-11-23T07:00:05.000Z',
         endedAt: '2026-11-23T08:00:00.000Z',
         exerciseIds: [RUNNING.id],
@@ -197,10 +200,10 @@ describe('the default selection', () => {
     const review = reviewOf([activity({ type: 'surfing' })]);
     expect(chosenCount(review.rows, review.choices)).toBe(0);
     expect(badgeTexts(review.rows, review)).toEqual(['Needs an exercise']);
-    const toggled = withRowToggled(review.rows, review.choices, review.rows[0].id, true);
+    const toggled = withRowToggled(review.choices, review.rows[0], true);
     expect(chosenCount(review.rows, toggled)).toBe(0);
 
-    const picked = withExercisePicked(review.rows, review.choices, [], review.rows[0].id, RUNNING.id);
+    const picked = withExercisePicked(review.choices, [], review.rows[0], RUNNING.id);
     expect(chosenCount(review.rows, picked)).toBe(1);
     expect(rowBadge(review.rows[0], picked, [])).toBeNull();
   });
@@ -208,28 +211,27 @@ describe('the default selection', () => {
   it('keeps a picked exercise deselected when it makes the activity a possible duplicate', () => {
     const sessions = [
       {
-        id: 'session-1',
         startedAt: '2026-11-23T06:45:00.000Z',
         endedAt: '2026-11-23T07:30:00.000Z',
         exerciseIds: [SWIMMING.id],
       },
     ];
     const review = reviewOf([activity({ type: 'surfing' })], { sessions });
-    const picked = withExercisePicked(review.rows, review.choices, sessions, review.rows[0].id, SWIMMING.id);
+    const picked = withExercisePicked(review.choices, sessions, review.rows[0], SWIMMING.id);
     expect(chosenCount(review.rows, picked)).toBe(0);
     expect(rowBadge(review.rows[0], picked, sessions)?.kind).toBe('possible_duplicate');
-    expect(chosenCount(review.rows, withRowToggled(review.rows, picked, review.rows[0].id, true))).toBe(1);
+    expect(chosenCount(review.rows, withRowToggled(picked, review.rows[0], true))).toBe(1);
   });
 
   it('shows history only on an old activity once its exercise is picked', () => {
     const review = reviewOf([activity({ type: 'surfing', startedAt: '2026-10-01T06:00:00.000Z' })]);
-    const picked = withExercisePicked(review.rows, review.choices, [], review.rows[0].id, RUNNING.id);
+    const picked = withExercisePicked(review.choices, [], review.rows[0], RUNNING.id);
     expect(rowBadge(review.rows[0], picked, [])?.text).toBe('History only');
   });
 
   it('never selects a greyed activity', () => {
     const review = reviewOf([activity({ durationS: 15_000 })]);
-    const forced = withRowToggled(review.rows, review.choices, review.rows[0].id, true);
+    const forced = withRowToggled(review.choices, review.rows[0], true);
     expect(chosenCount(review.rows, forced)).toBe(0);
     expect(allSelected(review.rows, forced)).toBe(false);
   });
@@ -261,7 +263,7 @@ describe('Select all', () => {
 
   it('clears the selection and keeps the picked exercises', () => {
     const review = reviewOf(activities, { sessions });
-    const picked = withExercisePicked(review.rows, review.choices, sessions, review.rows[1].id, RUNNING.id);
+    const picked = withExercisePicked(review.choices, sessions, review.rows[1], RUNNING.id);
     const none = withAllToggled(review.rows, picked, false);
     expect(chosenCount(review.rows, none)).toBe(0);
     expect(chosenCount(review.rows, withAllToggled(review.rows, none, true))).toBe(3);
@@ -307,7 +309,7 @@ describe('activitiesToImport', () => {
 
   it('drops the distance for a picked exercise that tracks none', () => {
     const review = reviewOf([activity({ type: 'yoga' })]);
-    const picked = withExercisePicked(review.rows, review.choices, [], review.rows[0].id, YOGA.id);
+    const picked = withExercisePicked(review.choices, [], review.rows[0], YOGA.id);
     expect(activitiesToImport(review.rows, picked, EXERCISES)[0]).toMatchObject({
       garminType: 'yoga',
       exerciseId: YOGA.id,
@@ -321,15 +323,51 @@ describe('activitiesToImport', () => {
   });
 });
 
-describe('reviewRange', () => {
+describe('activitiesRange', () => {
   it('spans from the earliest start to the latest end of the readable activities', () => {
-    const { rows } = reviewOf([
-      activity({ startedAt: '2026-11-23T06:00:00.000Z', durationS: 3600 }),
-      activity({ startedAt: '2026-11-20T06:00:00.000Z' }),
-      activity({ startedAt: 'never' }),
+    expect(
+      activitiesRange([
+        activity({ startedAt: '2026-11-23T06:00:00.900Z', durationS: 3600 }),
+        activity({ startedAt: '2026-11-20T06:00:00.000Z' }),
+        activity({ startedAt: 'never' }),
+        activity({ startedAt: '2026-11-25T06:00:00.000Z', durationS: Number.NaN }),
+      ]),
+    ).toEqual({ from: '2026-11-20T06:00:00.000Z', to: '2026-11-23T07:00:00.000Z' });
+    expect(activitiesRange([activity({ startedAt: 'never' })])).toBeNull();
+  });
+});
+
+describe('what a row offers', () => {
+  it('lets a row be chosen once it has an exercise and is not greyed, and asks for a pick only when none is mapped', () => {
+    const review = reviewOf([
+      activity({ startedAt: '2026-11-23T06:00:00.000Z' }),
+      activity({ startedAt: '2026-11-22T06:00:00.000Z', type: 'surfing' }),
+      activity({ startedAt: '2026-11-21T06:00:00.000Z', durationS: 15_000 }),
+      activity({ startedAt: '2026-11-20T06:00:00.000Z', type: 'surfing', durationS: 15_000 }),
     ]);
-    expect(reviewRange(rows)).toEqual({ from: '2026-11-20T06:00:00.000Z', to: '2026-11-23T07:00:00.000Z' });
-    expect(reviewRange(reviewOf([activity({ startedAt: 'never' })]).rows)).toBeNull();
+    expect(review.rows.map((row) => canBeChosen(row, review.choices))).toEqual([true, false, false, false]);
+    expect(review.rows.map(needsExercisePick)).toEqual([false, true, false, false]);
+    const picked = withExercisePicked(review.choices, [], review.rows[1], RUNNING.id);
+    expect(canBeChosen(review.rows[1], picked)).toBe(true);
+    expect(needsExercisePick(review.rows[1])).toBe(true);
+  });
+
+  it('offers the active cardio exercises by name, and still names an archived one a row maps to', () => {
+    const cardio = (id: string, name: string, archived = false) =>
+      ({
+        id,
+        name,
+        archived,
+        modality: 'cardio',
+        activity: { tracksDistance: id !== 'yoga', paceUnit: 'per_km' },
+      }) as unknown as Exercise;
+    const lift = { id: 'bench', name: 'Bench', archived: false, modality: 'lift' } as unknown as Exercise;
+    const exercises = [cardio('walk', 'Walking'), lift, cardio('old', 'Aqua jogging', true), cardio('yoga', 'Yoga')];
+    expect(pickableExercises(exercises)).toEqual([
+      { id: 'walk', name: 'Walking', tracksDistance: true, paceUnit: 'per_km' },
+      { id: 'yoga', name: 'Yoga', tracksDistance: false, paceUnit: 'per_km' },
+    ]);
+    expect([...reviewExercises(exercises).keys()]).toEqual(['walk', 'old', 'yoga']);
   });
 });
 

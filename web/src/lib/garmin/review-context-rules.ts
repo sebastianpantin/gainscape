@@ -9,7 +9,6 @@ const garminActivityTypeRowSchema = z.object({ key: z.string(), exercise_id: z.s
 const GARMIN_ACTIVITY_TYPE_COLUMNS = columnsOf(garminActivityTypeRowSchema);
 
 const reviewSessionRowSchema = z.object({
-  id: z.string(),
   started_at: z.string(),
   ended_at: z.string(),
   sets: z.array(z.object({ exercise_id: z.string() })),
@@ -41,10 +40,9 @@ async function querySessionsWithin(client: SupabaseClient, range: ReviewRange): 
     .order('started_at');
   if (sessions.error) throw sessions.error;
   return parsedRows(reviewSessionRowSchema, sessions.data).map((row) => ({
-    id: row.id,
     startedAt: new Date(row.started_at).toISOString(),
     endedAt: new Date(row.ended_at).toISOString(),
-    exerciseIds: [...new Set(row.sets.map((set) => set.exercise_id))],
+    exerciseIds: row.sets.map((set) => set.exercise_id),
   }));
 }
 

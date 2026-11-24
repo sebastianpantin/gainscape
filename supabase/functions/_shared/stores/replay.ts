@@ -380,8 +380,10 @@ export async function deleteSessionAndRederive(
   userId: string,
   key: SessionKey,
 ): Promise<ReplayChanges> {
-  const previousExerciseIds = await sessionExerciseIds(tx, key.id);
-  await markGarminActivityOfSessionDeleted(tx, userId, key.id);
+  const [previousExerciseIds] = await Promise.all([
+    sessionExerciseIds(tx, key.id),
+    markGarminActivityOfSessionDeleted(tx, userId, key.id),
+  ]);
   await tombstoneSession(tx, userId, key);
   const { replayedSessionIds, revokedDrops } = await replayFrom(
     tx,

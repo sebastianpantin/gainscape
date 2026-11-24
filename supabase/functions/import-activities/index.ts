@@ -1,65 +1,50 @@
 import { sql, type Transaction } from '../_shared/db.ts';
-import { GARMIN_IMPORT_CHUNK, implausibleTiming, isWithinEditWindow } from '../_shared/domain/index.ts';
-import { HttpError } from '../_shared/http.ts';
-import { takeRateLimit } from '../_shared/rate-limit.ts';
-import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
 import {
-  type GarminActivityOutcome,
-  rememberImportedGarminActivity,
-  seenGarminActivityOutcome,
-} from '../_shared/stores/garmin-activities.ts';
+  GARMIN_IMPORT_CHUNK,
+  type GarminImportOutcome,
+  type GarminSeenOutcome,
+  type GarminSkipReason,
+  implausibleTiming,
+  isWithinEditWindow,
+} from '../_shared/domain/index.ts';
+import { HttpError } from '../_shared/http.ts';
+import { rateLimitAllows } from '../_shared/rate-limit.ts';
+import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
+import { rememberImportedGarminActivities, seenGarminActivityOutcomes } from '../_shared/stores/garmin-activities.ts';
 import { storeNewSession } from '../_shared/stores/new-session.ts';
 import { lockUser } from '../_shared/stores/sessions.ts';
 import { type ConfirmedActivity, type ImportActivitiesPayload, parseImportActivitiesPayload } from './payload.ts';
 
-type SkipReason = 'already_imported' | 'deleted' | 'rejected' | 'daily_cap' | 'unreadable';
-
-type ImportOutcome =
-  | { startedAt: string; outcome: 'imported'; sessionId: string; xp: number }
-  | { startedAt: string; outcome: 'history_only'; sessionId: string }
-  | { startedAt: string; outcome: 'skipped'; reason: SkipReason };
-
 interface ImportActivitiesResponse {
-  activities: ImportOutcome[];
+  activities: GarminImportOutcome[];
 }
 
-const SKIP_REASON_OF_SEEN: Record<GarminActivityOutcome, SkipReason> = {
+const SKIP_REASON_OF_SEEN: Record<GarminSeenOutcome, GarminSkipReason> = {
   imported: 'already_imported',
   deleted: 'deleted',
   rejected: 'rejected',
 };
 
-const RATE_LIMITED_STATUS = 429;
-
-function isRateLimited(error: unknown): boolean {
-  return error instanceof HttpError && error.status === RATE_LIMITED_STATUS;
-}
-
-async function dailyCapAllows(tx: Transaction, userId: string): Promise<boolean> {
-  try {
-    await tx.savepoint((savepoint) => takeRateLimit(savepoint, 'garmin_import_day', userId));
-    return true;
-  } catch (error) {
-    if (isRateLimited(error)) return false;
-    throw error;
-  }
-}
-
 interface ImportRun {
   userId: string;
   now: Date;
+  seen: Map<string, GarminSeenOutcome>;
   capReached: boolean;
   lastCompletedAt: string | null;
 }
 
-async function importActivity(tx: Transaction, run: ImportRun, activity: ConfirmedActivity): Promise<ImportOutcome> {
-  const { startedAt, endedAt, garminType, set } = activity;
-  const skipped = (reason: SkipReason): ImportOutcome => ({ startedAt, outcome: 'skipped', reason });
+async function importActivity(
+  tx: Transaction,
+  run: ImportRun,
+  activity: ConfirmedActivity,
+): Promise<GarminImportOutcome> {
+  const { startedAt, endedAt, set } = activity;
+  const skipped = (reason: GarminSkipReason): GarminImportOutcome => ({ startedAt, outcome: 'skipped', reason });
 
-  const seen = await seenGarminActivityOutcome(tx, run.userId, startedAt);
-  if (seen !== null) return skipped(SKIP_REASON_OF_SEEN[seen]);
+  const seen = run.seen.get(startedAt);
+  if (seen !== undefined) return skipped(SKIP_REASON_OF_SEEN[seen]);
   if (implausibleTiming(startedAt, endedAt, run.now.getTime()) !== null) return skipped('unreadable');
-  run.capReached ||= !(await dailyCapAllows(tx, run.userId));
+  run.capReached ||= !(await rateLimitAllows(tx, 'garmin_import_day', run.userId));
   if (run.capReached) return skipped('daily_cap');
 
   const sessionId = crypto.randomUUID();
@@ -81,7 +66,7 @@ async function importActivity(tx: Transaction, run: ImportRun, activity: Confirm
     run.now,
   );
   run.lastCompletedAt = stored.completedAt;
-  await rememberImportedGarminActivity(tx, run.userId, { startedAt, garminType, sessionId });
+  run.seen.set(startedAt, 'imported');
   if (historyOnly) return { startedAt, outcome: 'history_only', sessionId };
   const xp = Object.values(stored.summary.xpBySkill).reduce((total, skillXp) => total + skillXp, 0);
   return { startedAt, outcome: 'imported', sessionId, xp };
@@ -99,12 +84,25 @@ async function importActivities(userId: string, payload: ImportActivitiesPayload
   assertWithinScoringBudget(payload.activities, now);
   return await sql.begin(async (tx) => {
     await lockUser(tx, userId);
-    const run: ImportRun = { userId, now, capReached: false, lastCompletedAt: null };
+    const seen = await seenGarminActivityOutcomes(
+      tx,
+      userId,
+      payload.activities.map((activity) => activity.startedAt),
+    );
+    const run: ImportRun = { userId, now, seen, capReached: false, lastCompletedAt: null };
     const inStartOrder = payload.activities
       .map((activity, sentAt) => ({ activity, sentAt }))
       .sort((a, b) => a.activity.startedAt.localeCompare(b.activity.startedAt) || a.sentAt - b.sentAt);
-    const outcomes: ImportOutcome[] = [];
+    const outcomes: GarminImportOutcome[] = [];
     for (const { activity, sentAt } of inStartOrder) outcomes[sentAt] = await importActivity(tx, run, activity);
+    await rememberImportedGarminActivities(
+      tx,
+      userId,
+      payload.activities.flatMap(({ startedAt, garminType }, sentAt) => {
+        const outcome = outcomes[sentAt];
+        return outcome.outcome === 'skipped' ? [] : [{ startedAt, garminType, sessionId: outcome.sessionId }];
+      }),
+    );
     return { activities: outcomes };
   });
 }

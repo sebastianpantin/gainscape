@@ -1,6 +1,5 @@
-import { type GarminActivity, type GarminLap, type GarminWorkoutStep, isRecord } from '@domain/index.ts';
+import { type GarminActivity, type GarminLap, type GarminWorkoutStep, isRecord, MS_PER_SECOND } from '@domain/index.ts';
 
-const MS_PER_SECOND = 1000;
 const GENERIC_SUB_SPORT = 'generic';
 const TIMED_STEP = 'time';
 const SPORTS_NAMED_BY_SUB_SPORT: ReadonlySet<string> = new Set(['training', 'fitness_equipment', 'generic']);

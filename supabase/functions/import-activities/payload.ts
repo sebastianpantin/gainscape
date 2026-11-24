@@ -5,14 +5,14 @@ import {
   garminActivityEnd,
   garminActivityIdentity,
 } from '../_shared/domain/index.ts';
-import { lowerUuid, parseOr422, type SetPayload, setSchema } from '../_shared/session-payload.ts';
+import { isoInstant, lowerUuid, parseOr422, type SetPayload, setSchema } from '../_shared/session-payload.ts';
 
 const activitySchema = z
   .object({
-    startedAt: z.iso
-      .datetime({ offset: true })
-      .transform((instant) => new Date(instant).toISOString())
-      .refine((instant) => garminActivityIdentity(instant) === instant, 'a Garmin activity starts on a whole second'),
+    startedAt: isoInstant.refine(
+      (instant) => garminActivityIdentity(instant) === instant,
+      'a Garmin activity starts on a whole second',
+    ),
     garminType: z
       .string()
       .regex(/^[a-z0-9_]{1,60}$/)

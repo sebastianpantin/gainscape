@@ -1,6 +1,7 @@
-import { CARDIO_BOUNDS, intervalDurationSeconds } from './cardio.ts';
+import { CARDIO_BOUNDS, isLoggableInterval } from './cardio.ts';
 import { isWithinEditWindow } from './edit-window.ts';
-import { isWholeNumberBetween, roundTo } from './math.ts';
+import { MS_PER_SECOND, roundTo } from './math.ts';
+import { implausibleTiming } from './session-timing.ts';
 import type { CardioInterval } from './types.ts';
 
 export interface GarminWorkoutStep {
@@ -37,7 +38,6 @@ export interface GarminImportCandidate {
   rejection: GarminRejection | null;
 }
 
-const MS_PER_SECOND = 1000;
 const DISTANCE_DECIMALS = 1;
 const GARMIN_STRENGTH_TYPES: ReadonlySet<string> = new Set(['strength_training']);
 const WORK_INTENSITIES: ReadonlySet<string> = new Set(['active', 'interval']);
@@ -75,19 +75,6 @@ function sharedSeconds(phases: readonly IntervalPhase[]): number | null {
   return seconds.size === 1 && only !== null ? only : null;
 }
 
-function isLoggableInterval(interval: CardioInterval): boolean {
-  const { intervalWorkS, intervalRestS, intervalRounds, intervalDurationS } = CARDIO_BOUNDS;
-  if (
-    !isWholeNumberBetween(interval.workS, intervalWorkS.min, intervalWorkS.max) ||
-    !isWholeNumberBetween(interval.restS, intervalRestS.min, intervalRestS.max) ||
-    !isWholeNumberBetween(interval.rounds, intervalRounds.min, intervalRounds.max)
-  ) {
-    return false;
-  }
-  const durationS = intervalDurationSeconds(interval);
-  return durationS >= intervalDurationS.min && durationS <= intervalDurationS.max;
-}
-
 function structuredInterval(activity: GarminActivity): CardioInterval | null {
   const phases = intervalPhases(activity);
   if (phases.at(-1)?.isWork === false) phases.pop();
@@ -107,10 +94,10 @@ function loggedDistance(distanceM: number | null): number | null {
   return rounded < CARDIO_BOUNDS.distanceM.min ? null : rounded;
 }
 
-function isUnreadable(activity: GarminActivity): boolean {
+function hasUnreadableMeasures(activity: GarminActivity): boolean {
   const badDuration = !Number.isFinite(activity.durationS) || activity.durationS < 0;
   const badDistance = activity.distanceM !== null && !(activity.distanceM >= 0 && Number.isFinite(activity.distanceM));
-  return garminActivityIdentity(activity.startedAt) === null || badDuration || badDistance;
+  return badDuration || badDistance;
 }
 
 function sizeRejection(durationS: number, distanceM: number | null): GarminRejection | null {
@@ -136,13 +123,17 @@ export function garminImportCandidate(
     status: 'rejected',
     rejection,
   });
-  if (isUnreadable(activity)) return rejected('unreadable');
+  const startedAt = garminActivityIdentity(activity.startedAt);
+  if (startedAt === null || hasUnreadableMeasures(activity)) return rejected('unreadable');
+  const durationS = Math.round(activity.durationS);
+  if (implausibleTiming(startedAt, garminActivityEnd({ startedAt, durationS }), now) !== null) {
+    return rejected('unreadable');
+  }
 
-  const startedAt = garminActivityIdentity(activity.startedAt)!;
   const measured = {
     startedAt,
     garminType: activity.type,
-    durationS: Math.round(activity.durationS),
+    durationS,
     distanceM: loggedDistance(activity.distanceM),
     historyOnly: !isWithinEditWindow(startedAt, now),
   };
@@ -157,6 +148,15 @@ export function garminImportCandidate(
   const status = exerciseId === null ? 'needs_exercise' : measured.historyOnly ? 'history_only' : 'importable';
   return { ...measured, exerciseId, interval: structuredInterval(activity), status, rejection: null };
 }
+
+export type GarminSeenOutcome = 'imported' | 'deleted' | 'rejected';
+
+export type GarminSkipReason = 'already_imported' | 'deleted' | 'rejected' | 'daily_cap' | 'unreadable';
+
+export type GarminImportOutcome =
+  | { startedAt: string; outcome: 'imported'; sessionId: string; xp: number }
+  | { startedAt: string; outcome: 'history_only'; sessionId: string }
+  | { startedAt: string; outcome: 'skipped'; reason: GarminSkipReason };
 
 export const GARMIN_IMPORT_CHUNK = Object.freeze({ maxActivities: 50, maxScored: 10 });
 

@@ -1,29 +1,30 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { BackLink } from '../../components/BackLink.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
-import { activeExercises, isCardioExercise } from '../../lib/exercises/catalog-rules.ts';
 import { importActivities } from '../../lib/garmin/garmin-import.ts';
 import {
+  activitiesRange,
   activitiesToImport,
   allSelected,
+  canBeChosen,
   chosenCount,
-  exerciseOfRow,
   fileSummary,
   importButtonLabel,
   importSummary,
   initialChoices,
   isChosen,
+  needsExercisePick,
+  pickableExercises,
   type ReviewChoices,
-  type ReviewContext,
   type ReviewExercise,
   reviewExercises,
   reviewMonths,
-  reviewRange,
   type ReviewRow,
   reviewRows,
+  type ReviewSession,
   rowBadge,
   rowFacts,
   rowTitle,
@@ -44,11 +45,10 @@ import { wrote } from '../../lib/query/writes.ts';
 import { useGoBack } from '../../lib/ui/use-go-back.ts';
 
 const SETTINGS_PATH = '/profile/settings';
-const NOTHING_KNOWN: ReviewContext = { exerciseIdByGarminType: new Map(), seen: [], sessions: [] };
 
 interface ReviewListProps {
   rows: ReviewRow[];
-  context: ReviewContext;
+  sessions: readonly ReviewSession[];
   choices: ReviewChoices;
   exercisesById: ReadonlyMap<string, ReviewExercise>;
   pickable: ReviewExercise[];
@@ -56,10 +56,10 @@ interface ReviewListProps {
   onChoices: (choices: ReviewChoices) => void;
 }
 
-function ReviewList({ rows, context, choices, exercisesById, pickable, disabled, onChoices }: ReviewListProps) {
+function ReviewList({ rows, sessions, choices, exercisesById, pickable, disabled, onChoices }: ReviewListProps) {
   const { unitPref } = usePreferences();
   const headingPrefix = useId();
-  const { sessions } = context;
+  const months = useMemo(() => reviewMonths(rows), [rows]);
 
   return (
     <>
@@ -72,7 +72,7 @@ function ReviewList({ rows, context, choices, exercisesById, pickable, disabled,
         />
         Select all
       </label>
-      {reviewMonths(rows).map((month, monthIndex) => (
+      {months.map((month, monthIndex) => (
         <section className="stack import-month" key={month.label} aria-labelledby={`${headingPrefix}-${monthIndex}`}>
           <h2 className="import-month-heading" id={`${headingPrefix}-${monthIndex}`}>
             {month.label}
@@ -81,15 +81,14 @@ function ReviewList({ rows, context, choices, exercisesById, pickable, disabled,
             {month.rows.map((row) => {
               const badge = rowBadge(row, choices, sessions);
               const title = rowTitle(row);
-              const needsPick = row.greyed === null && row.candidate.exerciseId === null;
               return (
                 <li className={row.greyed === null ? 'import-row' : 'import-row greyed'} key={row.id}>
                   <label className="import-check">
                     <input
                       type="checkbox"
                       checked={isChosen(row, choices)}
-                      disabled={disabled || row.greyed !== null || exerciseOfRow(row, choices) === null}
-                      onChange={(event) => onChoices(withRowToggled(rows, choices, row.id, event.target.checked))}
+                      disabled={disabled || !canBeChosen(row, choices)}
+                      onChange={(event) => onChoices(withRowToggled(choices, row, event.target.checked))}
                     />
                     <span className="stack import-row-text">
                       <span className="import-row-title">
@@ -100,14 +99,12 @@ function ReviewList({ rows, context, choices, exercisesById, pickable, disabled,
                       {badge?.kind === 'possible_duplicate' && <span className="muted tiny">{badge.note}</span>}
                     </span>
                   </label>
-                  {needsPick && (
+                  {needsExercisePick(row) && (
                     <select
                       aria-label={`Exercise for ${title}`}
                       value={choices.exerciseByRow.get(row.id) ?? ''}
                       disabled={disabled}
-                      onChange={(event) =>
-                        onChoices(withExercisePicked(rows, choices, sessions, row.id, event.target.value))
-                      }
+                      onChange={(event) => onChoices(withExercisePicked(choices, sessions, row, event.target.value))}
                     >
                       <option value="" disabled>
                         Choose exercise
@@ -133,36 +130,28 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
   const queryClient = useQueryClient();
   const goBack = useGoBack(SETTINGS_PATH);
   const [now] = useState(() => Date.now());
-  const range = useMemo(
-    () => reviewRange(reviewRows(pending.activities, NOTHING_KNOWN, now)),
-    [pending.activities, now],
-  );
+  const range = useMemo(() => activitiesRange(pending.activities), [pending.activities]);
   const contextQuery = useQuery(garminImportReviewQuery(userId, range));
   const exercisesQuery = useQuery(exerciseListQuery(userId));
   const [picked, setPicked] = useState<ReviewChoices | null>(null);
   const [importing, setImporting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
-  const loaded = loadedState(
-    contextQuery.data && exercisesQuery.data
-      ? { context: contextQuery.data, exercises: exercisesQuery.data }
-      : undefined,
-    contextQuery.error ?? exercisesQuery.error,
-  );
+  const context = contextQuery.data;
+  const exercises = exercisesQuery.data;
+  const loaded = loadedState(context && exercises ? true : undefined, contextQuery.error ?? exercisesQuery.error);
   const review = useMemo(() => {
-    if (loaded.status !== 'ready') return null;
-    const cardio = loaded.data.exercises.filter(isCardioExercise);
-    const rows = reviewRows(pending.activities, loaded.data.context, now);
+    if (context === undefined || exercises === undefined) return null;
+    const rows = reviewRows(pending.activities, context, now);
     return {
       rows,
-      context: loaded.data.context,
-      exercisesById: reviewExercises(cardio),
-      pickable: [...reviewExercises(activeExercises(loaded.data.exercises).filter(isCardioExercise)).values()].sort(
-        (first, second) => first.name.localeCompare(second.name),
-      ),
-      firstChoices: initialChoices(rows, loaded.data.context.sessions),
+      sessions: context.sessions,
+      exercisesById: reviewExercises(exercises),
+      pickable: pickableExercises(exercises),
+      firstChoices: initialChoices(rows, context.sessions),
     };
-  }, [loaded, pending.activities, now]);
+  }, [context, exercises, pending.activities, now]);
+  useEffect(() => dropPendingImport, []);
   const choices = picked ?? review?.firstChoices ?? null;
   const count = review && choices ? chosenCount(review.rows, choices) : 0;
 
@@ -174,7 +163,6 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
     if (run.outcomes.length > 0) await wrote(queryClient, { change: 'workout-changed' }).catch(() => undefined);
     setImporting(false);
     if (run.problem !== null) return setProblem(run.problem);
-    dropPendingImport();
     holdFinishedImport(importSummary(run.outcomes));
     goBack();
   };
@@ -196,7 +184,7 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
       {review && choices && (
         <ReviewList
           rows={review.rows}
-          context={review.context}
+          sessions={review.sessions}
           choices={choices}
           exercisesById={review.exercisesById}
           pickable={review.pickable}

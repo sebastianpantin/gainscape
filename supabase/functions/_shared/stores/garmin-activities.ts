@@ -1,25 +1,37 @@
-import type { Transaction } from '../db.ts';
+import { isoTimestamp, type Transaction } from '../db.ts';
+import type { GarminSeenOutcome } from '../domain/index.ts';
 
-export type GarminActivityOutcome = 'imported' | 'deleted' | 'rejected';
-
-export async function seenGarminActivityOutcome(
+export async function seenGarminActivityOutcomes(
   tx: Transaction,
   userId: string,
-  startedAt: string,
-): Promise<GarminActivityOutcome | null> {
-  const [row] = await tx`
-    select outcome from public.garmin_activities where user_id = ${userId} and started_at = ${startedAt}`;
-  return row?.outcome ?? null;
+  startedAts: readonly string[],
+): Promise<Map<string, GarminSeenOutcome>> {
+  const rows = await tx`
+    select started_at, outcome from public.garmin_activities
+    where user_id = ${userId} and started_at = any(${startedAts as string[]}::timestamptz[])`;
+  return new Map(rows.map((row) => [isoTimestamp(row.started_at), row.outcome]));
 }
 
-export async function rememberImportedGarminActivity(
+interface ImportedGarminActivity {
+  startedAt: string;
+  garminType: string | null;
+  sessionId: string;
+}
+
+export async function rememberImportedGarminActivities(
   tx: Transaction,
   userId: string,
-  activity: { startedAt: string; garminType: string | null; sessionId: string },
+  activities: readonly ImportedGarminActivity[],
 ): Promise<void> {
-  await tx`
-    insert into public.garmin_activities (user_id, started_at, outcome, session_id, garmin_type)
-    values (${userId}, ${activity.startedAt}, 'imported', ${activity.sessionId}, ${activity.garminType})`;
+  if (activities.length === 0) return;
+  const rows = activities.map((activity) => ({
+    user_id: userId,
+    started_at: activity.startedAt,
+    outcome: 'imported',
+    session_id: activity.sessionId,
+    garmin_type: activity.garminType,
+  }));
+  await tx`insert into public.garmin_activities ${tx(rows)}`;
 }
 
 export async function markGarminActivityOfSessionDeleted(

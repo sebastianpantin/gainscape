@@ -1,7 +1,7 @@
 import {
   boutDurationSeconds,
   CARDIO_BOUNDS,
-  intervalDurationSeconds,
+  isLoggableInterval,
   METRES_PER_KM,
   SECONDS_PER_MINUTE,
 } from '@domain/cardio.ts';
@@ -73,15 +73,6 @@ function isLoggableDistance(distanceM: number | null): boolean {
   return distanceM === null || (Number.isFinite(distanceM) && distanceM >= min && distanceM <= max);
 }
 
-function isLoggableInterval(interval: CardioInterval): boolean {
-  return (
-    isWithin(interval.workS, CARDIO_BOUNDS.intervalWorkS) &&
-    isWithin(interval.restS, CARDIO_BOUNDS.intervalRestS) &&
-    isWithin(interval.rounds, CARDIO_BOUNDS.intervalRounds) &&
-    isWithin(intervalDurationSeconds(interval), CARDIO_BOUNDS.intervalDurationS)
-  );
-}
-
 export function isLoggableBout(bout: BoutValues): boolean {
   const timing =
     bout.interval === null
@@ -114,13 +105,14 @@ export function formatDuration(durationS: number): string {
   return parts.filter(Boolean).join(' ') || '0 s';
 }
 
+export function describeInterval({ rounds, workS, restS }: CardioInterval): string {
+  const rest = restS === 0 ? '' : ` / ${formatDuration(restS)} rest`;
+  return `${rounds} × ${formatDuration(workS)}${rest}`;
+}
+
 export function describeBout(bout: BoutValues, unit: DistanceUnit): string {
   const distance = bout.distanceM === null ? [] : [formatDistance(bout.distanceM, unit)];
-  if (bout.interval !== null) {
-    const { rounds, workS, restS } = bout.interval;
-    const rest = restS === 0 ? '' : ` / ${formatDuration(restS)} rest`;
-    return [`${rounds} × ${formatDuration(workS)}${rest}`, ...distance].join(' · ');
-  }
+  if (bout.interval !== null) return [describeInterval(bout.interval), ...distance].join(' · ');
   const pace = bout.distanceM === null ? [] : [formatPace(bout.durationS, bout.distanceM, unit)];
   return [formatDuration(bout.durationS), ...distance, ...pace].join(' · ');
 }

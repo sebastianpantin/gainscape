@@ -1,3 +1,4 @@
+import type { GarminSeenOutcome } from '@domain/index.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { columnsOf, parsedRows } from '../rows.ts';
@@ -9,11 +10,9 @@ const seenGarminActivityRowSchema = z.object({
 
 const SEEN_GARMIN_ACTIVITY_COLUMNS = columnsOf(seenGarminActivityRowSchema);
 
-export type SeenGarminOutcome = z.infer<typeof seenGarminActivityRowSchema>['outcome'];
-
 export interface SeenGarminActivity {
   startedAt: string;
-  outcome: SeenGarminOutcome;
+  outcome: GarminSeenOutcome;
 }
 
 export async function querySeenGarminActivities(

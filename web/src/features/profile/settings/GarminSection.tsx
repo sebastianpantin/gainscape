@@ -10,8 +10,9 @@ import {
 } from '../../../lib/garmin/import-review-rules.ts';
 import { holdPendingImport, takeFinishedImport } from '../../../lib/garmin/pending-import.ts';
 import { garminLastImportQuery } from '../../../lib/query/queries.ts';
+import { HISTORY_PATH } from '../../history/SessionHeader.tsx';
 
-export const GARMIN_IMPORT_PATH = '/profile/settings/garmin-import';
+const GARMIN_IMPORT_PATH = '/profile/settings/garmin-import';
 
 export function GarminSection({ userId }: { userId: string }) {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export function GarminSection({ userId }: { userId: string }) {
       {finished && (
         <p className="notice" role="status">
           {importStatusText(finished)}{' '}
-          <Link className="tap-link" to="/collection/history">
+          <Link className="tap-link" to={HISTORY_PATH}>
             See History
           </Link>
         </p>

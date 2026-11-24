@@ -31,7 +31,7 @@ import {
 } from './sessions.ts';
 import { newSetRow, type PrescriptionSnapshotColumns, prescriptionSnapshotsBySetId } from './set-columns.ts';
 
-export interface NewSessionPayload extends SessionTiming {
+interface NewSessionPayload extends SessionTiming {
   id: string;
   notes: string | null;
   programDayId: string | null;
@@ -40,9 +40,8 @@ export interface NewSessionPayload extends SessionTiming {
   sets: SetPayload[];
 }
 
-export interface StoredNewSession {
+interface StoredNewSession {
   stored: InsertedSession;
-  timing: SessionTiming;
   programLinked: boolean;
   historyOnly: boolean;
 }
@@ -155,5 +154,5 @@ export async function storeNewSession(
           catalog,
         )
       : await storeHistoryOnly(tx, row, plan.sets, snapshots);
-  return { stored, timing: row, programLinked: programLink !== null, historyOnly: plan.mode === 'history_only' };
+  return { stored, programLinked: programLink !== null, historyOnly: plan.mode === 'history_only' };
 }
