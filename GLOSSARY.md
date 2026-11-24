@@ -136,6 +136,20 @@ _Avoid_: level, phase
 A single heavy set a Slot asks for after its last Stage fails, which resets its Reference from the reps done.
 _Avoid_: test set, max-out
 
+## Garmin
+
+**Garmin activity**:
+A workout recorded by a Garmin watch, as Garmin stores it, before or without becoming a Session.
+_Avoid_: external workout, import
+
+**Import**:
+Turning Garmin activities into Sessions, either automatically when Garmin sends one or from a file the user picks. An imported Session earns by the same rules as a logged one.
+_Avoid_: sync (sync is a Draft reaching the server)
+
+**Import review**:
+The list of Garmin activities from a file, where the user picks which ones become Sessions and under which exercise. Nothing is saved until the user confirms.
+_Avoid_: staging, pending imports
+
 ## App
 
 **Write**:
