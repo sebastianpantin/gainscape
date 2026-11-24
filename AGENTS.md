@@ -10,7 +10,7 @@ Gainscape is a strength-training logger with OSRS-inspired skills, XP, levels, l
 
 - `Makefile`: entry point for every workflow: stack, dev server, checks, every test layer, codegen.
 - `package.json`: npm dependencies only; every workflow runs through a `make` target.
-- `eslint.config.js`: ESLint flat config, including the custom `gainscape/no-comments` rule, the test id bans, the numeric `style` ban in `web/src/features`, the domain purity globals ban and the `__CHANGELOG__` global ban.
+- `eslint.config.js`: ESLint flat config, including the custom `gainscape/no-comments` rule, the test id bans, the numeric `style` ban in `web/src/features`, the domain purity globals ban, the `__CHANGELOG__` global ban and the `@garmin/fitsdk` import ban outside `tests/` and `e2e/` (its licence forbids shipping it).
 - `tsconfig.json`: solution file for editors and Vite; `make typecheck` runs each referenced config, so `tsc` fails on a global from the wrong environment. `tsconfig.web.json`: `web/src` with DOM and no Node types. `tsconfig.domain.json`: the domain with neither DOM nor Node. `tsconfig.node.json`: scripts, tests, e2e, `web/build` and the root configs with Node and DOM (tests and e2e drive DOM code). Shared options and the `@domain/*` path alias live in `tsconfig.base.json`.
 - `tsconfig.sw.json`: separate WebWorker type-check for `web/src/sw` and `web/src/pwa/shell-rules.ts`.
 - `vitest.config.ts`: Vitest projects (`@domain` resolves through `resolve.tsconfigPaths`): `unit` (balance, catalog, deploy, domain, web; parallel), `integration` (4 workers in parallel), then `integration-serial` (files that touch global state, and timing benchmarks, one at a time).
@@ -112,6 +112,7 @@ Design for testability. Put decisions in pure functions (`domain/`, `web/src/lib
 - Node 24.2 or later (`.nvmrc`, `engines`; CI reads `.nvmrc`), because scripts rely on native type stripping and `import.meta.main`. `@types/node` stays on the same major as `.nvmrc` so `tsc` rejects APIs the runtime lacks.
 - Deno 2 for Edge Function type checks
 - Zod 4 for payload validation
+- `fit-file-parser` (MIT, pinned: it releases often) parses Garmin FIT files in the browser; `@garmin/fitsdk` only encodes test files
 - Vitest 5, fast-check, fake-indexeddb, `postgres` (direct SQL in integration tests)
 - Playwright with `@axe-core/playwright`
 - TypeScript 6, ESLint 10 with typescript-eslint strict, Prettier 3
