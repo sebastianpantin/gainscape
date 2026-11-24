@@ -24,6 +24,7 @@ const WIPED_TABLES = [
   'events',
   'exercise_maxes',
   'exercise_notes',
+  'garmin_activities',
   'item_ledger',
   'lift_goals',
   'loot_rolls',

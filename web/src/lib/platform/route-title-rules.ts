@@ -25,6 +25,7 @@ const SCREEN_TITLES: readonly (readonly [pattern: string, screen: string])[] = [
   ['/profile/preview', 'What friends see'],
   ['/profile/settings', 'Settings'],
   ['/profile/settings/whats-new', "What's new"],
+  ['/profile/settings/garmin-import', 'Import review'],
   ['/exercises', 'Custom exercises'],
   ['/programs', 'Programs'],
   ['/programs/enroll/:key', 'Follow program'],

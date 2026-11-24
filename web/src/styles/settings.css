@@ -105,3 +105,69 @@
   padding: var(--space-3);
   border: var(--border-width) solid var(--color-danger);
 }
+
+.import-month-heading {
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+}
+
+.import-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.import-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-panel);
+  border: var(--border-width) solid var(--color-panel-border);
+}
+
+.import-row.greyed {
+  background: var(--color-well);
+}
+
+.import-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: var(--tap-target);
+}
+
+.import-check > input {
+  flex-shrink: 0;
+  margin-top: var(--space-1);
+}
+
+.import-row-text {
+  flex-grow: 1;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.import-row-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+}
+
+.import-badge {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  border: var(--border-width) solid var(--color-control-border);
+  padding: 0 var(--space-1);
+  white-space: nowrap;
+}
+
+.import-badge.needs_exercise,
+.import-badge.possible_duplicate {
+  color: var(--color-text);
+}

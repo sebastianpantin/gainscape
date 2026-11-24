@@ -48,6 +48,7 @@ SQL that restates domain or web rules (change both sides together, with a new mi
 
 - `private.is_valid_enrollment` and `private.is_valid_program_position` restate `validateEnrollment` and `isPositionInSchedule` (`functions/_shared/domain/program-validate.ts`, `program-schedule.ts`). The position check also gates the session link in `complete-session`. SQL additionally requires bindings to be a UUID or null, which `validateEnrollment` does not check. Parity is tested in `tests/integration/program-validation-parity.test.ts` and `program-enrollments.test.ts`.
 - `private.max_program_reference(unit)` (1000 kg, 2205 lb) equals the domain `MAX_REFERENCE_VALUE`.
+- The `garmin_import_day` rule (500 a day, 069) is restated as `GARMIN_IMPORT_DAILY_CAP` in `web/src/lib/garmin/import-review-rules.ts`, which only words the message.
 - `profiles_display_name_visible` restates `parsedName` in `web/src/lib/names.ts`.
 - `cardio_duration_within_bounds` restates `countedWorkSeconds`, `intervalDurationSeconds` and `CARDIO_BOUNDS` (`domain/cardio.ts`).
 - `set_is_lift_cardio_or_hold` and the hold branches (044) restate `HOLD_BOUNDS` in `domain/types.ts`.
@@ -65,6 +66,7 @@ Data and seed coupling:
 - Holds and mobility: an exercise with a `mobility` share has no other share (045); `save_program` refuses any exercise whose `measure` is not `reps` (047) and any progression on a non-`external` exercise (039).
 - `reset_account_data` tombstones every deleted session in `deleted_sessions` so a stale device resubmitting one gets `410 session_deleted`. A new user-owned table must be added to its delete list or to the kept list in `tests/integration/reset-account.test.ts`.
 - `lift_goals` (055) stores only the target; achieved and progress are derived from `rep_maxes` (which keep only each slot's current best, so no first-reached date) in `web/src/lib/progress/lift-goal-rules.ts`. `target_kg` restates the 2000 kg set load cap (`MAX_SET_LOAD_KG`). `save_lift_goal` upserts, so the insert policy applies to edits too: a goal on an archived exercise can be removed but not edited.
+- `garmin_activities` (069) outlives its Session on purpose: the key is `(user_id, started_at)` cut to the second, the Session link is `on delete set null (session_id)`, and a row with outcome `imported` and no Session still counts as seen. Only `reset_account_data` and account deletion remove rows. `garmin_activity_types` (068) is catalog data replaced whole by the seed.
 - `sessions.completed_at` defaults to a value truncated to milliseconds (023), matching JavaScript `Date` precision; resubmits answer the stored `completedAt` byte for byte.
 
 After a change:

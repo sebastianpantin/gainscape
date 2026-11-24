@@ -208,6 +208,20 @@ describe('catalog generator', () => {
     expect(exercises).toContain('modality = excluded.modality');
   });
 
+  it('replaces the whole Garmin activity type table, each type keyed by its exercise id, after the exercises', () => {
+    const statements = renderStatements(loadCatalogData());
+    const cleared = statements.indexOf('delete from public.garmin_activity_types;');
+    const mapping = statements[cleared + 1];
+    expect(cleared).toBeGreaterThan(
+      statements.findIndex((statement) => statement.startsWith('insert into public.exercises')),
+    );
+    expect(mapping.startsWith('insert into public.garmin_activity_types (key, exercise_id) values\n')).toBe(true);
+    expect(mapping).toContain(`('treadmill_running', ${idFor(catalogNames.exercise('running')).raw})`);
+    expect(mapping).toContain(`('stair_climbing', ${idFor(catalogNames.exercise('stair_climber')).raw})`);
+    expect(mapping.match(/^ {2}\(/gm)).toHaveLength(13);
+    expect(mapping).not.toContain('on conflict');
+  });
+
   it('seeds the curated strength library with its variations', () => {
     const statements = renderStatements(loadCatalogData());
     const exercises = statements.find((statement) => statement.startsWith('insert into public.exercises'))!;

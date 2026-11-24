@@ -9,6 +9,7 @@ import {
 import { HttpError } from '../_shared/http.ts';
 import {
   assertDistinctSetIdsAndPositions,
+  isoInstant,
   lowerUuid,
   parseOr422,
   sessionNotes,
@@ -42,14 +43,10 @@ function withoutPrescriptions(body: unknown): { body: unknown; prescriptions: un
   return { body: { ...body, sets }, prescriptions };
 }
 
-function toMillisecondIsoString(instant: string): string {
-  return new Date(instant).toISOString();
-}
-
 const sessionSchema = z.object({
   id: lowerUuid,
-  startedAt: z.iso.datetime({ offset: true }).transform(toMillisecondIsoString),
-  endedAt: z.iso.datetime({ offset: true }).transform(toMillisecondIsoString),
+  startedAt: isoInstant,
+  endedAt: isoInstant,
   notes: sessionNotes.nullable().default(null),
   sessionRpe: z.number().int().min(1).max(10).nullable().default(null),
   programDayId: lowerUuid.nullable().default(null),

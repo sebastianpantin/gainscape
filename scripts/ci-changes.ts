@@ -51,6 +51,7 @@ const UI_FILES = [
   'scripts/wait-for-functions.mjs',
   'tests/integration/local-stack.ts',
   'tests/integration/mailbox.ts',
+  'tests/web/garmin-fit-file.ts',
   '.github/workflows/ci.yml',
 ];
 

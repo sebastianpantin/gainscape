@@ -61,12 +61,19 @@ const V9_KEYS = [
   ...V8_KEYS.slice(V8_KEYS.indexOf('weeklyGoals') + 1),
 ];
 
+const V11_KEYS = [
+  ...V9_KEYS.slice(0, V9_KEYS.indexOf('deletedSessions') + 1),
+  'garminActivities',
+  ...V9_KEYS.slice(V9_KEYS.indexOf('deletedSessions') + 1),
+];
+
 const TOP_LEVEL_KEYS_BY_VERSION: Record<number, readonly string[]> = {
   6: V6_KEYS,
   7: V7_KEYS,
   8: V8_KEYS,
   9: V9_KEYS,
   10: V9_KEYS,
+  11: V11_KEYS,
 };
 
 describe('the data export format', () => {

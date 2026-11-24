@@ -10,6 +10,8 @@ The database access layer for the Edge Functions. Each module wraps the SQL for 
 ## Map
 
 - `replay.ts`: the intent-level operations the handlers call (`deriveNewSession`, `deriveEditedSession`, `deleteSessionAndRederive`, `rebuildDerivedState`). All run the private `replayFrom`, which loads the session suffix, catalog and prior state, calls the domain `replayHistory`, then rewrites derived set columns, `set_skill_xp`, `user_skills`, records, the strength cache and summaries, revokes disqualified drops and syncs events. Start here for any derived-data change.
+- `new-session.ts`: `storeNewSession`, the one way a new Session is stored (scored with replay, loot and quests, or history only), shared by `complete-session` and `import-activities`.
+- `garmin-activities.ts`: the seen Garmin activities (`public.garmin_activities`); `deleteSessionAndRederive` marks a linked one `deleted` before the Session goes.
 - `sessions.ts` (session and set rows, `lockUser`, edit writes) and `set-columns.ts` (derived, prescription snapshot and skill XP row mappers, no SQL). Input columns and set kinds come from the domain `set-codec.ts`.
 - `history.ts`, `records.ts`, `strength.ts`: replay inputs and derived caches.
 - `loot.ts`, `events.ts`, `gear.ts`, `challenges.ts`, `catalog.ts`, `rebuild.ts`: one concern each.

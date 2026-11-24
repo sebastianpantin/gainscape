@@ -22,6 +22,9 @@ async function exportFor(userId: string) {
     const sets = await tx`select * from public.sets where user_id = ${userId} order by session_id, position`;
     const deletedSessions = await tx`
       select id, started_at, deleted_at from public.deleted_sessions where user_id = ${userId} order by deleted_at`;
+    const garminActivities = await tx`
+      select started_at, outcome, session_id, garmin_type, created_at
+      from public.garmin_activities where user_id = ${userId} order by started_at`;
     const setSkillXp = await tx`
       select x.set_id, s.key as skill, x.xp
       from public.set_skill_xp x join public.skills s on s.id = x.skill_id
@@ -116,6 +119,7 @@ async function exportFor(userId: string) {
       sessions,
       sets,
       deletedSessions,
+      garminActivities,
       setSkillXp,
       skills,
       exerciseMaxes,

@@ -51,6 +51,17 @@ const NO_LINK_BACK_LINK = {
   message: 'Use the shared BackLink, so Back returns to where the user came from (docs/design-system.md).',
 };
 
+const PROGRAM_ENGINE_INTERNALS = {
+  regex: '(^@domain/|/domain/)(program-|prescription-snapshot)',
+  message: 'Import the program engine through @domain/index.ts (or domain/index.ts) only.',
+};
+
+const GARMIN_FIT_SDK = {
+  group: ['@garmin/fitsdk', '@garmin/fitsdk/*'],
+  message:
+    'The Garmin FIT SDK only writes test files in tests/ and e2e/; its licence forbids shipping it. Parse with fit-file-parser.',
+};
+
 export default tseslint.config(
   {
     ignores: ['node_modules/', 'web/dist/', 'test-results/', 'playwright-report/', 'supabase/.temp/', '.wrangler/'],
@@ -78,20 +89,16 @@ export default tseslint.config(
     },
   },
   {
+    ignores: ['tests/**', 'e2e/**'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [GARMIN_FIT_SDK] }],
+    },
+  },
+  {
     files: ['web/src/**/*.{ts,tsx}', 'scripts/**/*.{ts,mjs}', 'supabase/functions/**/*.ts'],
     ignores: ['supabase/functions/_shared/domain/**'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              regex: '(^@domain/|/domain/)(program-|prescription-snapshot)',
-              message: 'Import the program engine through @domain/index.ts (or domain/index.ts) only.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: [PROGRAM_ENGINE_INTERNALS, GARMIN_FIT_SDK] }],
     },
   },
   {

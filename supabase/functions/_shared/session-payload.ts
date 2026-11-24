@@ -13,6 +13,8 @@ import { HttpError } from './http.ts';
 
 export const lowerUuid = z.uuid().transform((id) => id.toLowerCase());
 
+export const isoInstant = z.iso.datetime({ offset: true }).transform((instant) => new Date(instant).toISOString());
+
 export const sessionNotes = z
   .string()
   .max(2000)

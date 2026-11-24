@@ -15,6 +15,7 @@ Stack-free Vitest suites for the web app's pure logic and its static build input
   - `memory-storage.ts`: an in-memory `Storage`.
   - `draft-fixtures.ts`: the sample drafts shared by `draft-format`, `draft-edits` and `draft-starts` tests.
   - `custom-program-fixture.ts`: a custom template shaped like the output of `publish_program`, shared by the enroll and follow tests.
+  - `garmin-fit-file.ts`: encodes FIT activity files with `@garmin/fitsdk` into a temp directory, for `fit-file.test.ts` and `e2e/`. Never commit a `.fit` file: a real one is health data, and generated ones need no freshness check.
 - The draft store contract runs twice: `draft-store.idb.test.ts` (fake-indexeddb) and `draft-store.local.test.ts` (`MemoryStorage`).
 - Test files whose names do not match the module:
   - `auth-session.test.ts`: `lib/platform/auth-restore.ts`

@@ -16,6 +16,7 @@ POST endpoint that deletes a session inside the edit window, records a tombstone
 - The tombstone is what makes a later `complete-session` of the same id answer 410 `session_deleted`. Keep both in sync.
 - `ifRevision` is optional so older clients still delete. A mismatch is 409 `revision_conflict` with `{ revision }`, checked after the tombstone lookup so a retried delete stays idempotent.
 - 404 `session_not_found`, 409 `edit_window_closed`.
+- A Session that came from Import keeps its `public.garmin_activities` row, marked `deleted` with the link cleared, so `import-activities` never brings it back.
 
 ## Testing
 

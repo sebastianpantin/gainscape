@@ -777,6 +777,23 @@ insert into public.exercise_skills (exercise_id, skill_id, share_bp) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'scapular_push_up'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'wall_slide'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'mobility'), 10000);
 
+delete from public.garmin_activity_types;
+
+insert into public.garmin_activity_types (key, exercise_id) values
+  ('running', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'running')),
+  ('treadmill_running', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'running')),
+  ('trail_running', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'running')),
+  ('cycling', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cycling')),
+  ('indoor_cycling', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cycling')),
+  ('virtual_ride', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'cycling')),
+  ('lap_swimming', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'swimming')),
+  ('open_water_swimming', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'swimming')),
+  ('walking', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'walking')),
+  ('hiking', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'walking')),
+  ('indoor_rowing', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'rowing')),
+  ('elliptical', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'elliptical')),
+  ('stair_climbing', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'stair_climber'));
+
 insert into public.programs (id, key, owner_user_id, name) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl'), 'ppl', null, 'Push / Pull / Legs'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower'), 'upper_lower', null, 'Upper / Lower'),

@@ -23,10 +23,11 @@ Files are grouped by area. A `-rules.ts` file sits in the same folder as its I/O
 - `social/`: friends, feed and hiscores.
 - `stats/`: the Stats screen's aggregate RPC reads (cache-first via `../offline/stats-cache.ts`) and their rules, one pair per section of `../features/stats/AGENTS.md`.
 - `quests/`: the quest log (cache-first), `start-quest` and `quest-rules.ts` (board, step and requirement text, start errors).
+- `garmin/`: Import from a Garmin file: the FIT reader, the Import review rules and the `import-activities` call.
 - `ui/`: pure helpers behind shared components (number field, count-up, charts, toast, term help, week and month keys) and `glossary.ts`.
 - The root keeps only small cross-cutting helpers: `format.ts`, `units.ts`, `names.ts`, `error-text.ts`, `json-rules.ts`, `rows.ts`, `reorder.ts`, `parsed.ts`.
-- Start here: `platform/supabase.ts` (the one client), `platform/use-auth-session.ts` (auth boot), `platform/function-client.ts` (`invokeAsOwner`) and `query/` (the server data cache and its invalidation).
-- `*-rules.ts` files are pure, and so are a few small modules without the suffix (`units.ts`, `format.ts`, `error-text.ts`, `names.ts`, the caches); `tests/web/` covers them without a stack.
+- Start here: `platform/supabase.ts` (the one client), `platform/use-auth-session.ts` (auth boot), `platform/function-client.ts` (`invokeAsOwner`) and `query/` (the server data cache).
+- `*-rules.ts` files and a few small modules (`units.ts`, `format.ts`, `error-text.ts`, `names.ts`, the caches) are pure; `tests/web/` covers them.
 - A `<feature>.ts` beside a `<feature>-rules.ts` is the I/O half.
 - `*-store.ts`: per-user settings kept only in this device's `localStorage`, never synced.
 - `programs/program-*-rules.ts` cover following a program; the program engine itself is `@domain/program-*.ts`, imported only through `@domain/index.ts`.

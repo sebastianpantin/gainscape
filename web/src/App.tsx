@@ -79,6 +79,7 @@ const FriendPreviewScreen = lazyScreen(
 );
 const ProfileScreen = lazyTabScreen(() => import('./features/profile/ProfileScreen.tsx'), 'ProfileScreen');
 const SettingsScreen = lazyScreen(() => import('./features/profile/SettingsScreen.tsx'), 'SettingsScreen');
+const GarminImportScreen = lazyScreen(() => import('./features/profile/GarminImportScreen.tsx'), 'GarminImportScreen');
 const ActiveProgramScreen = lazyScreen(
   () => import('./features/programs/ActiveProgramScreen.tsx'),
   'ActiveProgramScreen',
@@ -249,6 +250,7 @@ function SignedInShell() {
               <Route path="/profile/preview" element={<FriendPreviewScreen userId={userId} />} />
               <Route path="/profile/settings" element={<SettingsScreen userId={userId} email={email} />} />
               <Route path="/profile/settings/whats-new" element={<WhatsNewScreen />} />
+              <Route path="/profile/settings/garmin-import" element={<GarminImportScreen userId={userId} />} />
               <Route path="/exercises" element={<ExercisesScreen userId={userId} />} />
               <Route path="/programs" element={<ProgramsScreen userId={userId} />} />
               <Route path="/programs/enroll/:key" element={<ProgramEnrollScreen userId={userId} />} />

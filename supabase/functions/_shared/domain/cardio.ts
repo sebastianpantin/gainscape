@@ -1,5 +1,5 @@
 import type { BalanceConfig } from './balance.ts';
-import { roundTo } from './math.ts';
+import { isWholeNumberBetween, roundTo } from './math.ts';
 import {
   CARDIO_EFFORT_LEVELS,
   type CardioEffortLevel,
@@ -28,6 +28,16 @@ const DEFAULT_CARDIO_EFFORT: CardioEffortLevel = 'moderate';
 
 export function intervalDurationSeconds(interval: CardioInterval): number {
   return interval.rounds * interval.workS + (interval.rounds - 1) * interval.restS;
+}
+
+export function isLoggableInterval(interval: CardioInterval): boolean {
+  const { intervalWorkS, intervalRestS, intervalRounds, intervalDurationS } = CARDIO_BOUNDS;
+  return (
+    isWholeNumberBetween(interval.workS, intervalWorkS.min, intervalWorkS.max) &&
+    isWholeNumberBetween(interval.restS, intervalRestS.min, intervalRestS.max) &&
+    isWholeNumberBetween(interval.rounds, intervalRounds.min, intervalRounds.max) &&
+    isWholeNumberBetween(intervalDurationSeconds(interval), intervalDurationS.min, intervalDurationS.max)
+  );
 }
 
 export function boutDurationSeconds(bout: { durationS: number; interval: CardioInterval | null }): number {

@@ -686,6 +686,60 @@ describe('catalog validation', () => {
     expect(() => expandCatalog({ ...sources, quests })).toThrow();
   });
 
+  it.each<[string, (catalog: CatalogData) => void, RegExp]>([
+    [
+      'the exercise exists',
+      (c) => (find(c.garminActivityTypes, 'running').exercise = 'moon_walk'),
+      /Garmin activity type "running" maps to unknown exercise "moon_walk"/,
+    ],
+    [
+      'the exercise is a Cardio exercise',
+      (c) => (find(c.garminActivityTypes, 'indoor_rowing').exercise = 'barbell_row'),
+      /Garmin activity type "indoor_rowing" maps to lift exercise "barbell_row"/,
+    ],
+    [
+      'a type key appears once',
+      (c) => c.garminActivityTypes.push({ key: 'hiking', exercise: 'running' }),
+      /Garmin activity type key "hiking" is not unique/,
+    ],
+    [
+      'a type key matches the key pattern',
+      (c) => (find(c.garminActivityTypes, 'trail_running').key = 'Trail Running'),
+      /Garmin activity type key "Trail Running" must match/,
+    ],
+  ])('rejects a catalog when the Garmin activity type rule "%s" is broken', (_rule, mutate, expected) => {
+    const problems = problemsAfter(mutate);
+    expect(
+      problems.some((problem) => expected.test(problem)),
+      problems.join('\n'),
+    ).toBe(true);
+  });
+
+  it('maps the Garmin cardio activity types and leaves strength out', () => {
+    expect(Object.fromEntries(real.garminActivityTypes.map((type) => [type.key, type.exercise]))).toEqual({
+      running: 'running',
+      treadmill_running: 'running',
+      trail_running: 'running',
+      cycling: 'cycling',
+      indoor_cycling: 'cycling',
+      virtual_ride: 'cycling',
+      lap_swimming: 'swimming',
+      open_water_swimming: 'swimming',
+      walking: 'walking',
+      hiking: 'walking',
+      indoor_rowing: 'rowing',
+      elliptical: 'elliptical',
+      stair_climbing: 'stair_climber',
+    });
+  });
+
+  it('refuses to load a Garmin activity type with an unknown field', () => {
+    const sources = readCatalogSources();
+    const garminActivityTypes = structuredClone(sources.garminActivityTypes) as Record<string, unknown>[];
+    garminActivityTypes[0].sets = 3;
+    expect(() => expandCatalog({ ...sources, garminActivityTypes })).toThrow();
+  });
+
   it('accepts a retired drop table without entries', () => {
     expect(
       problemsAfter((c) => c.dropTables.push({ key: 'old_table', name: 'Old table', retired: true, entries: [] })),
@@ -697,10 +751,11 @@ describe('catalog validation', () => {
     expect(problemsAfter((c) => (find(c.items, 'plate_crab').name = 'Dragonfly Crab'))).toEqual([]);
   });
 
-  it('reports problems in a fixed order: names, exercises, program days, gear, items, challenges, loot, recipes, denylist', () => {
+  it('reports problems in a fixed order: names, exercises, program days, gear, items, challenges, loot, recipes, Garmin activity types, denylist', () => {
     expect(
       problemsAfter((c) => {
         find(c.items, 'plate_crab').name = 'Grand Exchange Crab';
+        find(c.garminActivityTypes, 'hiking').exercise = 'moon_walk';
         find(c.recipes, 'grinder_belt').inputs[1].quantity = 0;
         find(c.dropTables, 'rare').entries[0].weight = 0;
         find(c.items, 'plate_crab').grants = 'deadlift';
@@ -719,6 +774,7 @@ describe('catalog validation', () => {
       'item "plate_crab" grants a challenge but is no scroll',
       'drop table "rare" entry "scroll_pause_bench_press" weight must be an integer in 1-1000000',
       'recipe "grinder_belt" input "grinder_scraps" quantity must be 1-1000',
+      'Garmin activity type "hiking" maps to unknown exercise "moon_walk"',
       '"Grand Exchange Crab" matches denylisted term "grand exchange"',
     ]);
   });

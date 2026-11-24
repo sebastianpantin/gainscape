@@ -160,9 +160,15 @@ export interface CatalogQuest {
   rewardXp: CatalogQuestReward[];
 }
 
+export interface CatalogGarminActivityType {
+  key: string;
+  exercise: string;
+}
+
 export interface CatalogData {
   skills: CatalogSkill[];
   exercises: CatalogExercise[];
+  garminActivityTypes: CatalogGarminActivityType[];
   programs: CatalogProgram[];
   challenges: CatalogChallenge[];
   quests: CatalogQuest[];
@@ -364,9 +370,12 @@ const dropTablesSchema = z.array(
   }),
 );
 
+const garminActivityTypesSchema = z.array(z.strictObject({ key: z.string(), exercise: z.string() }));
+
 export interface CatalogSources {
   skills: unknown;
   exercises: unknown;
+  garminActivityTypes: unknown;
   programs: unknown;
   gear: unknown;
   challenges: unknown;
@@ -380,6 +389,7 @@ export function readCatalogSources(): CatalogSources {
   return {
     skills: read('skills'),
     exercises: read('exercises'),
+    garminActivityTypes: read('garmin_activity_types'),
     programs: read('programs'),
     gear: read('gear'),
     challenges: read('challenges'),
@@ -503,6 +513,7 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
               tracksDistance: exercise.cardio.distance ?? true,
             },
     })),
+    garminActivityTypes: garminActivityTypesSchema.parse(sources.garminActivityTypes),
     programs: programsSchema.parse(sources.programs).map((program) => ({
       key: program.key,
       name: program.name,

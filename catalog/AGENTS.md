@@ -5,11 +5,11 @@
 
 ## Purpose
 
-The YAML files here are the single source of truth for all seed data: skills, exercises, programs, gear tiers and slots, scroll challenges, quests, pets and scrolls, loot drop tables and program templates. `scripts/catalog/` loads, validates and renders them into `supabase/seed.sql`. Gear items, upgrade scrap materials and crafting recipes are not written out; they are expanded from the tier and slot lists in `gear.yaml`.
+The YAML files here are the single source of truth for all seed data: skills, exercises, programs, gear tiers and slots, scroll challenges, quests, pets and scrolls, loot drop tables, Garmin activity types and program templates. `scripts/catalog/` loads, validates and renders them into `supabase/seed.sql`. Gear items, upgrade scrap materials and crafting recipes are not written out; they are expanded from the tier and slot lists in `gear.yaml`.
 
 ## Map
 
-- One file per kind: `skills.yaml`, `exercises.yaml`, `programs.yaml`, `gear.yaml`, `challenges.yaml`, `quests.yaml`, `items.yaml` (pets and scrolls), `drop_tables.yaml`. The field list is the strict zod schema in `scripts/catalog/load.ts`.
+- One file per kind: `skills.yaml`, `exercises.yaml`, `programs.yaml`, `gear.yaml`, `challenges.yaml`, `quests.yaml`, `items.yaml` (pets and scrolls), `drop_tables.yaml`, `garmin_activity_types.yaml`. The field list is the strict zod schema in `scripts/catalog/load.ts`.
 - `program-templates/<key>.yaml`: the latest version of each template, deep-equal to its fixture in `tests/domain/program-fixtures/`; older versions stay frozen as `<key>@<version>.yaml`. camelCase fields mirroring the domain `ProgramDefinition`.
 - `program-templates.lock.json`: sha256 of each published `<key>@<version>`'s canonical JSON (keys sorted recursively, no whitespace).
 
@@ -37,6 +37,7 @@ The YAML files here are the single source of truth for all seed data: skills, ex
   - Days are named `Day 1`, `Day 2`, ... in schedule order, never after a weekday or lift, because any day of the week works. Day `key`s stay as they are.
   - A published `key@version` never changes: the seed inserts with `on conflict do nothing` and the lock fails on drift. To change one, copy `<key>.yaml` unchanged to `<key>@<version>.yaml` (keep its existing lock entry), bump `version` in `<key>.yaml` and its domain fixture, edit, add the lock entry, run `make catalog`. Enrollments stay on their version (foreign key); new enrollments get the highest version. The domain must keep reading every older version, so a new definition field is optional and its absence keeps the old behaviour.
   - gitleaks reads the `stronglifts_5x5` key as a secret. `.gitleaks.toml` allows that exact value only in `catalog/program-templates/*.yaml` and `supabase/seed.sql`; a new key that trips a rule gets the same narrow allowlist entry.
+- Garmin activity types: `key` is the type key Garmin Connect gives an activity (`treadmill_running`, `lap_swimming`), unique, and `exercise` is a cardio exercise. Import turns an activity of a listed type into one Cardio set of that exercise; an unlisted type asks the user for an exercise in the Import review. Strength types stay out until Import maps them to Lift sets. The seed replaces the whole table, so a key removed from the YAML is gone.
 - No key, name or description may contain a term from `tests/ip-denylist.txt` (whole word, case-insensitive).
 - `scripts/balance/catalog.ts` hard-codes shares, skills and some cardio profiles for the simulator; `tests/catalog/sim-catalog.test.ts` fails when they drift.
 

@@ -27,6 +27,7 @@ export const USER_TABLES: { table: string; column: string }[] = [
   { table: 'exercise_notes', column: 'user_id' },
   { table: 'weekly_goals', column: 'user_id' },
   { table: 'lift_goals', column: 'user_id' },
+  { table: 'garmin_activities', column: 'user_id' },
   { table: 'exercises', column: 'owner_user_id' },
   { table: 'programs', column: 'owner_user_id' },
   { table: 'deleted_sessions', column: 'user_id' },
@@ -97,6 +98,10 @@ export async function giveUserEverything(user: TestUser): Promise<void> {
   const keptSessionId = await logOneSession(user);
   await logOneSession(user, 80);
   await grantDrop(user.id, keptSessionId, randomUUID(), 'scroll_pause_squat', 1, 'pr');
+  await db`
+    insert into public.garmin_activities (user_id, started_at, outcome, session_id, garmin_type)
+    select s.user_id, date_trunc('second', s.started_at), 'imported', s.id, 'running'
+    from public.sessions s where s.id = ${keptSessionId}`;
   await db`
     insert into public.drop_luck (user_id, drop_table_id, dry_rolls)
     select ${user.id}, id, 3 from public.drop_tables where key = 'regular'
