@@ -50,7 +50,7 @@ SQL that restates domain or web rules (change both sides together, with a new mi
 - `private.max_program_reference(unit)` (1000 kg, 2205 lb) equals the domain `MAX_REFERENCE_VALUE`.
 - The `garmin_import_day` rule (500 a day, 069) is restated as `GARMIN_IMPORT_DAILY_CAP` in `web/src/lib/garmin/import-review-rules.ts`, which only words the message.
 - `profiles_display_name_visible` restates `parsedName` in `web/src/lib/names.ts`.
-- `cardio_duration_within_bounds` restates `countedWorkSeconds`, `intervalDurationSeconds` and `CARDIO_BOUNDS` (`domain/cardio.ts`).
+- `cardio_duration_within_bounds` (last in 070) restates `countedWorkSeconds`, `intervalDurationSeconds` and `CARDIO_BOUNDS` (`domain/cardio.ts`). A steady bout may last 12 hours, as long as a workout (`MAX_SESSION_DURATION_MS`), so a long walk or hike fits; an interval stays at 4 hours.
 - `set_is_lift_cardio_or_hold` and the hold branches (044) restate `HOLD_BOUNDS` in `domain/types.ts`.
 - `save_exercise_note` trims an explicit, locale-independent whitespace set (ECMAScript whitespace and line terminators including U+FEFF, plus U+0085), the same set as `trimNote` in `web/src/lib/exercises/exercise-note-rules.ts`; never use `\s` (038).
 - `exercise_strength_state` (016) matches the domain `strengthStateAt`.

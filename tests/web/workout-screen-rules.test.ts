@@ -234,7 +234,7 @@ describe('removedSetAt and restoreRemovedSet for cardio', () => {
   it('leaves the draft alone when the bout would go past the cardio time cap', () => {
     const rowing = { ...cardio('rowing'), sets: [bout('short', 600)] };
     const removed = removedSetAt(draftOf([rowing]), 0, 'short')!;
-    const full = draftOf([{ ...cardio('rowing'), sets: [bout('long', 4 * 60 * 60)] }]);
+    const full = draftOf([{ ...cardio('rowing'), sets: [bout('long', 12 * 60 * 60)] }]);
     expect(restoreRemovedSet(full, removed)).toBe(full);
   });
 

@@ -111,14 +111,14 @@ describe('reviewRows', () => {
 
   it('greys what the mapping rejects, naming the limit', () => {
     const review = reviewOf([
-      activity({ startedAt: '2026-11-23T06:00:00.000Z', durationS: 15_000 }),
+      activity({ startedAt: '2026-11-23T06:00:00.000Z', durationS: 50_000 }),
       activity({ startedAt: '2026-11-22T06:00:00.000Z', distanceM: 250_000 }),
       activity({ startedAt: '2026-11-21T06:00:00.000Z', durationS: 20 }),
       activity({ startedAt: '2026-11-20T06:00:00.000Z', type: 'strength_training', distanceM: null }),
       activity({ startedAt: 'never' }),
     ]);
     expect(badgeTexts(review.rows, review)).toEqual([
-      'Over 4 h',
+      'Over 12 h',
       'Over 200 km',
       'Under 1 min',
       'Strength not imported yet',
@@ -230,7 +230,7 @@ describe('the default selection', () => {
   });
 
   it('never selects a greyed activity', () => {
-    const review = reviewOf([activity({ durationS: 15_000 })]);
+    const review = reviewOf([activity({ durationS: 50_000 })]);
     const forced = withRowToggled(review.choices, review.rows[0], true);
     expect(chosenCount(review.rows, forced)).toBe(0);
     expect(allSelected(review.rows, forced)).toBe(false);
@@ -241,7 +241,7 @@ describe('Select all', () => {
   const activities = [
     activity({ startedAt: '2026-11-23T06:00:00.000Z' }),
     activity({ startedAt: '2026-11-22T06:00:00.000Z', type: 'surfing' }),
-    activity({ startedAt: '2026-11-21T06:00:00.000Z', durationS: 15_000 }),
+    activity({ startedAt: '2026-11-21T06:00:00.000Z', durationS: 50_000 }),
     activity({ startedAt: '2026-11-20T06:00:00.000Z' }),
   ];
   const sessions = [
@@ -283,7 +283,7 @@ describe('activitiesToImport', () => {
     const review = reviewOf([
       activity({ startedAt: '2026-11-23T06:00:00.000Z', type: 'lap_swimming', durationS: 840, distanceM: 457.2 }),
       activity({ startedAt: '2026-11-21T06:00:00.000Z', durationS: 2400.4, distanceM: 7000 }),
-      activity({ startedAt: '2026-11-22T06:00:00.000Z', durationS: 15_000 }),
+      activity({ startedAt: '2026-11-22T06:00:00.000Z', durationS: 50_000 }),
     ]);
     expect(activitiesToImport(review.rows, review.choices, EXERCISES)).toEqual([
       {
@@ -342,8 +342,8 @@ describe('what a row offers', () => {
     const review = reviewOf([
       activity({ startedAt: '2026-11-23T06:00:00.000Z' }),
       activity({ startedAt: '2026-11-22T06:00:00.000Z', type: 'surfing' }),
-      activity({ startedAt: '2026-11-21T06:00:00.000Z', durationS: 15_000 }),
-      activity({ startedAt: '2026-11-20T06:00:00.000Z', type: 'surfing', durationS: 15_000 }),
+      activity({ startedAt: '2026-11-21T06:00:00.000Z', durationS: 50_000 }),
+      activity({ startedAt: '2026-11-20T06:00:00.000Z', type: 'surfing', durationS: 50_000 }),
     ]);
     expect(review.rows.map((row) => canBeChosen(row, review.choices))).toEqual([true, false, false, false]);
     expect(review.rows.map(needsExercisePick)).toEqual([false, true, false, false]);

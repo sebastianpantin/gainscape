@@ -16,7 +16,7 @@ export const METRES_PER_KM = 1000;
 export const MOBILITY_SKILL_KEY = 'mobility';
 
 export const CARDIO_BOUNDS = Object.freeze({
-  steadyDurationS: Object.freeze({ min: 60, max: 14_400 }),
+  steadyDurationS: Object.freeze({ min: 60, max: 43_200 }),
   intervalDurationS: Object.freeze({ min: 5, max: 14_400 }),
   intervalRounds: Object.freeze({ min: 1, max: 100 }),
   intervalWorkS: Object.freeze({ min: 5, max: 3600 }),

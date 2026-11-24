@@ -85,8 +85,8 @@ select throws_ok(
   '23514', 'new row for relation "sets" violates check constraint "cardio_duration_within_bounds"', 'a steady bout lasts at least 60 seconds'
 );
 select throws_ok(
-  format($$select tests.add_cardio_set(%L, 0, 14401)$$, :'running'),
-  '23514', 'new row for relation "sets" violates check constraint "cardio_duration_within_bounds"', 'a steady bout lasts at most 4 hours'
+  format($$select tests.add_cardio_set(%L, 0, 43201)$$, :'running'),
+  '23514', 'new row for relation "sets" violates check constraint "cardio_duration_within_bounds"', 'a steady bout lasts at most 12 hours'
 );
 select throws_ok(
   format($$select tests.add_cardio_set(%L, 0, 100, null, null, 3, 20)$$, :'sprints'),

@@ -140,7 +140,7 @@ describe('boutDurationSeconds', () => {
 describe('CARDIO_BOUNDS', () => {
   it('matches the logging limits of steady and interval bouts', () => {
     expect(CARDIO_BOUNDS).toEqual({
-      steadyDurationS: { min: 60, max: 14_400 },
+      steadyDurationS: { min: 60, max: 43_200 },
       intervalDurationS: { min: 5, max: 14_400 },
       intervalRounds: { min: 1, max: 100 },
       intervalWorkS: { min: 5, max: 3600 },

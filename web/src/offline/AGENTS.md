@@ -33,7 +33,7 @@
 - `clientId` is the stable React key of an exercise card and is never sent to the server. The parser gives an exercise stored without one the positional `exercise-<index>`, so boot compares records deterministically.
 - `withValidSupersets` runs on every parse and after every group change, remove or swap. A superset id survives only on one adjacent run of two or more lifts. Cardio never keeps a `supersetId`.
 - `startDraftFromDay` ignores `PlannedExercise.progression`, so it is never stored and needs no bump.
-- The set cap must match the server's `MAX_SETS_PER_SESSION`, counting planned sets too. Bouts are capped at 4 hours in total; the cap is checked only when adding, and making an existing bout longer is not guarded. The add functions silently add nothing past either cap.
+- The set cap must match the server's `MAX_SETS_PER_SESSION`, counting planned sets too. Bouts are capped at 12 hours in total; the cap is checked only when adding, and making an existing bout longer is not guarded. The add functions silently add nothing past either cap.
 - `startDraftFromChallenge` never rounds a barbell load below the bar. An exercise with no `equipment` counts as a barbell, because older items caches lack equipment.
 - `markPlannedSetsDone` skips 5RM tests and optional program sets, because their numbers are placeholders.
 - Drafts carry no gear. `complete-session` snapshots the loadout equipped at sync time, so a workout synced after a gear change gets the new gear's bonus.
