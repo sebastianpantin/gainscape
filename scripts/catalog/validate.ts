@@ -164,6 +164,24 @@ function checkExercises(catalog: CatalogData, problems: string[]): void {
   }
 }
 
+function checkGarminActivityTypes(catalog: CatalogData, problems: string[]): void {
+  const exercisesByKey = exercisesByKeyOf(catalog);
+  for (const type of catalog.garminActivityTypes) {
+    if (!KEY_PATTERN.test(type.key)) {
+      problems.push(`Garmin activity type key "${type.key}" must match ${KEY_PATTERN}`);
+    }
+    const exercise = exercisesByKey.get(type.exercise);
+    if (exercise === undefined) {
+      problems.push(`Garmin activity type "${type.key}" maps to unknown exercise "${type.exercise}"`);
+    } else if (exercise.modality !== 'cardio') {
+      problems.push(`Garmin activity type "${type.key}" maps to ${exercise.modality} exercise "${type.exercise}"`);
+    }
+  }
+  for (const key of duplicates(catalog.garminActivityTypes.map((type) => type.key))) {
+    problems.push(`Garmin activity type key "${key}" is not unique`);
+  }
+}
+
 function checkProgramDays(catalog: CatalogData, problems: string[]): void {
   const exercisesByKey = exercisesByKeyOf(catalog);
   for (const program of catalog.programs) {
@@ -566,6 +584,7 @@ export function catalogProblems(catalog: CatalogData, denylist: readonly string[
   checkDropTables(catalog, problems);
   checkRecipes(catalog, problems);
   checkQuests(catalog, problems);
+  checkGarminActivityTypes(catalog, problems);
   checkDenylist(catalog, denylist, problems);
   return problems;
 }

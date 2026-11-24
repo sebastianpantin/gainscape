@@ -49,7 +49,9 @@ const SECTION_OF_CHILD_TABLE: Record<string, string> = {
   program_enrollment_events: 'programEnrollmentEvents',
 };
 
-const NOT_EXPORTED_CHILD_TABLES: Record<string, string> = {};
+const NOT_EXPORTED_CHILD_TABLES: Record<string, string> = {
+  garmin_activity_types: 'catalog seed data that maps Garmin types to built-in exercises, never to a custom one',
+};
 
 afterAll(async () => {
   await db.end();

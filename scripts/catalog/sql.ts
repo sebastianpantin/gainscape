@@ -251,6 +251,12 @@ export function renderStatements(catalog: CatalogData): string[] {
         exercise.shares.map((share) => [exerciseId(exercise.key), skillId(share.skill), share.shareBp]),
       ),
     ),
+    'delete from public.garmin_activity_types;',
+    insert(
+      'garmin_activity_types',
+      ['key', 'exercise_id'],
+      catalog.garminActivityTypes.map((type) => [type.key, exerciseId(type.exercise)]),
+    ),
     insert(
       'programs',
       ['id', 'key', 'owner_user_id', 'name'],

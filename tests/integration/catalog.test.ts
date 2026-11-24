@@ -203,6 +203,16 @@ describe('cardio catalog', () => {
     ]);
   });
 
+  it('seeds every Garmin activity type on a built-in cardio exercise', async () => {
+    const rows = await db`
+      select t.key, e.key as exercise, e.modality, e.owner_user_id
+      from public.garmin_activity_types t join public.exercises e on e.id = t.exercise_id`;
+    expect(Object.fromEntries(rows.map((row) => [row.key, row.exercise]))).toEqual(
+      Object.fromEntries(loadCatalogData().garminActivityTypes.map((type) => [type.key, type.exercise])),
+    );
+    expect(rows.every((row) => row.modality === 'cardio' && row.owner_user_id === null)).toBe(true);
+  });
+
   it('re-applies the seed over itself with the modality lock in place', async () => {
     const outcome = db.begin(async (tx) => {
       for (const statement of renderStatements(loadCatalogData())) await tx.unsafe(statement);
