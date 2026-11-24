@@ -117,6 +117,24 @@ describe('garminImportCandidate', () => {
     });
   });
 
+  it('counts a step once when auto lap cuts it into several laps', () => {
+    const workoutSteps: GarminWorkoutStep[] = [
+      { intensity: 'warmup', durationS: 600 },
+      { intensity: 'interval', durationS: 480 },
+      { intensity: 'recovery', durationS: 120 },
+      REPEAT,
+      { intensity: 'cooldown', durationS: 600 },
+    ];
+    expect(candidateOf({ workoutSteps, laps: lapsOf(0, 1, 1, 2, 1, 1, 4, 4, null), durationS: 2040 }).interval).toEqual(
+      { workS: 480, restS: 120, rounds: 2 },
+    );
+    expect(candidateOf({ workoutSteps, laps: lapsOf(0, 1, 1, 2, 2, 1, 4), durationS: 2040 }).interval).toEqual({
+      workS: 480,
+      restS: 120,
+      rounds: 2,
+    });
+  });
+
   it('reads interval and recovery steps as work and rest', () => {
     const workoutSteps: GarminWorkoutStep[] = [
       { intensity: 'interval', durationS: 240 },

@@ -11,6 +11,7 @@ const GARMIN_TYPE_BY_SPORT_AND_SUB_SPORT: ReadonlyMap<string, string> = new Map(
   ['swimming/lap_swimming', 'lap_swimming'],
   ['swimming/open_water', 'open_water_swimming'],
   ['rowing/indoor_rowing', 'indoor_rowing'],
+  ['training/cardio_training', 'indoor_cardio'],
 ]);
 const UNWRITTEN_STEP: GarminWorkoutStep = Object.freeze({ intensity: null, durationS: null });
 

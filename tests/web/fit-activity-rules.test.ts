@@ -35,6 +35,7 @@ describe('garminTypeOfFitSport', () => {
     ['fitness_equipment', 'elliptical', 'elliptical'],
     ['fitness_equipment', 'stair_climbing', 'stair_climbing'],
     ['training', 'strength_training', 'strength_training'],
+    ['training', 'cardio_training', 'indoor_cardio'],
   ])('reads %s with %s as the Garmin type %s', (sport, subSport, type) => {
     expect(garminTypeOfFitSport(sport, subSport)).toBe(type);
   });

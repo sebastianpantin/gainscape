@@ -59,9 +59,14 @@ interface IntervalPhase {
   durationS: number | null;
 }
 
+function stepsDone(activity: GarminActivity): number[] {
+  const stepOfEachLap = activity.laps.flatMap((lap) => (lap.workoutStepIndex === null ? [] : [lap.workoutStepIndex]));
+  return stepOfEachLap.filter((step, lap) => step !== stepOfEachLap[lap - 1]);
+}
+
 function intervalPhases(activity: GarminActivity): IntervalPhase[] {
-  return activity.laps.flatMap((lap): IntervalPhase[] => {
-    const step = lap.workoutStepIndex === null ? undefined : activity.workoutSteps[lap.workoutStepIndex];
+  return stepsDone(activity).flatMap((stepIndex): IntervalPhase[] => {
+    const step = activity.workoutSteps.at(stepIndex);
     if (step === undefined || step.intensity === null) return [];
     if (WORK_INTENSITIES.has(step.intensity)) return [{ isWork: true, durationS: step.durationS }];
     if (REST_INTENSITIES.has(step.intensity)) return [{ isWork: false, durationS: step.durationS }];
