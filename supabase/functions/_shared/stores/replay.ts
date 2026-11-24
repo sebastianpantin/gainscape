@@ -25,6 +25,7 @@ import {
 import { HttpError, logUnexpectedError } from '../http.ts';
 import { extendCatalog, loadCatalog } from './catalog.ts';
 import { syncSessionEvents } from './events.ts';
+import { markGarminActivityOfSessionDeleted } from './garmin-activities.ts';
 import { revokeDisqualifiedDrops, rollNewSessionLoot } from './loot.ts';
 import {
   hasLaterSessions,
@@ -380,6 +381,7 @@ export async function deleteSessionAndRederive(
   key: SessionKey,
 ): Promise<ReplayChanges> {
   const previousExerciseIds = await sessionExerciseIds(tx, key.id);
+  await markGarminActivityOfSessionDeleted(tx, userId, key.id);
   await tombstoneSession(tx, userId, key);
   const { replayedSessionIds, revokedDrops } = await replayFrom(
     tx,

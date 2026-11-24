@@ -8,7 +8,8 @@ type RateLimitBucket =
   | 'session_delete_hour'
   | 'export_data_hour'
   | 'delete_account_hour'
-  | 'quest_start_hour';
+  | 'quest_start_hour'
+  | 'garmin_import_day';
 
 const RATE_LIMITED = 'PT429';
 const FOREIGN_KEY_VIOLATION = '23503';

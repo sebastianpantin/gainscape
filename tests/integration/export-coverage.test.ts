@@ -18,6 +18,7 @@ const SECTION_OF_USER_TABLE: Record<string, string> = {
   exercise_notes: 'exerciseNotes',
   exercises: 'customExercises',
   friendships: 'friendships',
+  garmin_activities: 'garminActivities',
   item_ledger: 'itemLedger',
   lift_goals: 'liftGoals',
   loot_rolls: 'lootRolls',

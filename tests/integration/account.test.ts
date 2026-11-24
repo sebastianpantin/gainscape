@@ -65,10 +65,19 @@ describe('export-data', () => {
     expect(exported.userId).toBe(owner.id);
     expect(exported.profile.username).toBe(owner.username);
     expect(exported.account.email).toBe(`${owner.username}@example.test`);
-    expect(exported.version).toBe(10);
+    expect(exported.version).toBe(11);
     expect(exported.privateProfile.sex).toBe('female');
     expect(exported.sessions).toHaveLength(3);
     expect(exported.deletedSessions).toHaveLength(1);
+    expect(exported.garminActivities).toEqual([
+      {
+        started_at: expect.any(String),
+        outcome: 'imported',
+        session_id: expect.any(String),
+        garmin_type: 'running',
+        created_at: expect.any(String),
+      },
+    ]);
     expect(exported.sets).toHaveLength(3);
     expect(exported.sets.filter((set: { effort_input_type: string }) => set.effort_input_type === 'rpe')).toHaveLength(
       2,

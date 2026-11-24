@@ -9,7 +9,7 @@ POST endpoint that accepts a finished workout draft from the web app, validates 
 
 ## Map
 
-- `index.ts`: the handler. `completeSession` runs in one `sql.begin` under `lockUser`; the domain `planNewSession` picks scored or history-only, then `storeAndReplay` or `storeHistoryOnly`.
+- `index.ts`: the handler. `completeSession` runs in one `sql.begin` under `lockUser`, answers resubmissions and tombstones, takes the rate limits and hands the rest to `storeNewSession` in `../_shared/stores/new-session.ts`: the domain `planNewSession` picks scored or history-only, then `storeAndReplay` or `storeHistoryOnly`. `import-activities` stores through the same function, so a rule added there applies to imported Sessions too.
 - `payload.ts`: the zod `sessionSchema`, `parseCompleteSessionPayload`, `assertPlausibleTiming` (domain `implausibleTiming` as a 422).
 - `deno.json` (picked up by `make check-functions`) and `deno.lock` (regenerate with Deno, never hand-edit).
 

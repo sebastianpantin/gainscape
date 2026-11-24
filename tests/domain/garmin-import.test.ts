@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   type GarminActivity,
   garminActivityEnd,
+  GARMIN_IMPORT_CHUNK,
+  garminImportChunks,
   type GarminImportCandidate,
   garminImportCandidate,
   type GarminWorkoutStep,
@@ -284,5 +286,46 @@ describe('garminActivityEnd', () => {
     expect(garminActivityEnd({ startedAt: '2026-11-23T06:30:05.000Z', durationS: 1800 })).toBe(
       '2026-11-23T07:00:05.000Z',
     );
+  });
+});
+
+describe('garminImportChunks', () => {
+  const scored = (name: string) => ({ name, historyOnly: false });
+  const old = (name: string) => ({ name, historyOnly: true });
+  const names = (chunks: { name: string }[][]) => chunks.map((chunk) => chunk.map((activity) => activity.name));
+
+  it('sends at most 50 activities and at most 10 scored ones in a request', () => {
+    expect(GARMIN_IMPORT_CHUNK).toEqual({ maxActivities: 50, maxScored: 10 });
+  });
+
+  it('keeps a small import in one chunk, in the order given', () => {
+    expect(names(garminImportChunks([old('a'), scored('b'), old('c')]))).toEqual([['a', 'b', 'c']]);
+    expect(garminImportChunks([])).toEqual([]);
+  });
+
+  it('starts a new chunk after 50 activities', () => {
+    const activities = Array.from({ length: 120 }, (_, index) => old(`old-${index}`));
+    const chunks = garminImportChunks(activities);
+    expect(chunks.map((chunk) => chunk.length)).toEqual([50, 50, 20]);
+    expect(chunks.flat()).toEqual(activities);
+  });
+
+  it('starts a new chunk before an eleventh scored activity', () => {
+    const activities = [
+      ...Array.from({ length: 12 }, (_, index) => old(`old-${index}`)),
+      ...Array.from({ length: 23 }, (_, index) => scored(`scored-${index}`)),
+    ];
+    const chunks = garminImportChunks(activities);
+    expect(chunks.map((chunk) => chunk.length)).toEqual([22, 10, 3]);
+    expect(chunks.map((chunk) => chunk.filter((activity) => !activity.historyOnly).length)).toEqual([10, 10, 3]);
+    expect(chunks.flat()).toEqual(activities);
+  });
+
+  it('lets history-only activities fill a chunk that already holds 10 scored ones', () => {
+    const activities = [
+      ...Array.from({ length: 10 }, (_, index) => scored(`scored-${index}`)),
+      ...Array.from({ length: 45 }, (_, index) => old(`old-${index}`)),
+    ];
+    expect(garminImportChunks(activities).map((chunk) => chunk.length)).toEqual([50, 5]);
   });
 });

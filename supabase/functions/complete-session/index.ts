@@ -1,48 +1,18 @@
 import { sql, type Transaction } from '../_shared/db.ts';
-import {
-  type Catalog,
-  type ChallengeRun,
-  DEFAULT_BALANCE,
-  historyOnlySummary,
-  isNoOpEdit,
-  mergedSummaries,
-  pendingSummary,
-  planNewSession,
-  type SessionSummary,
-  type SetResult,
-  type WritableSession,
-} from '../_shared/domain/index.ts';
+import { DEFAULT_BALANCE, isNoOpEdit, mergedSummaries, type SessionSummary } from '../_shared/domain/index.ts';
 import { HttpError } from '../_shared/http.ts';
 import { takeRateLimit } from '../_shared/rate-limit.ts';
 import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
-import { loadKnownCatalog } from '../_shared/stores/catalog.ts';
-import { claimChallengeRun } from '../_shared/stores/challenges.ts';
-import { loadEquippedLoadout } from '../_shared/stores/gear.ts';
-import { loadSkillXp } from '../_shared/stores/history.ts';
-import { advanceQuestsForSession } from '../_shared/stores/quests.ts';
-import { deriveNewSession } from '../_shared/stores/replay.ts';
+import { storeNewSession } from '../_shared/stores/new-session.ts';
 import {
-  assertSetIdsUnused,
   findSession,
   type InsertedSession,
-  insertSession,
-  linkedProgram,
-  loadProfileSettings,
   loadStoredSetsById,
   lockUser,
-  type NewSessionRow,
-  ownedProgramDayId,
-  placeholderSetRow,
   type SessionTiming,
   type StoredSession,
-  storedSummary,
   tombstoneOwner,
 } from '../_shared/stores/sessions.ts';
-import {
-  newSetRow,
-  type PrescriptionSnapshotColumns,
-  prescriptionSnapshotsBySetId,
-} from '../_shared/stores/set-columns.ts';
 import {
   assertPlausibleTiming,
   type CompleteSessionPayload,
@@ -57,8 +27,6 @@ async function resubmissionDiffers(tx: Transaction, stored: StoredSession, paylo
   return !isNoOpEdit(payload, stored.notes, storedById, DEFAULT_BALANCE);
 }
 
-type SnapshotsBySetId = ReadonlyMap<string, PrescriptionSnapshotColumns>;
-
 interface CompletedDay {
   sessionId: string;
   programLinked: boolean;
@@ -70,60 +38,6 @@ interface CompleteSessionResponse extends SessionSummary, SessionTiming {
   programLinked: boolean;
   completedAt: string;
   storedContentDiffers?: true;
-}
-
-async function storeHistoryOnly(
-  tx: Transaction,
-  row: NewSessionRow,
-  sets: readonly SetResult[],
-  snapshots: SnapshotsBySetId,
-): Promise<InsertedSession> {
-  return await insertSession(
-    tx,
-    { ...row, historyOnly: true, summary: historyOnlySummary(row.id) },
-    sets.map((result) => ({
-      ...newSetRow(result, row.id, row.userId),
-      ...snapshots.get(result.set.id)!,
-    })),
-  );
-}
-
-async function storeAndReplay(
-  tx: Transaction,
-  row: NewSessionRow,
-  session: WritableSession,
-  snapshots: SnapshotsBySetId,
-  catalog: Catalog,
-): Promise<InsertedSession> {
-  const skillXpBeforeSync = await loadSkillXp(tx, row.userId);
-  const { completedAt } = await insertSession(
-    tx,
-    row,
-    session.sets.map((set) => ({
-      ...placeholderSetRow(set, session.id, row.userId, DEFAULT_BALANCE),
-      ...snapshots.get(set.id)!,
-    })),
-  );
-  const derived = await deriveNewSession(tx, row.userId, { id: session.id, startedAt: session.startedAt }, catalog);
-  await advanceQuestsForSession(
-    tx,
-    row.userId,
-    {
-      endedAt: row.endedAt,
-      replayed: derived.replayed,
-      catalog: derived.catalog,
-      skillXpBeforeSync,
-      skillXpAfterSync: derived.skillXp,
-    },
-    DEFAULT_BALANCE,
-  );
-  return { summary: await storedSummary(tx, session.id), completedAt };
-}
-
-async function claimedChallenge(tx: Transaction, userId: string, payload: DayPayload): Promise<ChallengeRun | null> {
-  if (payload.challenge === null) return null;
-  const key = { id: payload.id, startedAt: payload.startedAt };
-  return await claimChallengeRun(tx, userId, payload.challenge.challengeId, key, DEFAULT_BALANCE);
 }
 
 function responseFor(stored: InsertedSession, timing: SessionTiming, programLinked: boolean): CompleteSessionResponse {
@@ -151,48 +65,8 @@ async function completeDay(
 
   const now = new Date();
   assertPlausibleTiming(payload, now);
-  const [, catalog, profile, programLink, programDayId, gearLoadout] = await Promise.all([
-    assertSetIdsUnused(
-      tx,
-      payload.sets.map((set) => set.id),
-    ),
-    loadKnownCatalog(tx, userId, payload.sets),
-    loadProfileSettings(tx, userId),
-    linkedProgram(tx, userId, payload.program),
-    ownedProgramDayId(tx, userId, payload.programDayId),
-    loadEquippedLoadout(tx, userId),
-  ]);
-  const plan = planNewSession(payload, catalog, profile.bodyweightKg, now.getTime(), DEFAULT_BALANCE);
-  const snapshots = prescriptionSnapshotsBySetId(payload.sets, () => programLink !== null);
-  const row: NewSessionRow = {
-    id: payload.id,
-    userId,
-    programDayId,
-    programLink,
-    startedAt: payload.startedAt,
-    endedAt: payload.endedAt,
-    timezone: profile.timezone,
-    historyOnly: false,
-    balanceVersion: DEFAULT_BALANCE.version,
-    summary: pendingSummary(payload.id),
-    notes: payload.notes,
-    sessionRpe: payload.sessionRpe,
-    gearLoadout,
-    challenge: null,
-    completedAfter,
-  };
-
-  const stored =
-    plan.mode === 'scored'
-      ? await storeAndReplay(
-          tx,
-          { ...row, challenge: await claimedChallenge(tx, userId, payload) },
-          plan.session,
-          snapshots,
-          catalog,
-        )
-      : await storeHistoryOnly(tx, row, plan.sets, snapshots);
-  return responseFor(stored, row, programLink !== null);
+  const { stored, timing, programLinked } = await storeNewSession(tx, userId, payload, completedAfter, now);
+  return responseFor(stored, timing, programLinked);
 }
 
 function combinedResponse(responses: readonly CompleteSessionResponse[]): CompleteSessionResponse {

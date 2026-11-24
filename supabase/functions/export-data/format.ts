@@ -1,4 +1,4 @@
-export const EXPORT_FORMAT_VERSION = 10;
+export const EXPORT_FORMAT_VERSION = 11;
 
 export const EXPORT_SECTIONS = [
   'account',
@@ -7,6 +7,7 @@ export const EXPORT_SECTIONS = [
   'sessions',
   'sets',
   'deletedSessions',
+  'garminActivities',
   'setSkillXp',
   'skills',
   'exerciseMaxes',

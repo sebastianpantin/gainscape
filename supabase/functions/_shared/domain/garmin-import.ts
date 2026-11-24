@@ -157,3 +157,24 @@ export function garminImportCandidate(
   const status = exerciseId === null ? 'needs_exercise' : measured.historyOnly ? 'history_only' : 'importable';
   return { ...measured, exerciseId, interval: structuredInterval(activity), status, rejection: null };
 }
+
+export const GARMIN_IMPORT_CHUNK = Object.freeze({ maxActivities: 50, maxScored: 10 });
+
+export function garminImportChunks<Activity extends { historyOnly: boolean }>(
+  activities: readonly Activity[],
+): Activity[][] {
+  const chunks: Activity[][] = [];
+  let scoredInChunk = 0;
+  for (const activity of activities) {
+    const chunk = chunks.at(-1);
+    const scored = activity.historyOnly ? 0 : 1;
+    const fits =
+      chunk !== undefined &&
+      chunk.length < GARMIN_IMPORT_CHUNK.maxActivities &&
+      scoredInChunk + scored <= GARMIN_IMPORT_CHUNK.maxScored;
+    if (fits) chunk.push(activity);
+    else chunks.push([activity]);
+    scoredInChunk = fits ? scoredInChunk + scored : scored;
+  }
+  return chunks;
+}
