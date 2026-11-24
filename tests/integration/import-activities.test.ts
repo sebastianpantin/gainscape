@@ -177,6 +177,20 @@ describe('import-activities', () => {
     ]);
   });
 
+  it('imports a walk as long as a workout may be, twelve hours, and pays for the capped three', async () => {
+    const [walker, stroller] = await Promise.all([createTestUser(), createTestUser()]);
+    const walkingId = await builtInExerciseId('walking');
+    const walk = { garminType: 'walking', exerciseId: walkingId, distanceM: null };
+    const [long] = await imported(walker, [aRun(wholeSecondAgo(20 * HOUR_MS), { ...walk, durationS: 43_200 })]);
+    const [short] = await imported(stroller, [aRun(wholeSecondAgo(20 * HOUR_MS), { ...walk, durationS: 3 * 3600 })]);
+
+    expect(long.outcome).toBe('imported');
+    const [set] = await db`select duration_s from public.sets where session_id = ${long.sessionId!}`;
+    expect(set.duration_s).toBe(43_200);
+    expect(long.xp).toBe(short.xp);
+    expect(long.xp).toBeGreaterThan(0);
+  });
+
   it('stores the interval of a structured workout as an interval set', async () => {
     const user = await createTestUser();
     const [outcome] = await imported(user, [
@@ -431,7 +445,11 @@ describe('import-activities', () => {
       () => [aRun(new Date(Math.floor(Date.now() / 1000) * 1000 - HOUR_MS + 250).toISOString())],
       'invalid_payload',
     ],
-    ['a duration over four hours', () => [aRun(wholeSecondAgo(HOUR_MS), { durationS: 14_401 })], 'invalid_payload'],
+    [
+      'a duration over twelve hours',
+      () => [aRun(wholeSecondAgo(13 * HOUR_MS), { durationS: 43_201 })],
+      'invalid_payload',
+    ],
     ['a duration under a minute', () => [aRun(wholeSecondAgo(HOUR_MS), { durationS: 59 })], 'invalid_payload'],
     ['a distance over 200 km', () => [aRun(wholeSecondAgo(HOUR_MS), { distanceM: 200_001 })], 'invalid_payload'],
     [

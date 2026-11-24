@@ -144,20 +144,20 @@ describe('exercise edit rules', () => {
     expect(canAddSet({ exercises: [{ sets: Array.from({ length: MAX_SETS_PER_SESSION }) }] })).toBe(false);
   });
 
-  it('add a bout only while the bouts of the workout stay under 4 hours, and other sets regardless', () => {
-    const fourHours = updateBout(edit(), 1, 'bout-1', { durationS: 14_400 });
+  it('add a bout only while the bouts of the workout stay under 12 hours, and other sets regardless', () => {
+    const twelveHours = updateBout(edit(), 1, 'bout-1', { durationS: 43_200 });
     expect(canAddSetTo(edit(), 'cardio')).toBe(true);
-    expect(canAddSetTo(fourHours, 'cardio')).toBe(false);
-    expect(canAddSetTo(fourHours, 'lift')).toBe(true);
-    expect(canAddSetTo(updateBout(draft(), 1, 'bout-1', { durationS: 14_400 }), 'hold')).toBe(true);
+    expect(canAddSetTo(twelveHours, 'cardio')).toBe(false);
+    expect(canAddSetTo(twelveHours, 'lift')).toBe(true);
+    expect(canAddSetTo(updateBout(draft(), 1, 'bout-1', { durationS: 43_200 }), 'hold')).toBe(true);
   });
 
   it('offer only the exercises a set or bout can still be added to', () => {
     const running = { id: 'run', modality: 'cardio' as const };
     const bench = { id: 'bench', modality: 'lift' as const };
-    const fourHours = updateBout(edit(), 1, 'bout-1', { durationS: 14_400 });
+    const twelveHours = updateBout(edit(), 1, 'bout-1', { durationS: 43_200 });
     expect(addableExercises(edit(), [running, bench])).toEqual([running, bench]);
-    expect(addableExercises(fourHours, [running, bench])).toEqual([bench]);
+    expect(addableExercises(twelveHours, [running, bench])).toEqual([bench]);
   });
 
   it('add nothing of any kind once the workout holds the most sets the server accepts', () => {
@@ -216,17 +216,17 @@ describe('exercise-level edits shared by a live draft and a history edit', () =>
   });
 
   it('add no set past the limits or to a missing exercise', () => {
-    const fourHours = updateBout(edit(), 1, 'bout-1', { durationS: 14_400 });
-    expect(addSetTo(fourHours, 1, {})).toBe(fourHours);
+    const twelveHours = updateBout(edit(), 1, 'bout-1', { durationS: 43_200 });
+    expect(addSetTo(twelveHours, 1, {})).toBe(twelveHours);
     expect(addSetTo(edit(), 5, {})).toEqual(edit());
   });
 
   it('append an exercise only while a set of its kind still fits', () => {
     const squat = { ...edit().exercises[0], exerciseId: 'squat', sets: [] };
     expect(addExerciseTo(edit(), squat).exercises.at(-1)).toBe(squat);
-    const fourHours = updateBout(edit(), 1, 'bout-1', { durationS: 14_400 });
+    const twelveHours = updateBout(edit(), 1, 'bout-1', { durationS: 43_200 });
     const run = { ...edit().exercises[1], sets: [] };
-    expect(addExerciseTo(fourHours, run)).toBe(fourHours);
+    expect(addExerciseTo(twelveHours, run)).toBe(twelveHours);
   });
 
   it('swap a loaded exercise, keeping its weights or starting from the replacement default', () => {

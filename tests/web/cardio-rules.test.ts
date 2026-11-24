@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { boutDurationSeconds, CARDIO_BOUNDS } from '../../supabase/functions/_shared/domain/cardio.ts';
 import {
+  BOUTS_FULL_TEXT,
   boutModeChanges,
   canAddBout,
   cardioRecordCards,
@@ -22,7 +23,7 @@ const intervals = { durationS: 1800, distanceM: null, interval: { workS: 30, res
 describe('steady duration', () => {
   it('stays within the steady bounds the server checks', () => {
     expect(clampedSteadyDurationS(30)).toBe(CARDIO_BOUNDS.steadyDurationS.min);
-    expect(clampedSteadyDurationS(20_000)).toBe(CARDIO_BOUNDS.steadyDurationS.max);
+    expect(clampedSteadyDurationS(50_000)).toBe(CARDIO_BOUNDS.steadyDurationS.max);
     expect(clampedSteadyDurationS(1500)).toBe(1500);
   });
 
@@ -82,14 +83,18 @@ describe('distance', () => {
 });
 
 describe('adding bouts', () => {
-  it('allows another bout while the bouts add up to less than 4 hours', () => {
+  it('allows another bout while the bouts add up to less than 12 hours', () => {
     expect(canAddBout([steady, intervals])).toBe(true);
   });
 
-  it('stops adding bouts once they add up to 4 hours', () => {
+  it('stops adding bouts once they add up to 12 hours, the longest a workout can be', () => {
     const long = { ...steady, durationS: CARDIO_BOUNDS.steadyDurationS.max / 2 };
     expect(canAddBout([long])).toBe(true);
     expect(canAddBout([long, long])).toBe(false);
+  });
+
+  it('says how long the bouts of one workout may be', () => {
+    expect(BOUTS_FULL_TEXT).toBe('Bouts in one workout can add up to at most 12 hours.');
   });
 });
 
