@@ -34,7 +34,7 @@ let squatId: string;
 
 const { freshUser, checkAndClear } = trackedUsers(expectLedgerMatchesItems);
 
-async function fillCaps(userId: string, localDate: string): Promise<void> {
+async function leaveNoRollOpen(userId: string, localDate: string): Promise<void> {
   const [regular] = await db`select id from public.drop_tables where key = 'regular'`;
   const [rare] = await db`select id from public.drop_tables where key = 'rare'`;
   const rows = [
@@ -53,6 +53,20 @@ async function fillCaps(userId: string, localDate: string): Promise<void> {
     loot_version: DEFAULT_LOOT.version,
   }));
   await db`insert into public.loot_rolls ${db(rows)}`;
+  await ownEveryPet(userId);
+}
+
+async function ownEveryPet(userId: string): Promise<void> {
+  await db`
+    insert into public.user_items (user_id, item_id, quantity)
+    select ${userId}, i.id, 1 from public.items i where i.skill_id is not null and i.retired_at is null
+    on conflict (user_id, item_id) do nothing`;
+  await db`
+    insert into public.item_ledger (user_id, item_id, delta, reason, ref_id)
+    select u.user_id, u.item_id, 1, 'drop', gen_random_uuid()
+    from public.user_items u join public.items i on i.id = u.item_id
+    where u.user_id = ${userId} and i.skill_id is not null
+      and not exists (select 1 from public.item_ledger l where l.user_id = u.user_id and l.item_id = u.item_id)`;
 }
 
 async function dropRow(dropId: string) {
@@ -73,9 +87,10 @@ async function storedDrops(sessionId: string) {
 }
 
 async function sessionOnCappedDay(user: TestUser, sets: SetShape[], start = startsOnOneLocalDay(1)[0]) {
-  await fillCaps(user.id, localDateOf(start));
+  await leaveNoRollOpen(user.id, localDateOf(start));
   const payload = payloadAt(start, sets);
   const response = await postSession(user, payload);
+  expect(await db`select kind from public.loot_rolls where session_id = ${payload.id}`).toEqual([]);
   expect(await db`select id from public.drops where session_id = ${payload.id}`).toEqual([]);
   return { payload, response };
 }
@@ -232,7 +247,7 @@ describe('edit-session', () => {
     const user = await freshUser();
     const runId = await builtInExerciseId('running');
     const start = startsOnOneLocalDay(1)[0];
-    await fillCaps(user.id, localDateOf(start));
+    await leaveNoRollOpen(user.id, localDateOf(start));
     const payload = payloadAt(start, [aBout(runId, 0, { durationS: 600 })]);
     await postSession(user, payload);
     const drop = await grantDrop(user.id, payload.id, payload.sets[0].id, 'grinder_scraps', 2);
