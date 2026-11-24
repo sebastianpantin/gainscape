@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { GarminGroupDecision, GarminImportOutcome } from '@domain/index.ts';
+import type { GarminImportOutcome } from '@domain/index.ts';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { BackLink } from '../../components/BackLink.tsx';
@@ -158,9 +158,7 @@ function ReviewList({
                       disabled={disabled}
                       openGroup={openPicker?.rowId === row.id ? openPicker.group : null}
                       onOpenGroup={(group) => setOpenPicker(group === null ? null : { rowId: row.id, group })}
-                      onDecisions={(decisions: GarminGroupDecision[]) =>
-                        onChoices(withGroupDecisions(choices, sessions, row, decisions))
-                      }
+                      onDecisions={(decisions) => onChoices(withGroupDecisions(choices, sessions, row, decisions))}
                     />
                   )}
                 </li>
@@ -194,24 +192,24 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
     contextQuery.error ?? exercisesQuery.error ?? bodyweightQuery.error,
   );
   const review = useMemo(() => {
-    if (context === undefined || exercises === undefined || bodyweightKg === undefined) return null;
-    const rows = reviewRows(pending.activities, context, now);
-    const sessions = reviewSessions(context.sessions, exercises);
-    const lifts = reviewLifts(exercises);
+    if (context === undefined || exercises === undefined) return null;
+    const pickableLiftExercises = pickableLifts(exercises);
     return {
-      rows,
-      sessions,
+      rows: reviewRows(pending.activities, context, now),
+      sessions: reviewSessions(context.sessions, exercises),
       exercisesById: reviewExercises(exercises),
       pickable: pickableExercises(exercises),
-      lifts,
-      pickableLiftExercises: pickableLifts(exercises),
-      firstChoices: initialChoices(rows, sessions, {
-        exerciseIdByGarminCategory: context.exerciseIdByGarminCategory,
-        lifts,
-        bodyweightKnown: bodyweightKg !== null,
-      }),
+      lifts: reviewLifts(pickableLiftExercises),
+      pickableLiftExercises,
+      exerciseIdByGarminCategory: context.exerciseIdByGarminCategory,
     };
-  }, [context, exercises, bodyweightKg, pending.activities, now]);
+  }, [context, exercises, pending.activities, now]);
+  const bodyweightKnown = bodyweightKg === undefined ? undefined : bodyweightKg !== null;
+  const firstChoices = useMemo(() => {
+    if (review === null || bodyweightKnown === undefined) return null;
+    const { exerciseIdByGarminCategory, lifts } = review;
+    return initialChoices(review.rows, review.sessions, { exerciseIdByGarminCategory, lifts, bodyweightKnown });
+  }, [review, bodyweightKnown]);
   const onScreen = useRef(false);
   const imported = useRef<GarminImportOutcome[]>([]);
   useEffect(() => {
@@ -221,7 +219,7 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
       dropPendingImport();
     };
   }, []);
-  const choices = picked ?? review?.firstChoices ?? null;
+  const choices = picked ?? firstChoices;
   const count = review && choices ? chosenCount(review.rows, choices) : 0;
 
   const runImport = async () => {

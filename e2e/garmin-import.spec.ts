@@ -152,7 +152,7 @@ function setGroups(page: Page) {
   return page.getByRole('list', { name: /^Set groups of .* · Strength training$/ }).getByRole('listitem');
 }
 
-async function pickExercise(group: ReturnType<typeof setGroups>, search: string, exercise: RegExp) {
+async function pickGroupExercise(group: ReturnType<typeof setGroups>, search: string, exercise: RegExp) {
   await group.getByRole('button', { name: /^(Choose|Change) exercise for group / }).click();
   await group.getByRole('searchbox', { name: 'Search exercises' }).fill(search);
   await group.getByRole('button', { name: exercise }).click();
@@ -178,9 +178,9 @@ test('a strength activity is imported set group by set group, and the next one r
   await expect(groups.nth(1)).toContainText('Unknown exercise');
   await expect(groups.nth(3)).toContainText('1 set without reps left out.');
 
-  await pickExercise(groups.nth(0), 'barbell bench', /^Barbell Bench Press/);
+  await pickGroupExercise(groups.nth(0), 'barbell bench', /^Barbell Bench Press/);
   await expect(groups.nth(0)).toContainText('Barbell Bench Press');
-  await pickExercise(groups.nth(1), 'barbell row', /^Barbell Row/);
+  await pickGroupExercise(groups.nth(1), 'barbell row', /^Barbell Row/);
   const missingWeight = groups.nth(1).getByRole('spinbutton', { name: /^Weight for set 1 \(kg\), group 2, / });
   await expect(missingWeight).toBeVisible();
   await groups
@@ -200,6 +200,15 @@ test('a strength activity is imported set group by set group, and the next one r
   await expect(gym).toContainText('Needs a weight');
   await missingWeight.fill('40');
   await expect(gym).not.toContainText('Needs a weight');
+  const skipRow = groups.nth(1).getByRole('checkbox', { name: /^Skip group 2, / });
+  await skipRow.check();
+  await expect(missingWeight).toHaveCount(0);
+  await skipRow.uncheck();
+  await expect(missingWeight).toHaveValue('40');
+  await pickGroupExercise(groups.nth(1), 'barbell row', /^Barbell Row/);
+  await expect(missingWeight).toHaveValue('');
+  await expect(gym).toContainText('Needs a weight');
+  await missingWeight.fill('40');
   await expect(gym.getByRole('checkbox').first()).toBeChecked();
   expect(await sessionCount(username)).toBe(0);
   await page.getByRole('button', { name: 'Import 1 workout' }).click();
@@ -229,7 +238,7 @@ test('a strength activity is imported set group by set group, and the next one r
     .nth(1)
     .getByRole('checkbox', { name: /^Skip group 2, / })
     .check();
-  await pickExercise(nextGroups.nth(2), 'push', /^Push-up/);
+  await pickGroupExercise(nextGroups.nth(2), 'push', /^Push-up/);
   const nextGym = page.getByRole('listitem').filter({ hasText: 'Strength training' });
   await expect(nextGym).toContainText('Needs your bodyweight');
   await page.getByRole('spinbutton', { name: 'Bodyweight (kg)' }).fill('80');

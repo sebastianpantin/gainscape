@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { queryReviewContext } from '../../web/src/lib/garmin/review-context-rules.ts';
 import { importAs, imported, seenBy, sessionsOf, totalXp, wholeSecondAgo } from './garmin-import-support.ts';
-import { builtInExerciseId, createTestUser, db, type TestUser } from './local-stack.ts';
+import { builtInExerciseId, createTestUser, db, setBodyweight, type TestUser } from './local-stack.ts';
 import { aSet, DAY_MS, HOUR_MS, payloadAt, postSession } from './session-support.ts';
 
 interface LiftSetBody {
@@ -68,9 +68,9 @@ async function setsOfSession(sessionId: string) {
     from public.sets where session_id = ${sessionId} order by position`;
 }
 
-async function withBodyweight(user: TestUser): Promise<TestUser> {
-  const saved = await user.client.from('profile_private').update({ bodyweight_kg: 82 }).eq('user_id', user.id);
-  expect(saved.error).toBeNull();
+async function aUserWithBodyweight(): Promise<TestUser> {
+  const user = await createTestUser();
+  await setBodyweight(user, 82);
   return user;
 }
 
@@ -151,7 +151,7 @@ describe('import-activities with a strength activity', () => {
   });
 
   it('takes an added weight on a bodyweight exercise that allows one, and a bodyweight set without weight', async () => {
-    const user = await withBodyweight(await createTestUser());
+    const user = await aUserWithBodyweight();
     const [outcome] = await imported(user, [
       aStrengthActivity(wholeSecondAgo(3 * HOUR_MS), {
         sets: [
@@ -182,7 +182,7 @@ describe('import-activities with a strength activity', () => {
   });
 
   it('remembers the picks of an imported activity and replaces them on a later one', async () => {
-    const user = await withBodyweight(await createTestUser());
+    const user = await aUserWithBodyweight();
     await imported(user, [aStrengthActivity(wholeSecondAgo(30 * HOUR_MS))]);
     expect(await picksOf(user)).toEqual({ bench_press: benchId, row: rowId });
 
@@ -202,7 +202,7 @@ describe('import-activities with a strength activity', () => {
   });
 
   it('remembers the pick of the latest activity when one chunk picks twice for a category', async () => {
-    const user = await withBodyweight(await createTestUser());
+    const user = await aUserWithBodyweight();
     const older = aStrengthActivity(wholeSecondAgo(20 * DAY_MS), {
       sets: [{ exerciseId: pushUpId, reps: 20, weightKg: 0 }],
       picks: [{ category: 'bench_press', exerciseId: pushUpId }],
@@ -325,7 +325,7 @@ describe('import-activities with a strength activity', () => {
   });
 
   it('refuses a weight on an exercise that takes none, as complete-session does, and stores nothing', async () => {
-    const user = await withBodyweight(await createTestUser());
+    const user = await aUserWithBodyweight();
     const response = await importAs(user, [
       aStrengthActivity(wholeSecondAgo(3 * HOUR_MS), {
         sets: [{ exerciseId: pushUpId, reps: 12, weightKg: 10 }],

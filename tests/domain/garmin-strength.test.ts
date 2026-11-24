@@ -149,11 +149,10 @@ describe('garminSetWeight', () => {
     });
   });
 
-  it('leaves a weight out on an exercise that takes none, and says which weight', () => {
+  it('leaves a weight out on an exercise that takes none, and says so', () => {
     expect(garminSetWeight({ reps: 12, weightKg: 10 }, 'bodyweight', null)).toEqual({
       source: 'left_out',
       weightKg: 0,
-      recordedKg: 10,
     });
   });
 });
@@ -162,7 +161,7 @@ describe('garminStrengthDecision', () => {
   const groups = [group('bench_press', [8, 60], [8, 60]), group(null, [12, 0]), group('row', [10, 40])];
 
   it('needs an exercise while a group has neither an exercise nor Skip', () => {
-    const needsExercise = { status: 'undecided', needs: 'exercise' };
+    const needsExercise = { status: 'needs_exercise' };
     expect(decisionOf(groups, [decided(BENCH, 'external'), undefined, SKIPPED])).toEqual(needsExercise);
     expect(decisionOf(groups, [])).toEqual(needsExercise);
     expect(
@@ -172,15 +171,13 @@ describe('garminStrengthDecision', () => {
 
   it('needs a weight while an asked-for weight is missing and every group has an exercise', () => {
     expect(decisionOf(groups, [decided(BENCH, 'external'), decided(ROW, 'external'), SKIPPED])).toEqual({
-      status: 'undecided',
-      needs: 'weight',
+      status: 'needs_weight',
     });
   });
 
   it('names the exercise first when one group needs an exercise and another a weight', () => {
     expect(decisionOf(groups, [decided(BENCH, 'external'), decided(ROW, 'external'), undefined])).toEqual({
-      status: 'undecided',
-      needs: 'exercise',
+      status: 'needs_exercise',
     });
   });
 
@@ -259,11 +256,12 @@ describe('garminStrengthDecision', () => {
       decided(PUSH_UP, 'bodyweight'),
     ]);
     expect(decision).toMatchObject({
-      picks: [
+      picks: expect.arrayContaining([
         { category: 'row', exerciseId: ROW },
         { category: 'bench_press', exerciseId: PUSH_UP },
-      ],
+      ]),
     });
+    expect(decision.status === 'ready' && decision.picks).toHaveLength(2);
   });
 
   it('needs the bodyweight of the user before a bodyweight exercise can be imported', () => {

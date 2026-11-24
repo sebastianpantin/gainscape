@@ -1,5 +1,6 @@
-import { roundTo } from './math.ts';
-import { type LoadType, MAX_SET_LOAD_KG, MAX_SET_REPS, measuresRepsCapacity } from './types.ts';
+import { isWholeNumberBetween } from './math.ts';
+import { storedWeightKg } from './set-codec.ts';
+import { countsBodyweight, type LoadType, MAX_SET_LOAD_KG, MAX_SET_REPS, measuresRepsCapacity } from './types.ts';
 
 export interface GarminSet {
   category: string | null;
@@ -21,7 +22,7 @@ export interface GarminSetGroup {
 export type GarminSetWeight =
   | { source: 'recorded'; weightKg: number }
   | { source: 'asked'; weightKg: number | null }
-  | { source: 'left_out'; weightKg: 0; recordedKg: number };
+  | { source: 'left_out'; weightKg: 0 };
 
 export interface GarminGroupDecision {
   skipped: boolean;
@@ -40,30 +41,29 @@ export interface GarminExercisePick {
   exerciseId: string;
 }
 
-export type GarminGroupNeed = 'exercise' | 'weight';
+export type GarminGroupNeed = 'needs_exercise' | 'needs_weight';
+
+export type GarminUndecidedStatus = GarminGroupNeed | 'nothing_chosen' | 'needs_bodyweight';
 
 export type GarminStrengthDecision =
-  | { status: 'undecided'; needs: GarminGroupNeed }
-  | { status: 'nothing_chosen' }
-  | { status: 'needs_bodyweight' }
-  | { status: 'ready'; sets: GarminLiftSet[]; picks: GarminExercisePick[] };
+  { status: GarminUndecidedStatus } | { status: 'ready'; sets: GarminLiftSet[]; picks: GarminExercisePick[] };
 
-const WEIGHT_DECIMALS = 2;
 const UNKNOWN_CATEGORY = 'unknown';
-const CATEGORY_KEY = /^[a-z0-9_]{1,60}$/;
+
+export const GARMIN_KEY_PATTERN = /^[a-z0-9_]{1,60}$/;
 
 export function garminCategoryKey(name: string | null): string | null {
-  return name !== null && name !== UNKNOWN_CATEGORY && CATEGORY_KEY.test(name) ? name : null;
+  return name !== null && name !== UNKNOWN_CATEGORY && GARMIN_KEY_PATTERN.test(name) ? name : null;
 }
 
 function storableWeight(weightKg: number): number | null {
-  return weightKg >= 0 && weightKg <= MAX_SET_LOAD_KG ? roundTo(WEIGHT_DECIMALS, weightKg) : null;
+  return weightKg >= 0 && weightKg <= MAX_SET_LOAD_KG ? storedWeightKg(weightKg) : null;
 }
 
 function usableSet(set: GarminSet): GarminGroupSet | null {
   const weightKg = storableWeight(set.weightKg ?? 0);
-  const countsReps = set.reps !== null && Number.isInteger(set.reps) && set.reps >= 1 && set.reps <= MAX_SET_REPS;
-  return countsReps && weightKg !== null ? { reps: set.reps!, weightKg } : null;
+  if (!isWholeNumberBetween(set.reps, 1, MAX_SET_REPS) || weightKg === null) return null;
+  return { reps: set.reps, weightKg };
 }
 
 export function garminSetGroups(sets: readonly GarminSet[]): GarminSetGroup[] {
@@ -86,9 +86,7 @@ export function garminUsableSetCount(groups: readonly GarminSetGroup[]): number 
 
 export function garminSetWeight(set: GarminGroupSet, loadType: LoadType, filledKg: number | null): GarminSetWeight {
   if (measuresRepsCapacity(loadType)) {
-    return set.weightKg > 0
-      ? { source: 'left_out', weightKg: 0, recordedKg: set.weightKg }
-      : { source: 'recorded', weightKg: 0 };
+    return set.weightKg > 0 ? { source: 'left_out', weightKg: 0 } : { source: 'recorded', weightKg: 0 };
   }
   if (loadType !== 'external' || set.weightKg > 0) return { source: 'recorded', weightKg: set.weightKg };
   const filled = filledKg !== null && filledKg > 0 ? storableWeight(filledKg) : null;
@@ -101,11 +99,11 @@ function liftSetsOfGroup(
 ): GarminLiftSet[] | GarminGroupNeed {
   if (group.sets.length === 0 || decision?.skipped === true) return [];
   const exercise = decision?.exercise ?? null;
-  if (decision === undefined || exercise === null) return 'exercise';
+  if (decision === undefined || exercise === null) return 'needs_exercise';
   const sets: GarminLiftSet[] = [];
   for (const [index, set] of group.sets.entries()) {
     const { weightKg } = garminSetWeight(set, exercise.loadType, decision.filledKg[index] ?? null);
-    if (weightKg === null) return 'weight';
+    if (weightKg === null) return 'needs_weight';
     sets.push({ exerciseId: exercise.id, reps: set.reps, weightKg });
   }
   return sets;
@@ -118,9 +116,7 @@ function picksToRemember(
   const exerciseByCategory = new Map<string, string>();
   groups.forEach((group, index) => {
     const [first] = setsByGroup[index];
-    if (group.category === null || first === undefined) return;
-    exerciseByCategory.delete(group.category);
-    exerciseByCategory.set(group.category, first.exerciseId);
+    if (group.category !== null && first !== undefined) exerciseByCategory.set(group.category, first.exerciseId);
   });
   return Array.from(exerciseByCategory, ([category, exerciseId]) => ({ category, exerciseId }));
 }
@@ -133,14 +129,14 @@ export function garminStrengthDecision(
   const outcomes = groups.map((group, index) => liftSetsOfGroup(group, decisions[index]));
   const setsByGroup = outcomes.filter((outcome) => typeof outcome !== 'string');
   if (setsByGroup.length < outcomes.length) {
-    return { status: 'undecided', needs: outcomes.includes('exercise') ? 'exercise' : 'weight' };
+    return { status: outcomes.includes('needs_exercise') ? 'needs_exercise' : 'needs_weight' };
   }
   const sets = setsByGroup.flat();
   if (sets.length === 0) return { status: 'nothing_chosen' };
-  const countsBodyweight = setsByGroup.some((groupSets, index) => {
+  const needsBodyweight = setsByGroup.some((groupSets, index) => {
     const loadType = decisions[index]?.exercise?.loadType;
-    return groupSets.length > 0 && loadType !== undefined && loadType !== 'external';
+    return groupSets.length > 0 && loadType !== undefined && countsBodyweight(loadType);
   });
-  if (countsBodyweight && !bodyweightKnown) return { status: 'needs_bodyweight' };
+  if (needsBodyweight && !bodyweightKnown) return { status: 'needs_bodyweight' };
   return { status: 'ready', sets, picks: picksToRemember(groups, setsByGroup) };
 }

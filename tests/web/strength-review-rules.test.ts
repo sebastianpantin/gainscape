@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { GarminGroupDecision, GarminSetGroup } from '@domain/index.ts';
+import type { GarminSetGroup } from '@domain/index.ts';
 import type { Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   categoryLabel,
   decisionFor,
+  type GroupChoice,
   groupName,
-  groupNotes,
-  groupSetViews,
+  groupView,
   pickableLifts,
   prefilledDecisions,
   type ReviewLift,
@@ -37,11 +37,7 @@ describe('categoryLabel and groupName', () => {
 
   it('numbers the groups so two groups of one category have their own name', () => {
     const groups = [group('bench_press', [8, 60]), group('row', [10, 40]), group('bench_press', [8, 50])];
-    expect(groups.map((_each, index) => groupName(groups, index))).toEqual([
-      'group 1, Bench press',
-      'group 2, Row',
-      'group 3, Bench press',
-    ]);
+    expect(groups.map(groupName)).toEqual(['group 1, Bench press', 'group 2, Row', 'group 3, Bench press']);
   });
 });
 
@@ -58,7 +54,7 @@ describe('pickableLifts and reviewLifts', () => {
 
   it('offers active exercises that take reps, never a hold, a cardio or an archived exercise', () => {
     expect(pickableLifts(exercises).map((exercise) => exercise.id)).toEqual(['bench', 'push-up']);
-    expect(reviewLifts(exercises)).toEqual(
+    expect(reviewLifts(pickableLifts(exercises))).toEqual(
       new Map([
         ['bench', { id: 'bench', name: 'bench', loadType: 'external' }],
         ['push-up', { id: 'push-up', name: 'push-up', loadType: 'bodyweight' }],
@@ -75,7 +71,7 @@ describe('prefilledDecisions', () => {
       ['curl', 'ex-gone'],
     ]);
     expect(prefilledDecisions(groups, remembered, LIFTS)).toEqual([
-      { skipped: false, exercise: { id: BENCH.id, loadType: 'external' }, filledKg: [] },
+      { skipped: false, exercise: { id: BENCH.id, loadType: 'external' }, filledKg: [], typedWeights: [] },
       UNDECIDED_GROUP,
       UNDECIDED_GROUP,
     ]);
@@ -95,19 +91,25 @@ describe('changing a group decision', () => {
       skipped: true,
       exercise: null,
       filledKg: [],
+      typedWeights: [],
     });
   });
 
   it('forgets filled-in weights when another exercise is picked', () => {
     const filled = withFilledWeight(decisionFor(BENCH), 0, '40', 'kg');
-    expect(filled.filledKg).toEqual([40]);
-    expect(withGroupDecision([filled], 0, () => decisionFor(PULL_UP))[0].filledKg).toEqual([]);
+    expect(filled).toMatchObject({ filledKg: [40], typedWeights: ['40'] });
+    expect(withGroupDecision([filled], 0, () => decisionFor(PULL_UP))[0]).toMatchObject({
+      filledKg: [],
+      typedWeights: [],
+    });
+    expect(withGroupDecision([filled], 0, () => decisionFor(BENCH))[0]).toEqual(decisionFor(BENCH));
   });
 
-  it('keeps the exercise of a skipped group, so taking Skip away brings it back', () => {
-    const skipped = withSkip(decisionFor(BENCH), true);
-    expect(skipped).toMatchObject({ skipped: true, exercise: { id: BENCH.id } });
-    expect(withSkip(skipped, false)).toEqual(decisionFor(BENCH));
+  it('keeps the exercise and the typed weights of a skipped group, so taking Skip away brings them back', () => {
+    const filled = withFilledWeight(decisionFor(BENCH), 1, '42,5', 'kg');
+    const skipped = withSkip(filled, true);
+    expect(skipped).toMatchObject({ skipped: true, exercise: { id: BENCH.id }, typedWeights: ['', '42,5'] });
+    expect(withSkip(skipped, false)).toEqual(filled);
   });
 });
 
@@ -117,58 +119,60 @@ describe('withFilledWeight', () => {
     expect(withFilledWeight(decisionFor(BENCH), 0, '100', 'lb').filledKg).toEqual([45.36]);
   });
 
-  it('has no weight for what is no number, and keeps the other sets', () => {
+  it('has no weight for what is no number, keeps what was typed, and keeps the other sets', () => {
     const first = withFilledWeight(decisionFor(BENCH), 0, '40', 'kg');
-    expect(withFilledWeight(first, 1, 'heavy', 'kg').filledKg).toEqual([40, null]);
-    expect(withFilledWeight(first, 0, '', 'kg').filledKg).toEqual([null]);
+    expect(withFilledWeight(first, 1, 'heavy', 'kg')).toMatchObject({
+      filledKg: [40, null],
+      typedWeights: ['40', 'heavy'],
+    });
+    expect(withFilledWeight(first, 0, '', 'kg')).toMatchObject({ filledKg: [null], typedWeights: [''] });
   });
 });
 
-describe('groupSetViews', () => {
+describe('groupView', () => {
   const sets = group('bench_press', [8, 60], [8, 0]);
 
   it('shows reps and weight in the unit of the user, and reps alone for a set without weight', () => {
-    expect(groupSetViews(sets, undefined, 'kg')).toEqual([
+    expect(groupView(sets, UNDECIDED_GROUP, undefined, 'kg').sets).toEqual([
       { text: '8 × 60 kg', asksWeight: false },
       { text: '8 reps', asksWeight: false },
     ]);
-    expect(groupSetViews(group('curl', [1, 10]), undefined, 'lb')[0].text).toBe('1 × 22 lb');
+    expect(groupView(group('curl', [1, 10]), UNDECIDED_GROUP, undefined, 'lb').sets[0].text).toBe('1 × 22 lb');
   });
 
   it('asks for the weight of a set without one only under an exercise with an external load', () => {
-    const asks = (decision: GarminGroupDecision) => groupSetViews(sets, decision, 'kg').map((set) => set.asksWeight);
+    const asks = (decision: GroupChoice) =>
+      groupView(sets, decision, undefined, 'kg').sets.map((set) => set.asksWeight);
     expect(asks(decisionFor(BENCH))).toEqual([false, true]);
-    expect(asks({ ...decisionFor(BENCH), filledKg: [null, 40] })).toEqual([false, true]);
+    expect(asks(withFilledWeight(decisionFor(BENCH), 1, '40', 'kg'))).toEqual([false, true]);
     expect(asks(decisionFor(PUSH_UP))).toEqual([false, false]);
     expect(asks(decisionFor(PULL_UP))).toEqual([false, false]);
     expect(asks(withSkip(decisionFor(BENCH), true))).toEqual([false, false]);
   });
-});
 
-describe('groupNotes', () => {
   it('says how many sets were left out', () => {
-    expect(groupNotes({ ...group('plank', [8, 0]), leftOut: 1 }, undefined, undefined, 'kg')).toEqual([
+    expect(groupView({ ...group('plank', [8, 0]), leftOut: 1 }, UNDECIDED_GROUP, undefined, 'kg').notes).toEqual([
       '1 set without reps left out.',
     ]);
-    expect(groupNotes({ category: 'plank', sets: [], leftOut: 3 }, undefined, undefined, 'kg')).toEqual([
+    expect(groupView({ category: 'plank', sets: [], leftOut: 3 }, UNDECIDED_GROUP, undefined, 'kg').notes).toEqual([
       '3 sets without reps left out.',
     ]);
   });
 
   it('names the weight an exercise without added weight leaves out, once per weight', () => {
     const weighted = group('push_up', [12, 10], [12, 10], [10, 15], [10, 0]);
-    expect(groupNotes(weighted, decisionFor(PUSH_UP), PUSH_UP.name, 'kg')).toEqual([
+    expect(groupView(weighted, decisionFor(PUSH_UP), PUSH_UP.name, 'kg').notes).toEqual([
       'Push-up takes no added weight: 10 kg, 15 kg left out.',
     ]);
-    expect(groupNotes(weighted, decisionFor(PULL_UP), PULL_UP.name, 'kg')).toEqual([]);
-    expect(groupNotes(weighted, withSkip(decisionFor(PUSH_UP), true), PUSH_UP.name, 'kg')).toEqual([]);
+    expect(groupView(weighted, decisionFor(PULL_UP), PULL_UP.name, 'kg').notes).toEqual([]);
+    expect(groupView(weighted, withSkip(decisionFor(PUSH_UP), true), PUSH_UP.name, 'kg').notes).toEqual([]);
   });
 });
 
 describe('strengthBadgeText and strengthFacts', () => {
   it('names what an undecided strength activity waits for', () => {
-    expect(strengthBadgeText({ status: 'undecided', needs: 'exercise' })).toBe('Needs exercises');
-    expect(strengthBadgeText({ status: 'undecided', needs: 'weight' })).toBe('Needs a weight');
+    expect(strengthBadgeText({ status: 'needs_exercise' })).toBe('Needs exercises');
+    expect(strengthBadgeText({ status: 'needs_weight' })).toBe('Needs a weight');
     expect(strengthBadgeText({ status: 'needs_bodyweight' })).toBe('Needs your bodyweight');
     expect(strengthBadgeText({ status: 'nothing_chosen' })).toBe('Every group skipped');
     expect(strengthBadgeText({ status: 'ready', sets: [], picks: [] })).toBeNull();

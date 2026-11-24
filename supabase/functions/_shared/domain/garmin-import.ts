@@ -2,7 +2,7 @@ import { CARDIO_BOUNDS, intervalDurationSeconds, isLoggableInterval } from './ca
 import { isWithinEditWindow } from './edit-window.ts';
 import { type GarminSet, type GarminSetGroup, garminSetGroups, garminUsableSetCount } from './garmin-strength.ts';
 import { MS_PER_SECOND, roundTo } from './math.ts';
-import { implausibleTiming } from './session-timing.ts';
+import { implausibleTiming, MAX_SESSION_DURATION_S } from './session-timing.ts';
 import { type CardioInterval, MAX_SETS_PER_SESSION } from './types.ts';
 
 export interface GarminWorkoutStep {
@@ -144,7 +144,7 @@ function sizeRejection(durationS: number, distanceM: number | null): GarminRejec
 
 function strengthRejection(durationS: number, setGroups: readonly GarminSetGroup[]): GarminRejection | null {
   const usableSets = garminUsableSetCount(setGroups);
-  if (durationS > CARDIO_BOUNDS.steadyDurationS.max) return 'too_long';
+  if (durationS > MAX_SESSION_DURATION_S) return 'too_long';
   if (usableSets === 0) return 'no_sets';
   if (usableSets > MAX_SETS_PER_SESSION) return 'too_many_sets';
   return null;

@@ -38,7 +38,12 @@ import {
   withGroupDecisions,
   withRowToggled,
 } from '../../web/src/lib/garmin/import-review-rules.ts';
-import { decisionFor, type ReviewLift, withSkip } from '../../web/src/lib/garmin/strength-review-rules.ts';
+import {
+  decisionFor,
+  type ReviewLift,
+  withFilledWeight,
+  withSkip,
+} from '../../web/src/lib/garmin/strength-review-rules.ts';
 
 const NOW = Date.parse('2026-11-24T12:00:00.000Z');
 const RUNNING: ReviewExercise = { id: 'ex-running', name: 'Running', tracksDistance: true, paceUnit: 'per_km' };
@@ -633,7 +638,7 @@ describe('a strength activity in the review', () => {
     expect(canBeChosen(review.rows[0], picked)).toBe(false);
     expect(rowBadge(review.rows[0], picked, review.sessions)?.text).toBe('Needs a weight');
     const filled = withGroupDecisions(picked, review.sessions, review.rows[0], [
-      { ...decisionFor(BENCH), filledKg: [42.5] },
+      withFilledWeight(decisionFor(BENCH), 0, '42.5', 'kg'),
     ]);
     expect(isChosen(review.rows[0], filled)).toBe(true);
     expect(activitiesToImport(review.rows, filled, EXERCISES)).toMatchObject([
@@ -731,5 +736,9 @@ describe('reviewSessions', () => {
       { startedAt: '2026-11-21T06:00:00.000Z', endedAt: '2026-11-21T07:00:00.000Z', exerciseIds: ['gone'] },
     ];
     expect(asReviewSessions(logged).map((session) => session.holdsLiftSets)).toEqual([false, true, false]);
+    expect(asReviewSessions(logged)[0]).toMatchObject({
+      startMs: Date.parse('2026-11-23T06:00:00.000Z'),
+      endMs: Date.parse('2026-11-23T07:00:00.000Z'),
+    });
   });
 });

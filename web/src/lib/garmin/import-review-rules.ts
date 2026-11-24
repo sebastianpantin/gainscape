@@ -4,7 +4,6 @@ import {
   garminActivityEnd,
   garminActivityIdentity,
   type GarminExercisePick,
-  type GarminGroupDecision,
   type GarminImportCandidate,
   garminImportCandidate,
   type GarminImportOutcome,
@@ -24,14 +23,21 @@ import {
   type PaceUnit,
 } from '../exercises/catalog-rules.ts';
 import { formatCount, formatXp } from '../format.ts';
-import { capitalized } from '../names.ts';
+import { labelOfKey } from '../names.ts';
 import type { InvokeOutcome } from '../platform/function-client-rules.ts';
 import { RATE_LIMITED_STATUS } from '../platform/rate-limit.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
 import { distanceUnitFor, formatDistance } from '../units.ts';
 import { describeInterval, formatDuration } from '../workout/cardio-rules.ts';
 import type { SeenGarminActivity } from './seen-activities-rules.ts';
-import { prefilledDecisions, type ReviewLift, strengthBadgeText, strengthFacts } from './strength-review-rules.ts';
+import {
+  type GroupChoice,
+  prefilledDecisions,
+  type ReviewLift,
+  strengthBadgeText,
+  strengthFacts,
+  UNDECIDED_GROUP,
+} from './strength-review-rules.ts';
 
 const GARMIN_IMPORT_DAILY_CAP = 500;
 const DEFAULT_PACE_UNIT: PaceUnit = 'per_km';
@@ -54,6 +60,8 @@ export interface LoggedSession {
 }
 
 export interface ReviewSession extends LoggedSession {
+  startMs: number;
+  endMs: number;
   holdsLiftSets: boolean;
 }
 
@@ -74,7 +82,7 @@ export interface ReviewExercise {
 export interface ReviewChoices {
   selected: ReadonlySet<string>;
   exerciseByRow: ReadonlyMap<string, string>;
-  groupsByRow: ReadonlyMap<string, readonly GarminGroupDecision[]>;
+  groupsByRow: ReadonlyMap<string, readonly GroupChoice[]>;
   bodyweightKnown: boolean;
 }
 
@@ -136,6 +144,8 @@ export function reviewSessions(sessions: readonly LoggedSession[], exercises: re
   const liftIds = new Set(exercises.filter(isLiftExercise).map((exercise) => exercise.id));
   return sessions.map((session) => ({
     ...session,
+    startMs: Date.parse(session.startedAt),
+    endMs: Date.parse(session.endedAt),
     holdsLiftSets: session.exerciseIds.some((exerciseId) => liftIds.has(exerciseId)),
   }));
 }
@@ -152,8 +162,8 @@ export function needsExercisePick(row: ReviewRow): boolean {
   return row.greyed === null && row.candidate.kind === 'cardio' && row.candidate.exerciseId === null;
 }
 
-export function groupDecisionsOfRow(row: ReviewRow, choices: ReviewChoices): readonly GarminGroupDecision[] {
-  return choices.groupsByRow.get(row.id) ?? [];
+export function groupDecisionsOfRow(row: ReviewRow, choices: ReviewChoices): readonly GroupChoice[] {
+  return choices.groupsByRow.get(row.id) ?? row.candidate.setGroups.map(() => UNDECIDED_GROUP);
 }
 
 export function strengthDecisionOfRow(row: ReviewRow, choices: ReviewChoices): GarminStrengthDecision {
@@ -170,31 +180,28 @@ export function isChosen(row: ReviewRow, choices: ReviewChoices): boolean {
   return canBeChosen(row, choices) && choices.selected.has(row.id);
 }
 
-function overlappingSession(
-  row: ReviewRow,
-  exerciseId: string | null,
-  sessions: readonly ReviewSession[],
-): ReviewSession | null {
-  const { kind, startedAt, durationS } = row.candidate;
-  if ((kind === 'cardio' && exerciseId === null) || startedAt === null || durationS === null) return null;
-  const activityStart = Date.parse(startedAt);
-  const activityEnd = Date.parse(garminActivityEnd({ startedAt, durationS }));
-  return (
-    sessions.find(
-      (session) =>
-        (exerciseId === null ? session.holdsLiftSets : session.exerciseIds.includes(exerciseId)) &&
-        Date.parse(session.startedAt) <= activityEnd &&
-        activityStart <= Date.parse(session.endedAt),
-    ) ?? null
-  );
-}
-
 function possibleDuplicateOf(
   row: ReviewRow,
   choices: ReviewChoices,
   sessions: readonly ReviewSession[],
 ): ReviewSession | null {
-  return overlappingSession(row, isStrengthRow(row) ? null : exerciseOfRow(row, choices), sessions);
+  const { startedAt, durationS } = row.candidate;
+  const exerciseId = exerciseOfRow(row, choices);
+  const isStrength = isStrengthRow(row);
+  if ((!isStrength && exerciseId === null) || startedAt === null || durationS === null) return null;
+  const sameKindOfWorkout = (session: ReviewSession) =>
+    isStrength ? session.holdsLiftSets : session.exerciseIds.includes(exerciseId!);
+  const activityStart = Date.parse(startedAt);
+  const activityEnd = Date.parse(garminActivityEnd({ startedAt, durationS }));
+  return (
+    sessions.find(
+      (session) => sameKindOfWorkout(session) && session.startMs <= activityEnd && activityStart <= session.endMs,
+    ) ?? null
+  );
+}
+
+function isChosenUnasked(row: ReviewRow, choices: ReviewChoices, sessions: readonly ReviewSession[]): boolean {
+  return canBeChosen(row, choices) && possibleDuplicateOf(row, choices, sessions) === null;
 }
 
 export interface ReviewMemory {
@@ -221,9 +228,7 @@ export function initialChoices(
     ),
     bodyweightKnown: memory.bodyweightKnown,
   };
-  const selected = rows
-    .filter((row) => canBeChosen(row, unselected) && possibleDuplicateOf(row, unselected, sessions) === null)
-    .map((row) => row.id);
+  const selected = rows.filter((row) => isChosenUnasked(row, unselected, sessions)).map((row) => row.id);
   return { ...unselected, selected: new Set(selected) };
 }
 
@@ -248,7 +253,7 @@ export function withExercisePicked(
 ): ReviewChoices {
   if (row.greyed !== null) return choices;
   const picked = { ...choices, exerciseByRow: new Map([...choices.exerciseByRow, [row.id, exerciseId]]) };
-  return withSelection(picked, [row], overlappingSession(row, exerciseId, sessions) === null);
+  return withSelection(picked, [row], possibleDuplicateOf(row, picked, sessions) === null);
 }
 
 function withNewlyChoosableSelected(
@@ -260,7 +265,7 @@ function withNewlyChoosableSelected(
   const changed = rows.filter((row) => canBeChosen(row, before) !== canBeChosen(row, after));
   const selected = new Set(after.selected);
   for (const row of changed) {
-    if (canBeChosen(row, after) && possibleDuplicateOf(row, after, sessions) === null) selected.add(row.id);
+    if (isChosenUnasked(row, after, sessions)) selected.add(row.id);
     else selected.delete(row.id);
   }
   return { ...after, selected };
@@ -270,7 +275,7 @@ export function withGroupDecisions(
   choices: ReviewChoices,
   sessions: readonly ReviewSession[],
   row: ReviewRow,
-  decisions: readonly GarminGroupDecision[],
+  decisions: readonly GroupChoice[],
 ): ReviewChoices {
   if (!isStrengthRow(row)) return choices;
   const decided = { ...choices, groupsByRow: new Map([...choices.groupsByRow, [row.id, decisions]]) };
@@ -339,7 +344,7 @@ function formatActivityStart(startedAt: string, timeZone?: string): string {
 }
 
 function garminTypeLabel(garminType: string | null): string {
-  return garminType === null ? UNNAMED_GARMIN_TYPE : capitalized(garminType.replaceAll('_', ' '));
+  return garminType === null ? UNNAMED_GARMIN_TYPE : labelOfKey(garminType);
 }
 
 export function rowTitle(row: ReviewRow, timeZone?: string): string {
@@ -355,12 +360,12 @@ export function rowFacts(
   exercisesById: ReadonlyMap<string, ReviewExercise>,
   unit: UnitPref,
 ): string {
-  const { kind, durationS, distanceM, interval, setGroups } = row.candidate;
+  const { durationS, distanceM, interval, setGroups } = row.candidate;
   const exercise = exercisesById.get(exerciseOfRow(row, choices) ?? '');
   const showsDistance = distanceM !== null && (exercise?.tracksDistance ?? true);
   return [
     exercise?.name,
-    kind === 'strength' && setGroups.length > 0 ? strengthFacts(setGroups) : null,
+    setGroups.length > 0 ? strengthFacts(setGroups) : null,
     durationS === null ? null : formatDuration(durationS),
     showsDistance ? formatDistance(distanceM, distanceUnitFor(unit, exercise?.paceUnit ?? DEFAULT_PACE_UNIT)) : null,
     interval === null ? null : describeInterval(interval),
@@ -380,11 +385,12 @@ export function rowBadge(
   timeZone?: string,
 ): RowBadge | null {
   if (row.greyed !== null) return { kind: 'greyed', text: GREYED_TEXT[row.greyed] };
-  const undecided = isStrengthRow(row) ? strengthBadgeText(strengthDecisionOfRow(row, choices)) : null;
-  if (undecided !== null) return { kind: 'needs_exercise', text: undecided };
-  if (!isStrengthRow(row) && exerciseOfRow(row, choices) === null) {
-    return { kind: 'needs_exercise', text: 'Needs an exercise' };
-  }
+  const needs = isStrengthRow(row)
+    ? strengthBadgeText(strengthDecisionOfRow(row, choices))
+    : exerciseOfRow(row, choices) === null
+      ? 'Needs an exercise'
+      : null;
+  if (needs !== null) return { kind: 'needs_exercise', text: needs };
   const duplicate = possibleDuplicateOf(row, choices, sessions);
   if (duplicate !== null) {
     return {

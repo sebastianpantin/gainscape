@@ -13,6 +13,10 @@ export function capitalized(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+export function labelOfKey(key: string): string {
+  return capitalized(key.replaceAll('_', ' '));
+}
+
 export function trimmedName(raw: string): string {
   return raw.replace(SURROUNDING_BLANKS, '');
 }

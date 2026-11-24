@@ -28,7 +28,7 @@ import type {
   StrengthState,
   UserState,
 } from './types.ts';
-import { measuresRepsCapacity, NO_RECORDS } from './types.ts';
+import { countsBodyweight, measuresRepsCapacity, NO_RECORDS } from './types.ts';
 import { BodyweightLoadNotZeroError, BodyweightRequiredError, DistanceNotTrackedError } from './errors.ts';
 import { challengeBonusXp, type ChallengeVerdict, judgeChallenge } from './challenges.ts';
 import {
@@ -91,7 +91,7 @@ export function effectiveLoadForNewSet(
 ): number {
   const exercise = liftExercise(anyExercise);
   assertNoAddedLoadOnPureBodyweight(set, exercise);
-  if (exercise.loadType === 'external') return set.weightKg;
+  if (!countsBodyweight(exercise.loadType)) return set.weightKg;
   if (bodyweightKg === null) throw new BodyweightRequiredError();
   return bodyweightKg + set.weightKg;
 }

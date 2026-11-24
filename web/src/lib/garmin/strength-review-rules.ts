@@ -1,49 +1,57 @@
 import {
   type GarminGroupDecision,
-  type GarminGroupNeed,
   type GarminSetGroup,
   garminSetWeight,
   type GarminStrengthDecision,
+  type GarminUndecidedStatus,
   garminUsableSetCount,
-  type LoadType,
 } from '@domain/index.ts';
 import { activeExercises, type Exercise, isPlannableExercise, type LiftExercise } from '../exercises/catalog-rules.ts';
 import { formatCount } from '../format.ts';
-import { capitalized } from '../names.ts';
+import { labelOfKey } from '../names.ts';
 import type { UnitPref } from '../profile/profile-rules.ts';
 import { formatWeight, parsedDecimal, unitToKg } from '../units.ts';
 
 const UNKNOWN_CATEGORY_LABEL = 'Unknown exercise';
 
-export interface ReviewLift {
-  id: string;
-  name: string;
-  loadType: LoadType;
+export type ReviewLift = Pick<LiftExercise, 'id' | 'name' | 'loadType'>;
+
+export interface GroupChoice extends GarminGroupDecision {
+  typedWeights: readonly string[];
 }
 
-export const UNDECIDED_GROUP: GarminGroupDecision = Object.freeze({ skipped: false, exercise: null, filledKg: [] });
+export const UNDECIDED_GROUP: GroupChoice = Object.freeze({
+  skipped: false,
+  exercise: null,
+  filledKg: [],
+  typedWeights: [],
+});
 
 export function pickableLifts(exercises: readonly Exercise[]): LiftExercise[] {
   return activeExercises(exercises).filter(isPlannableExercise);
 }
 
-export function reviewLifts(exercises: readonly Exercise[]): Map<string, ReviewLift> {
-  return new Map(pickableLifts(exercises).map(({ id, name, loadType }) => [id, { id, name, loadType }]));
+export function reviewLifts(lifts: readonly LiftExercise[]): Map<string, ReviewLift> {
+  return new Map(lifts.map(({ id, name, loadType }) => [id, { id, name, loadType }]));
 }
 
 export function categoryLabel(category: string | null): string {
-  return category === null ? UNKNOWN_CATEGORY_LABEL : capitalized(category.replaceAll('_', ' '));
+  return category === null ? UNKNOWN_CATEGORY_LABEL : labelOfKey(category);
 }
 
-export function groupName(groups: readonly GarminSetGroup[], index: number): string {
-  return `group ${index + 1}, ${categoryLabel(groups[index].category)}`;
+export function groupName(group: GarminSetGroup, index: number): string {
+  return `group ${index + 1}, ${categoryLabel(group.category)}`;
+}
+
+export function decisionFor(lift: ReviewLift): GroupChoice {
+  return { ...UNDECIDED_GROUP, exercise: { id: lift.id, loadType: lift.loadType } };
 }
 
 export function prefilledDecisions(
   groups: readonly GarminSetGroup[],
   exerciseIdByCategory: ReadonlyMap<string, string>,
   lifts: ReadonlyMap<string, ReviewLift>,
-): GarminGroupDecision[] {
+): GroupChoice[] {
   return groups.map((group) => {
     const remembered = group.category === null ? undefined : lifts.get(exerciseIdByCategory.get(group.category) ?? '');
     return remembered === undefined ? UNDECIDED_GROUP : decisionFor(remembered);
@@ -51,36 +59,32 @@ export function prefilledDecisions(
 }
 
 export function withGroupDecision(
-  decisions: readonly GarminGroupDecision[],
+  decisions: readonly GroupChoice[],
   index: number,
-  change: (decision: GarminGroupDecision) => GarminGroupDecision,
-): GarminGroupDecision[] {
+  change: (decision: GroupChoice) => GroupChoice,
+): GroupChoice[] {
   const changed = [...decisions];
   changed[index] = change(decisions[index] ?? UNDECIDED_GROUP);
   return changed;
 }
 
-export function decisionFor(lift: ReviewLift): GarminGroupDecision {
-  return { ...UNDECIDED_GROUP, exercise: { id: lift.id, loadType: lift.loadType } };
-}
-
-export function withSkip(decision: GarminGroupDecision, skipped: boolean): GarminGroupDecision {
+export function withSkip(decision: GroupChoice, skipped: boolean): GroupChoice {
   return { ...decision, skipped };
 }
 
-export function withFilledWeight(
-  decision: GarminGroupDecision,
-  setIndex: number,
-  typed: string,
-  unit: UnitPref,
-): GarminGroupDecision {
+function withValueAt<Value>(values: readonly Value[], index: number, value: Value, empty: Value): Value[] {
+  const changed = Array.from({ length: Math.max(values.length, index + 1) }, (_unused, at) => values[at] ?? empty);
+  changed[index] = value;
+  return changed;
+}
+
+export function withFilledWeight(decision: GroupChoice, setIndex: number, typed: string, unit: UnitPref): GroupChoice {
   const shown = parsedDecimal(typed);
-  const filledKg = Array.from(
-    { length: Math.max(decision.filledKg.length, setIndex + 1) },
-    (_unused, index) => decision.filledKg[index] ?? null,
-  );
-  filledKg[setIndex] = shown === null ? null : unitToKg(shown, unit);
-  return { ...decision, filledKg };
+  return {
+    ...decision,
+    typedWeights: withValueAt(decision.typedWeights, setIndex, typed, ''),
+    filledKg: withValueAt(decision.filledKg, setIndex, shown === null ? null : unitToKg(shown, unit), null),
+  };
 }
 
 export interface GroupSetView {
@@ -88,48 +92,46 @@ export interface GroupSetView {
   asksWeight: boolean;
 }
 
-export function groupSetViews(
-  group: GarminSetGroup,
-  decision: GarminGroupDecision | undefined,
-  unit: UnitPref,
-): GroupSetView[] {
-  const loadType = decision?.skipped === true ? undefined : decision?.exercise?.loadType;
-  return group.sets.map((set, index) => {
-    const asksWeight =
-      loadType !== undefined && garminSetWeight(set, loadType, decision?.filledKg[index] ?? null).source === 'asked';
-    const reps = formatCount(set.reps, 'rep');
-    return { text: set.weightKg > 0 ? `${set.reps} × ${formatWeight(set.weightKg, unit)}` : reps, asksWeight };
-  });
+export interface GroupView {
+  sets: GroupSetView[];
+  notes: string[];
 }
 
-export function groupNotes(
+export function groupView(
   group: GarminSetGroup,
-  decision: GarminGroupDecision | undefined,
+  decision: GroupChoice,
   exerciseName: string | undefined,
   unit: UnitPref,
-): string[] {
-  const loadType = decision?.skipped === true ? undefined : decision?.exercise?.loadType;
-  const leftOutWeights =
-    loadType === undefined
-      ? []
-      : group.sets.flatMap((set) => {
-          const weight = garminSetWeight(set, loadType, null);
-          return weight.source === 'left_out' ? [formatWeight(weight.recordedKg, unit)] : [];
-        });
-  return [
+): GroupView {
+  const loadType = decision.skipped ? undefined : decision.exercise?.loadType;
+  const leftOutWeights = new Set<string>();
+  const sets = group.sets.map((set): GroupSetView => {
+    const weight = formatWeight(set.weightKg, unit);
+    const source = loadType === undefined ? null : garminSetWeight(set, loadType, null).source;
+    if (source === 'left_out') leftOutWeights.add(weight);
+    return {
+      text: set.weightKg > 0 ? `${set.reps} × ${weight}` : formatCount(set.reps, 'rep'),
+      asksWeight: source === 'asked',
+    };
+  });
+  const notes = [
     group.leftOut > 0 ? `${formatCount(group.leftOut, 'set')} without reps left out.` : null,
-    leftOutWeights.length > 0
-      ? `${exerciseName ?? 'This exercise'} takes no added weight: ${[...new Set(leftOutWeights)].join(', ')} left out.`
+    leftOutWeights.size > 0
+      ? `${exerciseName ?? 'This exercise'} takes no added weight: ${[...leftOutWeights].join(', ')} left out.`
       : null,
   ].filter((note) => note !== null);
+  return { sets, notes };
 }
 
-const UNDECIDED_BADGE_TEXT: Record<GarminGroupNeed, string> = { exercise: 'Needs exercises', weight: 'Needs a weight' };
+const UNDECIDED_BADGE_TEXT: Record<GarminUndecidedStatus, string> = {
+  needs_exercise: 'Needs exercises',
+  needs_weight: 'Needs a weight',
+  needs_bodyweight: 'Needs your bodyweight',
+  nothing_chosen: 'Every group skipped',
+};
 
 export function strengthBadgeText(decision: GarminStrengthDecision): string | null {
-  if (decision.status === 'ready') return null;
-  if (decision.status === 'undecided') return UNDECIDED_BADGE_TEXT[decision.needs];
-  return decision.status === 'needs_bodyweight' ? 'Needs your bodyweight' : 'Every group skipped';
+  return decision.status === 'ready' ? null : UNDECIDED_BADGE_TEXT[decision.status];
 }
 
 export function strengthFacts(groups: readonly GarminSetGroup[]): string {

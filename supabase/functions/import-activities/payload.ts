@@ -2,13 +2,13 @@ import { z } from 'npm:zod@4.6.5';
 import {
   CARDIO_BOUNDS,
   GARMIN_IMPORT_CHUNK,
+  GARMIN_KEY_PATTERN,
   garminActivityEnd,
   garminActivityIdentity,
   garminCategoryKey,
   type GarminExercisePick,
-  MAX_SESSION_DURATION_MS,
+  MAX_SESSION_DURATION_S,
   MAX_SETS_PER_SESSION,
-  MS_PER_SECOND,
 } from '../_shared/domain/index.ts';
 import { isoInstant, lowerUuid, parseOr422, type SetPayload, setSchema } from '../_shared/session-payload.ts';
 
@@ -17,11 +17,7 @@ const activityIdentity = {
     (instant) => garminActivityIdentity(instant) === instant,
     'a Garmin activity starts on a whole second',
   ),
-  garminType: z
-    .string()
-    .regex(/^[a-z0-9_]{1,60}$/)
-    .nullable()
-    .default(null),
+  garminType: z.string().regex(GARMIN_KEY_PATTERN).nullable().default(null),
 };
 
 const cardioActivitySchema = z
@@ -44,10 +40,7 @@ const pickSchema = z
 const strengthActivitySchema = z
   .object({
     ...activityIdentity,
-    durationS: z
-      .int()
-      .min(0)
-      .max(MAX_SESSION_DURATION_MS / MS_PER_SECOND),
+    durationS: z.int().min(0).max(MAX_SESSION_DURATION_S),
     sets: z
       .array(z.object({ exerciseId: lowerUuid, reps: z.unknown(), weightKg: z.unknown() }).strict())
       .min(1)
