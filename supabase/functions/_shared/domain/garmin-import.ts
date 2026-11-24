@@ -1,4 +1,4 @@
-import { CARDIO_BOUNDS, isLoggableInterval } from './cardio.ts';
+import { CARDIO_BOUNDS, intervalDurationSeconds, isLoggableInterval } from './cardio.ts';
 import { isWithinEditWindow } from './edit-window.ts';
 import { MS_PER_SECOND, roundTo } from './math.ts';
 import { implausibleTiming } from './session-timing.ts';
@@ -75,7 +75,7 @@ function sharedSeconds(phases: readonly IntervalPhase[]): number | null {
   return seconds.size === 1 && only !== null ? only : null;
 }
 
-function structuredInterval(activity: GarminActivity): CardioInterval | null {
+function structuredInterval(activity: GarminActivity, durationS: number): CardioInterval | null {
   const phases = intervalPhases(activity);
   if (phases.at(-1)?.isWork === false) phases.pop();
   const alternatesFromWorkToWork =
@@ -85,7 +85,7 @@ function structuredInterval(activity: GarminActivity): CardioInterval | null {
   const restS = sharedSeconds(phases.filter((phase) => !phase.isWork));
   if (workS === null || restS === null) return null;
   const interval = { workS, restS, rounds: (phases.length + 1) / 2 };
-  return isLoggableInterval(interval) ? interval : null;
+  return isLoggableInterval(interval) && intervalDurationSeconds(interval) <= durationS ? interval : null;
 }
 
 function loggedDistance(distanceM: number | null): number | null {
@@ -125,15 +125,11 @@ export function garminImportCandidate(
   });
   const startedAt = garminActivityIdentity(activity.startedAt);
   if (startedAt === null || hasUnreadableMeasures(activity)) return rejected('unreadable');
-  const durationS = Math.round(activity.durationS);
-  if (implausibleTiming(startedAt, garminActivityEnd({ startedAt, durationS }), now) !== null) {
-    return rejected('unreadable');
-  }
 
   const measured = {
     startedAt,
     garminType: activity.type,
-    durationS,
+    durationS: Math.round(activity.durationS),
     distanceM: loggedDistance(activity.distanceM),
     historyOnly: !isWithinEditWindow(startedAt, now),
   };
@@ -144,9 +140,16 @@ export function garminImportCandidate(
   const exerciseId = (activity.type === null ? undefined : exerciseIdByGarminType.get(activity.type)) ?? null;
   const tooBigOrSmall = sizeRejection(measured.durationS, measured.distanceM);
   if (tooBigOrSmall !== null) return { ...rejected(tooBigOrSmall), ...measured, exerciseId };
+  if (implausibleTiming(startedAt, garminActivityEnd(measured), now) !== null) return rejected('unreadable');
 
   const status = exerciseId === null ? 'needs_exercise' : measured.historyOnly ? 'history_only' : 'importable';
-  return { ...measured, exerciseId, interval: structuredInterval(activity), status, rejection: null };
+  return {
+    ...measured,
+    exerciseId,
+    interval: structuredInterval(activity, measured.durationS),
+    status,
+    rejection: null,
+  };
 }
 
 export type GarminSeenOutcome = 'imported' | 'deleted' | 'rejected';

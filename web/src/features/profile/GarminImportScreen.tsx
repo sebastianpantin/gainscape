@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useId, useMemo, useState } from 'react';
+import type { GarminImportOutcome } from '@domain/index.ts';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { BackLink } from '../../components/BackLink.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
@@ -151,7 +152,15 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
       firstChoices: initialChoices(rows, context.sessions),
     };
   }, [context, exercises, pending.activities, now]);
-  useEffect(() => dropPendingImport, []);
+  const onScreen = useRef(false);
+  const imported = useRef<GarminImportOutcome[]>([]);
+  useEffect(() => {
+    onScreen.current = true;
+    return () => {
+      onScreen.current = false;
+      dropPendingImport();
+    };
+  }, []);
   const choices = picked ?? review?.firstChoices ?? null;
   const count = review && choices ? chosenCount(review.rows, choices) : 0;
 
@@ -162,9 +171,10 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
     const run = await importActivities(userId, activitiesToImport(review.rows, choices, review.exercisesById));
     if (run.outcomes.length > 0) await wrote(queryClient, { change: 'workout-changed' }).catch(() => undefined);
     setImporting(false);
+    imported.current.push(...run.outcomes);
     if (run.problem !== null) return setProblem(run.problem);
-    holdFinishedImport(importSummary(run.outcomes));
-    goBack();
+    holdFinishedImport(importSummary(imported.current));
+    if (onScreen.current) goBack();
   };
 
   return (

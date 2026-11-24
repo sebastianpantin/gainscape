@@ -26,8 +26,10 @@ export function holdFinishedImport(summary: ImportSummary): void {
   finishedImport = summary;
 }
 
-export function takeFinishedImport(): ImportSummary | null {
-  const summary = finishedImport;
+export function heldFinishedImport(): ImportSummary | null {
+  return finishedImport;
+}
+
+export function dropFinishedImport(): void {
   finishedImport = null;
-  return summary;
 }

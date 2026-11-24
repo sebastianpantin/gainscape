@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { type ChangeEvent, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fitActivitiesOf } from '../../../lib/garmin/fit-file.ts';
 import {
@@ -8,7 +8,7 @@ import {
   lastImportText,
   UNREADABLE_FILE_TEXT,
 } from '../../../lib/garmin/import-review-rules.ts';
-import { holdPendingImport, takeFinishedImport } from '../../../lib/garmin/pending-import.ts';
+import { dropFinishedImport, heldFinishedImport, holdPendingImport } from '../../../lib/garmin/pending-import.ts';
 import { garminLastImportQuery } from '../../../lib/query/queries.ts';
 import { HISTORY_PATH } from '../../history/SessionHeader.tsx';
 
@@ -17,7 +17,8 @@ const GARMIN_IMPORT_PATH = '/profile/settings/garmin-import';
 export function GarminSection({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [finished] = useState(takeFinishedImport);
+  const [finished] = useState(heldFinishedImport);
+  useEffect(() => dropFinishedImport, []);
   const [reading, setReading] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const { data: lastImportAt } = useQuery(garminLastImportQuery(userId));

@@ -154,6 +154,17 @@ describe('garminImportCandidate', () => {
       'a work step shorter than five seconds',
       { workoutSteps: [{ ...WORK, durationS: 4 }, REST], laps: lapsOf(0, 1, 0) },
     ],
+    [
+      'a workout cut short, so the planned interval is longer than the activity',
+      {
+        workoutSteps: [
+          { intensity: 'active', durationS: 300 },
+          { intensity: 'rest', durationS: 120 },
+        ],
+        laps: lapsOf(0, 1, 0, 1, 0, 1, 0),
+        durationS: 600,
+      },
+    ],
     ['laps that point at no workout step', { workoutSteps: INTERVAL_WORKOUT, laps: lapsOf(7, 8, 7, 8, 7) }],
     [
       'more than a hundred rounds',
@@ -189,6 +200,31 @@ describe('garminImportCandidate', () => {
       rejection: 'too_long',
     });
     expect(candidateOf({ durationS: 14_400.4 })).toMatchObject({ durationS: 14_400, status: 'importable' });
+  });
+
+  it('still says over four hours, with its date, for a watch left running half a day', () => {
+    expect(candidateOf({ durationS: 13 * 3600 })).toMatchObject({
+      startedAt: '2026-11-23T06:30:05.000Z',
+      durationS: 46_800,
+      status: 'rejected',
+      rejection: 'too_long',
+    });
+    expect(candidateOf({ type: 'strength_training', durationS: 13 * 3600, distanceM: null }).rejection).toBe(
+      'strength',
+    );
+  });
+
+  it('keeps an interval that fills the activity exactly', () => {
+    const workoutSteps: GarminWorkoutStep[] = [
+      { intensity: 'active', durationS: 60 },
+      { intensity: 'rest', durationS: 30 },
+    ];
+    expect(candidateOf({ workoutSteps, laps: lapsOf(0, 1, 0), durationS: 150 }).interval).toEqual({
+      workS: 60,
+      restS: 30,
+      rounds: 2,
+    });
+    expect(candidateOf({ workoutSteps, laps: lapsOf(0, 1, 0), durationS: 149 }).interval).toBeNull();
   });
 
   it('rejects an activity over 200 km, and takes one of exactly 200 km', () => {
