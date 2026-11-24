@@ -73,7 +73,10 @@ function lapsOfSession(session: FitMessage, sessionCount: number, laps: readonly
 export function garminActivitiesFromFit(parsed: unknown): GarminActivity[] {
   const file = messageOf(parsed);
   const sessions = messagesOf(file.sessions);
-  const laps = messagesOf(file.laps).map((lap) => ({ workoutStepIndex: messageIndexOf(lap.wkt_step_index) }));
+  const laps = messagesOf(file.laps).map((lap) => ({
+    workoutStepIndex: messageIndexOf(lap.wkt_step_index),
+    durationS: numberOf(lap.total_timer_time),
+  }));
   const workoutSteps = workoutStepsOf(messagesOf(messageOf(file.messages).workout_step));
   return sessions.map((session) => ({
     type: garminTypeOfFitSport(nameOf(session.sport), nameOf(session.sub_sport)),

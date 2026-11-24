@@ -11,6 +11,7 @@ export interface GarminWorkoutStep {
 
 export interface GarminLap {
   workoutStepIndex: number | null;
+  durationS: number | null;
 }
 
 export interface GarminActivity {
@@ -43,6 +44,7 @@ const GARMIN_STRENGTH_TYPES: ReadonlySet<string> = new Set(['strength_training']
 const WORK_INTENSITIES: ReadonlySet<string> = new Set(['active', 'interval']);
 const REST_INTENSITIES: ReadonlySet<string> = new Set(['rest', 'recovery']);
 const FEWEST_INTERVAL_PHASES = 3;
+const STEP_TIME_TOLERANCE_S = 2;
 
 export function garminActivityIdentity(startedAt: string): string | null {
   const startedMs = Date.parse(startedAt);
@@ -59,19 +61,41 @@ interface IntervalPhase {
   durationS: number | null;
 }
 
-function stepsDone(activity: GarminActivity): number[] {
-  const stepOfEachLap = activity.laps.flatMap((lap) => (lap.workoutStepIndex === null ? [] : [lap.workoutStepIndex]));
-  return stepOfEachLap.filter((step, lap) => step !== stepOfEachLap[lap - 1]);
+interface StepRun {
+  stepIndex: number | null;
+  lapSeconds: (number | null)[];
+}
+
+function stepRuns(laps: readonly GarminLap[]): StepRun[] {
+  const runs: StepRun[] = [];
+  for (const lap of laps) {
+    const run = runs.at(-1);
+    if (run !== undefined && run.stepIndex === lap.workoutStepIndex) run.lapSeconds.push(lap.durationS);
+    else runs.push({ stepIndex: lap.workoutStepIndex, lapSeconds: [lap.durationS] });
+  }
+  return runs;
+}
+
+function timesStepWasDone(lapSeconds: readonly (number | null)[], plannedS: number): number | null {
+  if (lapSeconds.includes(null)) return lapSeconds.length;
+  const doneS = lapSeconds.reduce<number>((total, seconds) => total + (seconds ?? 0), 0);
+  const times = Math.round(doneS / plannedS);
+  const asPlanned = times >= 1 && Math.abs(doneS - times * plannedS) <= times * STEP_TIME_TOLERANCE_S;
+  return asPlanned ? times : null;
+}
+
+function phasesOfRun(run: StepRun, workoutSteps: readonly GarminWorkoutStep[]): IntervalPhase[] {
+  const step = run.stepIndex === null ? undefined : workoutSteps[run.stepIndex];
+  if (step === undefined || step.intensity === null) return [];
+  const isWork = WORK_INTENSITIES.has(step.intensity);
+  if (!isWork && !REST_INTENSITIES.has(step.intensity)) return [];
+  const times = step.durationS === null ? null : timesStepWasDone(run.lapSeconds, step.durationS);
+  if (times === null) return [{ isWork, durationS: null }];
+  return Array.from({ length: times }, () => ({ isWork, durationS: step.durationS }));
 }
 
 function intervalPhases(activity: GarminActivity): IntervalPhase[] {
-  return stepsDone(activity).flatMap((stepIndex): IntervalPhase[] => {
-    const step = activity.workoutSteps.at(stepIndex);
-    if (step === undefined || step.intensity === null) return [];
-    if (WORK_INTENSITIES.has(step.intensity)) return [{ isWork: true, durationS: step.durationS }];
-    if (REST_INTENSITIES.has(step.intensity)) return [{ isWork: false, durationS: step.durationS }];
-    return [];
-  });
+  return stepRuns(activity.laps).flatMap((run) => phasesOfRun(run, activity.workoutSteps));
 }
 
 function sharedSeconds(phases: readonly IntervalPhase[]): number | null {

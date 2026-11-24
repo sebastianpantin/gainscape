@@ -62,7 +62,7 @@ Balance and versioning:
 
 Import:
 
-- `garminImportCandidate` is the one mapping from a Garmin activity to a Cardio set, for the Import review and for any later server handler. Its `startedAt` (start second in UTC) is the persisted identity of a Garmin activity; changing how it is cut lets old activities import twice. An interval comes only from workout steps the laps point at, never from laps alone, because a plain run marks every auto lap `interval`.
+- `garminImportCandidate` is the one mapping from a Garmin activity to a Cardio set, for the Import review and for any later server handler. Its `startedAt` (start second in UTC) is the persisted identity of a Garmin activity; changing how it is cut lets old activities import twice. An interval comes only from workout steps the laps point at, never from laps alone, because a plain run marks every auto lap `interval`. Auto lap cuts one step into several laps, so laps of one step count as one round only when their time adds up to the planned step time; a step cut short gives a steady set.
 
 Rules restated elsewhere (change both sides together):
 

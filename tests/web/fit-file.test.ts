@@ -32,7 +32,7 @@ describe('fitActivitiesOf', () => {
         startedAt: STARTED_AT,
         durationS: 1800,
         distanceM: 5012.4,
-        laps: [{ workoutStepIndex: null }],
+        laps: [{ workoutStepIndex: null, durationS: 1800 }],
         workoutSteps: [],
       },
     ]);
@@ -105,6 +105,7 @@ describe('fitActivitiesOf', () => {
       { intensity: 'cooldown', durationS: null },
     ]);
     expect(run.laps.map((lap) => lap.workoutStepIndex)).toEqual([0, 1, 2, 1, 2, 1, 2, 1, 2, 4]);
+    expect(run.laps.map((lap) => lap.durationS)).toEqual([300, 60, 30, 60, 30, 60, 30, 60, 30, 200]);
     expect(garminImportCandidate(run, new Map([['running', 'exercise-running']]), NOW)).toMatchObject({
       startedAt: STARTED_AT,
       exerciseId: 'exercise-running',

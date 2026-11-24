@@ -42,9 +42,20 @@ const WORK: GarminWorkoutStep = { intensity: 'active', durationS: 60 };
 const REST: GarminWorkoutStep = { intensity: 'rest', durationS: 30 };
 const REPEAT: GarminWorkoutStep = { intensity: null, durationS: null };
 const INTERVAL_WORKOUT = [WARMUP, WORK, REST, REPEAT, COOLDOWN];
+const LONG_INTERVAL_WORKOUT: GarminWorkoutStep[] = [
+  { intensity: 'warmup', durationS: 600 },
+  { intensity: 'interval', durationS: 480 },
+  { intensity: 'recovery', durationS: 120 },
+  REPEAT,
+  { intensity: 'cooldown', durationS: 600 },
+];
 
 function lapsOf(...workoutStepIndexes: (number | null)[]) {
-  return workoutStepIndexes.map((workoutStepIndex) => ({ workoutStepIndex }));
+  return workoutStepIndexes.map((workoutStepIndex) => ({ workoutStepIndex, durationS: null }));
+}
+
+function timedLaps(...laps: [workoutStepIndex: number | null, durationS: number][]) {
+  return laps.map(([workoutStepIndex, durationS]) => ({ workoutStepIndex, durationS }));
 }
 
 describe('garminImportCandidate', () => {
@@ -117,22 +128,36 @@ describe('garminImportCandidate', () => {
     });
   });
 
-  it('counts a step once when auto lap cuts it into several laps', () => {
-    const workoutSteps: GarminWorkoutStep[] = [
-      { intensity: 'warmup', durationS: 600 },
-      { intensity: 'interval', durationS: 480 },
-      { intensity: 'recovery', durationS: 120 },
-      REPEAT,
-      { intensity: 'cooldown', durationS: 600 },
-    ];
-    expect(candidateOf({ workoutSteps, laps: lapsOf(0, 1, 1, 2, 1, 1, 4, 4, null), durationS: 2040 }).interval).toEqual(
-      { workS: 480, restS: 120, rounds: 2 },
-    );
-    expect(candidateOf({ workoutSteps, laps: lapsOf(0, 1, 1, 2, 2, 1, 4), durationS: 2040 }).interval).toEqual({
+  it('counts a step once when auto lap cuts it into laps whose time adds up to the step', () => {
+    const laps = timedLaps([0, 356], [1, 300], [1, 180], [2, 120], [1, 291], [1, 190], [4, 380], [4, 221], [null, 12]);
+    expect(candidateOf({ workoutSteps: LONG_INTERVAL_WORKOUT, laps, durationS: 2050 }).interval).toEqual({
       workS: 480,
       restS: 120,
       rounds: 2,
     });
+  });
+
+  it('counts a repeated work step as many times as its laps add up to, so repeats with no rest stay one steady set', () => {
+    const workoutSteps: GarminWorkoutStep[] = [WARMUP, { ...WORK, durationS: 90 }, REPEAT, { ...REST, durationS: 90 }];
+    const fourThenRestThenFour = timedLaps([0, 300], [1, 90], [1, 90], [1, 90], [1, 90], [3, 90], [1, 180], [1, 180]);
+    expect(candidateOf({ workoutSteps, laps: fourThenRestThenFour }).interval).toBeNull();
+  });
+
+  it.each<[string, ReturnType<typeof timedLaps>]>([
+    ['a last work step stopped early', timedLaps([1, 480], [2, 120], [1, 200])],
+    ['a work step skipped after a few seconds', timedLaps([1, 480], [2, 120], [1, 9], [2, 120], [1, 480])],
+    [
+      'a lap without a step between two laps of one step',
+      timedLaps([1, 240], [null, 10], [1, 240], [2, 120], [1, 480]),
+    ],
+  ])('falls back to one steady set for %s', (_case, laps) => {
+    expect(candidateOf({ workoutSteps: LONG_INTERVAL_WORKOUT, laps, durationS: 2050 }).interval).toBeNull();
+  });
+
+  it('reads no step from a lap index that is negative or between two steps', () => {
+    const workoutSteps: GarminWorkoutStep[] = [WORK, REST];
+    expect(candidateOf({ workoutSteps, laps: lapsOf(-2, -1, -2) }).interval).toBeNull();
+    expect(candidateOf({ workoutSteps, laps: lapsOf(0.5, 1.5, 0.2) }).interval).toBeNull();
   });
 
   it('reads interval and recovery steps as work and rest', () => {
