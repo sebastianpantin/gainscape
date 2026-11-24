@@ -58,15 +58,14 @@ async function leaveNoRollOpen(userId: string, localDate: string): Promise<void>
 
 async function ownEveryPet(userId: string): Promise<void> {
   await db`
-    insert into public.user_items (user_id, item_id, quantity)
-    select ${userId}, i.id, 1 from public.items i where i.skill_id is not null and i.retired_at is null
-    on conflict (user_id, item_id) do nothing`;
-  await db`
+    with newly_owned as (
+      insert into public.user_items (user_id, item_id, quantity)
+      select ${userId}, i.id, 1 from public.items i where i.skill_id is not null and i.retired_at is null
+      on conflict (user_id, item_id) do nothing
+      returning user_id, item_id
+    )
     insert into public.item_ledger (user_id, item_id, delta, reason, ref_id)
-    select u.user_id, u.item_id, 1, 'drop', gen_random_uuid()
-    from public.user_items u join public.items i on i.id = u.item_id
-    where u.user_id = ${userId} and i.skill_id is not null
-      and not exists (select 1 from public.item_ledger l where l.user_id = u.user_id and l.item_id = u.item_id)`;
+    select user_id, item_id, 1, 'drop', gen_random_uuid() from newly_owned`;
 }
 
 async function dropRow(dropId: string) {
