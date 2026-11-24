@@ -40,9 +40,12 @@ export interface GarminExercisePick {
   exerciseId: string;
 }
 
+export type GarminGroupNeed = 'exercise' | 'weight';
+
 export type GarminStrengthDecision =
-  | { status: 'undecided' }
+  | { status: 'undecided'; needs: GarminGroupNeed }
   | { status: 'nothing_chosen' }
+  | { status: 'needs_bodyweight' }
   | { status: 'ready'; sets: GarminLiftSet[]; picks: GarminExercisePick[] };
 
 const WEIGHT_DECIMALS = 2;
@@ -92,14 +95,17 @@ export function garminSetWeight(set: GarminGroupSet, loadType: LoadType, filledK
   return { source: 'asked', weightKg: filled };
 }
 
-function liftSetsOfGroup(group: GarminSetGroup, decision: GarminGroupDecision | undefined): GarminLiftSet[] | null {
+function liftSetsOfGroup(
+  group: GarminSetGroup,
+  decision: GarminGroupDecision | undefined,
+): GarminLiftSet[] | GarminGroupNeed {
   if (group.sets.length === 0 || decision?.skipped === true) return [];
   const exercise = decision?.exercise ?? null;
-  if (decision === undefined || exercise === null) return null;
+  if (decision === undefined || exercise === null) return 'exercise';
   const sets: GarminLiftSet[] = [];
   for (const [index, set] of group.sets.entries()) {
     const { weightKg } = garminSetWeight(set, exercise.loadType, decision.filledKg[index] ?? null);
-    if (weightKg === null) return null;
+    if (weightKg === null) return 'weight';
     sets.push({ exerciseId: exercise.id, reps: set.reps, weightKg });
   }
   return sets;
@@ -122,14 +128,19 @@ function picksToRemember(
 export function garminStrengthDecision(
   groups: readonly GarminSetGroup[],
   decisions: readonly (GarminGroupDecision | undefined)[],
+  bodyweightKnown: boolean,
 ): GarminStrengthDecision {
-  const setsByGroup: GarminLiftSet[][] = [];
-  for (const [index, group] of groups.entries()) {
-    const sets = liftSetsOfGroup(group, decisions[index]);
-    if (sets === null) return { status: 'undecided' };
-    setsByGroup.push(sets);
+  const outcomes = groups.map((group, index) => liftSetsOfGroup(group, decisions[index]));
+  const setsByGroup = outcomes.filter((outcome) => typeof outcome !== 'string');
+  if (setsByGroup.length < outcomes.length) {
+    return { status: 'undecided', needs: outcomes.includes('exercise') ? 'exercise' : 'weight' };
   }
   const sets = setsByGroup.flat();
   if (sets.length === 0) return { status: 'nothing_chosen' };
+  const countsBodyweight = setsByGroup.some((groupSets, index) => {
+    const loadType = decisions[index]?.exercise?.loadType;
+    return groupSets.length > 0 && loadType !== undefined && loadType !== 'external';
+  });
+  if (countsBodyweight && !bodyweightKnown) return { status: 'needs_bodyweight' };
   return { status: 'ready', sets, picks: picksToRemember(groups, setsByGroup) };
 }

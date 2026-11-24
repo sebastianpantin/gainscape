@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { columnsOf, parsedRows } from '../rows.ts';
-import type { ReviewContext, ReviewSession } from './import-review-rules.ts';
+import type { LoggedSession, ReviewContext } from './import-review-rules.ts';
 import { querySeenGarminActivities } from './seen-activities-rules.ts';
 
 const garminActivityTypeRowSchema = z.object({ key: z.string(), exercise_id: z.string() });
@@ -41,7 +41,7 @@ async function queryExerciseIdByGarminCategory(client: SupabaseClient): Promise<
   return new Map(parsedRows(garminExercisePickRowSchema, picks.data).map((row) => [row.category, row.exercise_id]));
 }
 
-async function querySessionsWithin(client: SupabaseClient, range: ReviewRange): Promise<ReviewSession[]> {
+async function querySessionsWithin(client: SupabaseClient, range: ReviewRange): Promise<LoggedSession[]> {
   const sessions = await client
     .from('sessions')
     .select(REVIEW_SESSION_COLUMNS)

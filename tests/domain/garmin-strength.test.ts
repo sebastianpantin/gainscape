@@ -29,6 +29,14 @@ function decided(exerciseId: string, loadType: LoadType, filledKg: (number | nul
   return { skipped: false, exercise: { id: exerciseId, loadType }, filledKg };
 }
 
+function decisionOf(
+  groups: readonly GarminSetGroup[],
+  decisions: readonly (GarminGroupDecision | undefined)[],
+  bodyweightKnown = true,
+) {
+  return garminStrengthDecision(groups, decisions, bodyweightKnown);
+}
+
 const SKIPPED: GarminGroupDecision = { skipped: true, exercise: null, filledKg: [] };
 
 describe('garminCategoryKey', () => {
@@ -153,33 +161,32 @@ describe('garminSetWeight', () => {
 describe('garminStrengthDecision', () => {
   const groups = [group('bench_press', [8, 60], [8, 60]), group(null, [12, 0]), group('row', [10, 40])];
 
-  it('is undecided while a group has neither an exercise nor Skip', () => {
-    expect(garminStrengthDecision(groups, [decided(BENCH, 'external'), undefined, SKIPPED])).toEqual({
-      status: 'undecided',
-    });
-    expect(garminStrengthDecision(groups, [])).toEqual({ status: 'undecided' });
+  it('needs an exercise while a group has neither an exercise nor Skip', () => {
+    const needsExercise = { status: 'undecided', needs: 'exercise' };
+    expect(decisionOf(groups, [decided(BENCH, 'external'), undefined, SKIPPED])).toEqual(needsExercise);
+    expect(decisionOf(groups, [])).toEqual(needsExercise);
     expect(
-      garminStrengthDecision(groups, [
-        decided(BENCH, 'external'),
-        { skipped: false, exercise: null, filledKg: [] },
-        SKIPPED,
-      ]),
-    ).toEqual({ status: 'undecided' });
+      decisionOf(groups, [decided(BENCH, 'external'), { skipped: false, exercise: null, filledKg: [] }, SKIPPED]),
+    ).toEqual(needsExercise);
   });
 
-  it('is undecided while an asked-for weight is missing', () => {
-    expect(garminStrengthDecision(groups, [decided(BENCH, 'external'), decided(ROW, 'external'), SKIPPED])).toEqual({
+  it('needs a weight while an asked-for weight is missing and every group has an exercise', () => {
+    expect(decisionOf(groups, [decided(BENCH, 'external'), decided(ROW, 'external'), SKIPPED])).toEqual({
       status: 'undecided',
+      needs: 'weight',
+    });
+  });
+
+  it('names the exercise first when one group needs an exercise and another a weight', () => {
+    expect(decisionOf(groups, [decided(BENCH, 'external'), decided(ROW, 'external'), undefined])).toEqual({
+      status: 'undecided',
+      needs: 'exercise',
     });
   });
 
   it('returns the Lift sets in file order once every group is decided, and the picks to remember', () => {
     expect(
-      garminStrengthDecision(groups, [
-        decided(BENCH, 'external'),
-        decided(ROW, 'external', [25]),
-        decided(ROW, 'external'),
-      ]),
+      decisionOf(groups, [decided(BENCH, 'external'), decided(ROW, 'external', [25]), decided(ROW, 'external')]),
     ).toEqual({
       status: 'ready',
       sets: [
@@ -196,7 +203,7 @@ describe('garminStrengthDecision', () => {
   });
 
   it('leaves the sets of a skipped group out and remembers no pick for it', () => {
-    expect(garminStrengthDecision(groups, [decided(BENCH, 'external'), SKIPPED, SKIPPED])).toEqual({
+    expect(decisionOf(groups, [decided(BENCH, 'external'), SKIPPED, SKIPPED])).toEqual({
       status: 'ready',
       sets: [
         { exerciseId: BENCH, reps: 8, weightKg: 60 },
@@ -208,25 +215,25 @@ describe('garminStrengthDecision', () => {
 
   it('lets Skip win over an exercise picked before', () => {
     const skippedAfterPick: GarminGroupDecision = { ...decided(BENCH, 'external'), skipped: true };
-    expect(garminStrengthDecision([group('bench_press', [8, 60])], [skippedAfterPick])).toEqual({
+    expect(decisionOf([group('bench_press', [8, 60])], [skippedAfterPick])).toEqual({
       status: 'nothing_chosen',
     });
   });
 
   it('has nothing to import when every group is skipped', () => {
-    expect(garminStrengthDecision(groups, [SKIPPED, SKIPPED, SKIPPED])).toEqual({ status: 'nothing_chosen' });
+    expect(decisionOf(groups, [SKIPPED, SKIPPED, SKIPPED])).toEqual({ status: 'nothing_chosen' });
   });
 
   it('needs no decision for a group whose every set was left out', () => {
     const withEmptyGroup = [group('bench_press', [8, 60]), { category: 'plank', sets: [], leftOut: 2 }];
-    expect(garminStrengthDecision(withEmptyGroup, [decided(BENCH, 'external')])).toMatchObject({
+    expect(decisionOf(withEmptyGroup, [decided(BENCH, 'external')])).toMatchObject({
       status: 'ready',
       picks: [{ category: 'bench_press', exerciseId: BENCH }],
     });
   });
 
   it('sends weight zero for a set whose weight the chosen exercise does not take', () => {
-    expect(garminStrengthDecision([group('push_up', [12, 10])], [decided(PUSH_UP, 'bodyweight')])).toMatchObject({
+    expect(decisionOf([group('push_up', [12, 10])], [decided(PUSH_UP, 'bodyweight')])).toMatchObject({
       status: 'ready',
       sets: [{ exerciseId: PUSH_UP, reps: 12, weightKg: 0 }],
     });
@@ -234,7 +241,7 @@ describe('garminStrengthDecision', () => {
 
   it('keeps the added weight under a bodyweight exercise that allows one', () => {
     expect(
-      garminStrengthDecision([group('pull_up', [5, 12.5], [5, 0])], [decided(WEIGHTED_PULL_UP, 'bodyweight_plus')]),
+      decisionOf([group('pull_up', [5, 12.5], [5, 0])], [decided(WEIGHTED_PULL_UP, 'bodyweight_plus')]),
     ).toMatchObject({
       status: 'ready',
       sets: [
@@ -246,7 +253,7 @@ describe('garminStrengthDecision', () => {
 
   it('remembers the last pick when one category got two exercises in one activity', () => {
     const twice = [group('bench_press', [8, 60]), group('row', [10, 40]), group('bench_press', [8, 50])];
-    const decision = garminStrengthDecision(twice, [
+    const decision = decisionOf(twice, [
       decided(BENCH, 'external'),
       decided(ROW, 'external'),
       decided(PUSH_UP, 'bodyweight'),
@@ -259,8 +266,27 @@ describe('garminStrengthDecision', () => {
     });
   });
 
+  it('needs the bodyweight of the user before a bodyweight exercise can be imported', () => {
+    const pushUps = [group('push_up', [12, 0])];
+    const pullUps = [group('pull_up', [5, 10])];
+    expect(decisionOf(pushUps, [decided(PUSH_UP, 'bodyweight')], false)).toEqual({ status: 'needs_bodyweight' });
+    expect(decisionOf(pullUps, [decided(WEIGHTED_PULL_UP, 'bodyweight_plus')], false)).toEqual({
+      status: 'needs_bodyweight',
+    });
+    expect(decisionOf(pushUps, [decided(PUSH_UP, 'bodyweight')], true).status).toBe('ready');
+  });
+
+  it('needs no bodyweight for exercises with an external load, or for a skipped bodyweight group', () => {
+    const mixed = [group('bench_press', [8, 60]), group('push_up', [12, 0])];
+    expect(decisionOf(mixed, [decided(BENCH, 'external'), SKIPPED], false).status).toBe('ready');
+    expect(
+      decisionOf(mixed, [decided(BENCH, 'external'), { ...decided(PUSH_UP, 'bodyweight'), skipped: true }], false)
+        .status,
+    ).toBe('ready');
+  });
+
   it('remembers nothing for the group without a category', () => {
-    expect(garminStrengthDecision([group(null, [12, 20])], [decided(ROW, 'external')])).toMatchObject({
+    expect(decisionOf([group(null, [12, 20])], [decided(ROW, 'external')])).toMatchObject({
       status: 'ready',
       picks: [],
     });

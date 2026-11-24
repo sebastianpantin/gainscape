@@ -3,15 +3,26 @@ import {
   type GarminActivity,
   garminActivityEnd,
   garminActivityIdentity,
+  type GarminExercisePick,
+  type GarminGroupDecision,
   type GarminImportCandidate,
   garminImportCandidate,
   type GarminImportOutcome,
+  type GarminLiftSet,
   type GarminRejection,
   type GarminSeenOutcome,
   type GarminSkipReason,
+  type GarminStrengthDecision,
+  garminStrengthDecision,
   MAX_SETS_PER_SESSION,
 } from '@domain/index.ts';
-import { activeExercises, type Exercise, isCardioExercise, type PaceUnit } from '../exercises/catalog-rules.ts';
+import {
+  activeExercises,
+  type Exercise,
+  isCardioExercise,
+  isLiftExercise,
+  type PaceUnit,
+} from '../exercises/catalog-rules.ts';
 import { formatCount, formatXp } from '../format.ts';
 import { capitalized } from '../names.ts';
 import type { InvokeOutcome } from '../platform/function-client-rules.ts';
@@ -20,6 +31,7 @@ import type { UnitPref } from '../profile/profile-rules.ts';
 import { distanceUnitFor, formatDistance } from '../units.ts';
 import { describeInterval, formatDuration } from '../workout/cardio-rules.ts';
 import type { SeenGarminActivity } from './seen-activities-rules.ts';
+import { prefilledDecisions, type ReviewLift, strengthBadgeText, strengthFacts } from './strength-review-rules.ts';
 
 const GARMIN_IMPORT_DAILY_CAP = 500;
 const DEFAULT_PACE_UNIT: PaceUnit = 'per_km';
@@ -27,8 +39,7 @@ const UNKNOWN_MONTH = 'Unknown date';
 const UNNAMED_GARMIN_TYPE = 'Activity';
 const DAILY_CAP_REASON: GarminSkipReason = 'daily_cap';
 
-export type GreyedReason =
-  GarminRejection | 'already_imported' | 'deleted_earlier' | 'rejected_earlier' | 'same_start' | 'strength';
+export type GreyedReason = GarminRejection | 'already_imported' | 'deleted_earlier' | 'rejected_earlier' | 'same_start';
 
 export interface ReviewRow {
   id: string;
@@ -36,17 +47,21 @@ export interface ReviewRow {
   greyed: GreyedReason | null;
 }
 
-export interface ReviewSession {
+export interface LoggedSession {
   startedAt: string;
   endedAt: string;
   exerciseIds: readonly string[];
+}
+
+export interface ReviewSession extends LoggedSession {
+  holdsLiftSets: boolean;
 }
 
 export interface ReviewContext {
   exerciseIdByGarminType: ReadonlyMap<string, string>;
   exerciseIdByGarminCategory: ReadonlyMap<string, string>;
   seen: readonly SeenGarminActivity[];
-  sessions: readonly ReviewSession[];
+  sessions: readonly LoggedSession[];
 }
 
 export interface ReviewExercise {
@@ -59,6 +74,8 @@ export interface ReviewExercise {
 export interface ReviewChoices {
   selected: ReadonlySet<string>;
   exerciseByRow: ReadonlyMap<string, string>;
+  groupsByRow: ReadonlyMap<string, readonly GarminGroupDecision[]>;
+  bodyweightKnown: boolean;
 }
 
 const GREYED_BY_SEEN: Record<GarminSeenOutcome, GreyedReason> = {
@@ -75,7 +92,6 @@ const GREYED_TEXT: Record<GreyedReason, string> = {
   too_long: `Over ${formatDuration(CARDIO_BOUNDS.steadyDurationS.max)}`,
   too_far: `Over ${formatDistance(CARDIO_BOUNDS.distanceM.max, 'km')}`,
   too_short: `Under ${formatDuration(CARDIO_BOUNDS.steadyDurationS.min)}`,
-  strength: 'Strength not imported yet',
   no_sets: 'No sets to import',
   too_many_sets: `Over ${MAX_SETS_PER_SESSION} sets`,
   unreadable: 'Unreadable',
@@ -93,7 +109,6 @@ export function reviewRows(activities: readonly GarminActivity[], context: Revie
       const candidate = garminImportCandidate(activity, context.exerciseIdByGarminType, now);
       const id = `activity-${index}`;
       if (candidate.rejection !== null) return { id, candidate, greyed: candidate.rejection };
-      if (candidate.kind === 'strength') return { id, candidate, greyed: 'strength' };
       const startedAt = candidate.startedAt!;
       const seen = seenOutcome.get(startedAt);
       if (seen !== undefined) return { id, candidate, greyed: GREYED_BY_SEEN[seen] };
@@ -117,16 +132,38 @@ export function activitiesRange(activities: readonly GarminActivity[]): { from: 
   };
 }
 
+export function reviewSessions(sessions: readonly LoggedSession[], exercises: readonly Exercise[]): ReviewSession[] {
+  const liftIds = new Set(exercises.filter(isLiftExercise).map((exercise) => exercise.id));
+  return sessions.map((session) => ({
+    ...session,
+    holdsLiftSets: session.exerciseIds.some((exerciseId) => liftIds.has(exerciseId)),
+  }));
+}
+
 export function exerciseOfRow(row: ReviewRow, choices: ReviewChoices): string | null {
   return row.candidate.exerciseId ?? choices.exerciseByRow.get(row.id) ?? null;
 }
 
+export function isStrengthRow(row: ReviewRow): boolean {
+  return row.greyed === null && row.candidate.kind === 'strength';
+}
+
 export function needsExercisePick(row: ReviewRow): boolean {
-  return row.greyed === null && row.candidate.exerciseId === null;
+  return row.greyed === null && row.candidate.kind === 'cardio' && row.candidate.exerciseId === null;
+}
+
+export function groupDecisionsOfRow(row: ReviewRow, choices: ReviewChoices): readonly GarminGroupDecision[] {
+  return choices.groupsByRow.get(row.id) ?? [];
+}
+
+export function strengthDecisionOfRow(row: ReviewRow, choices: ReviewChoices): GarminStrengthDecision {
+  return garminStrengthDecision(row.candidate.setGroups, groupDecisionsOfRow(row, choices), choices.bodyweightKnown);
 }
 
 export function canBeChosen(row: ReviewRow, choices: ReviewChoices): boolean {
-  return row.greyed === null && exerciseOfRow(row, choices) !== null;
+  if (row.greyed !== null) return false;
+  if (isStrengthRow(row)) return strengthDecisionOfRow(row, choices).status === 'ready';
+  return exerciseOfRow(row, choices) !== null;
 }
 
 export function isChosen(row: ReviewRow, choices: ReviewChoices): boolean {
@@ -138,26 +175,56 @@ function overlappingSession(
   exerciseId: string | null,
   sessions: readonly ReviewSession[],
 ): ReviewSession | null {
-  const { startedAt, durationS } = row.candidate;
-  if (exerciseId === null || startedAt === null || durationS === null) return null;
+  const { kind, startedAt, durationS } = row.candidate;
+  if ((kind === 'cardio' && exerciseId === null) || startedAt === null || durationS === null) return null;
   const activityStart = Date.parse(startedAt);
   const activityEnd = Date.parse(garminActivityEnd({ startedAt, durationS }));
   return (
     sessions.find(
       (session) =>
-        session.exerciseIds.includes(exerciseId) &&
+        (exerciseId === null ? session.holdsLiftSets : session.exerciseIds.includes(exerciseId)) &&
         Date.parse(session.startedAt) <= activityEnd &&
         activityStart <= Date.parse(session.endedAt),
     ) ?? null
   );
 }
 
-export function initialChoices(rows: readonly ReviewRow[], sessions: readonly ReviewSession[]): ReviewChoices {
+function possibleDuplicateOf(
+  row: ReviewRow,
+  choices: ReviewChoices,
+  sessions: readonly ReviewSession[],
+): ReviewSession | null {
+  return overlappingSession(row, isStrengthRow(row) ? null : exerciseOfRow(row, choices), sessions);
+}
+
+export interface ReviewMemory {
+  exerciseIdByGarminCategory: ReadonlyMap<string, string>;
+  lifts: ReadonlyMap<string, ReviewLift>;
+  bodyweightKnown: boolean;
+}
+
+export function initialChoices(
+  rows: readonly ReviewRow[],
+  sessions: readonly ReviewSession[],
+  memory: ReviewMemory,
+): ReviewChoices {
+  const unselected: ReviewChoices = {
+    selected: new Set(),
+    exerciseByRow: new Map(),
+    groupsByRow: new Map(
+      rows
+        .filter(isStrengthRow)
+        .map((row) => [
+          row.id,
+          prefilledDecisions(row.candidate.setGroups, memory.exerciseIdByGarminCategory, memory.lifts),
+        ]),
+    ),
+    bodyweightKnown: memory.bodyweightKnown,
+  };
   const selected = rows
-    .filter((row) => row.greyed === null && row.candidate.exerciseId !== null)
-    .filter((row) => overlappingSession(row, row.candidate.exerciseId, sessions) === null)
+    .filter((row) => canBeChosen(row, unselected) && possibleDuplicateOf(row, unselected, sessions) === null)
     .map((row) => row.id);
-  return { selected: new Set(selected), exerciseByRow: new Map() };
+  return { ...unselected, selected: new Set(selected) };
 }
 
 function withSelection(choices: ReviewChoices, rows: readonly ReviewRow[], on: boolean): ReviewChoices {
@@ -182,6 +249,44 @@ export function withExercisePicked(
   if (row.greyed !== null) return choices;
   const picked = { ...choices, exerciseByRow: new Map([...choices.exerciseByRow, [row.id, exerciseId]]) };
   return withSelection(picked, [row], overlappingSession(row, exerciseId, sessions) === null);
+}
+
+function withNewlyChoosableSelected(
+  before: ReviewChoices,
+  after: ReviewChoices,
+  rows: readonly ReviewRow[],
+  sessions: readonly ReviewSession[],
+): ReviewChoices {
+  const changed = rows.filter((row) => canBeChosen(row, before) !== canBeChosen(row, after));
+  const selected = new Set(after.selected);
+  for (const row of changed) {
+    if (canBeChosen(row, after) && possibleDuplicateOf(row, after, sessions) === null) selected.add(row.id);
+    else selected.delete(row.id);
+  }
+  return { ...after, selected };
+}
+
+export function withGroupDecisions(
+  choices: ReviewChoices,
+  sessions: readonly ReviewSession[],
+  row: ReviewRow,
+  decisions: readonly GarminGroupDecision[],
+): ReviewChoices {
+  if (!isStrengthRow(row)) return choices;
+  const decided = { ...choices, groupsByRow: new Map([...choices.groupsByRow, [row.id, decisions]]) };
+  return withNewlyChoosableSelected(choices, decided, [row], sessions);
+}
+
+export function withBodyweightKnown(
+  choices: ReviewChoices,
+  rows: readonly ReviewRow[],
+  sessions: readonly ReviewSession[],
+): ReviewChoices {
+  return withNewlyChoosableSelected(choices, { ...choices, bodyweightKnown: true }, rows, sessions);
+}
+
+export function needsBodyweight(rows: readonly ReviewRow[], choices: ReviewChoices): boolean {
+  return rows.some((row) => isStrengthRow(row) && strengthDecisionOfRow(row, choices).status === 'needs_bodyweight');
 }
 
 export function withAllToggled(rows: readonly ReviewRow[], choices: ReviewChoices, on: boolean): ReviewChoices {
@@ -250,11 +355,12 @@ export function rowFacts(
   exercisesById: ReadonlyMap<string, ReviewExercise>,
   unit: UnitPref,
 ): string {
-  const { durationS, distanceM, interval } = row.candidate;
+  const { kind, durationS, distanceM, interval, setGroups } = row.candidate;
   const exercise = exercisesById.get(exerciseOfRow(row, choices) ?? '');
   const showsDistance = distanceM !== null && (exercise?.tracksDistance ?? true);
   return [
     exercise?.name,
+    kind === 'strength' && setGroups.length > 0 ? strengthFacts(setGroups) : null,
     durationS === null ? null : formatDuration(durationS),
     showsDistance ? formatDistance(distanceM, distanceUnitFor(unit, exercise?.paceUnit ?? DEFAULT_PACE_UNIT)) : null,
     interval === null ? null : describeInterval(interval),
@@ -274,9 +380,12 @@ export function rowBadge(
   timeZone?: string,
 ): RowBadge | null {
   if (row.greyed !== null) return { kind: 'greyed', text: GREYED_TEXT[row.greyed] };
-  const exerciseId = exerciseOfRow(row, choices);
-  if (exerciseId === null) return { kind: 'needs_exercise', text: 'Needs an exercise' };
-  const duplicate = overlappingSession(row, exerciseId, sessions);
+  const undecided = isStrengthRow(row) ? strengthBadgeText(strengthDecisionOfRow(row, choices)) : null;
+  if (undecided !== null) return { kind: 'needs_exercise', text: undecided };
+  if (!isStrengthRow(row) && exerciseOfRow(row, choices) === null) {
+    return { kind: 'needs_exercise', text: 'Needs an exercise' };
+  }
+  const duplicate = possibleDuplicateOf(row, choices, sessions);
   if (duplicate !== null) {
     return {
       kind: 'possible_duplicate',
@@ -320,15 +429,25 @@ export function pickableExercises(exercises: readonly Exercise[]): ReviewExercis
   );
 }
 
-export interface ActivityToImport {
+interface ActivityToImportBase {
   startedAt: string;
   garminType: string | null;
-  exerciseId: string;
   durationS: number;
-  distanceM: number | null;
-  interval: GarminImportCandidate['interval'];
   historyOnly: boolean;
 }
+
+export interface CardioActivityToImport extends ActivityToImportBase {
+  exerciseId: string;
+  distanceM: number | null;
+  interval: GarminImportCandidate['interval'];
+}
+
+export interface StrengthActivityToImport extends ActivityToImportBase {
+  sets: GarminLiftSet[];
+  picks: GarminExercisePick[];
+}
+
+export type ActivityToImport = CardioActivityToImport | StrengthActivityToImport;
 
 export function activitiesToImport(
   rows: readonly ReviewRow[],
@@ -338,19 +457,17 @@ export function activitiesToImport(
   return rows
     .filter((row) => isChosen(row, choices))
     .flatMap((row): ActivityToImport[] => {
-      const exercise = exercisesById.get(exerciseOfRow(row, choices)!);
       const { startedAt, garminType, durationS, distanceM, interval, historyOnly } = row.candidate;
-      if (exercise === undefined || startedAt === null || durationS === null) return [];
+      if (startedAt === null || durationS === null) return [];
+      const measured = { startedAt, garminType, durationS, historyOnly };
+      if (isStrengthRow(row)) {
+        const decision = strengthDecisionOfRow(row, choices);
+        return decision.status === 'ready' ? [{ ...measured, sets: decision.sets, picks: decision.picks }] : [];
+      }
+      const exercise = exercisesById.get(exerciseOfRow(row, choices)!);
+      if (exercise === undefined) return [];
       return [
-        {
-          startedAt,
-          garminType,
-          exerciseId: exercise.id,
-          durationS,
-          distanceM: exercise.tracksDistance ? distanceM : null,
-          interval,
-          historyOnly,
-        },
+        { ...measured, exerciseId: exercise.id, distanceM: exercise.tracksDistance ? distanceM : null, interval },
       ];
     })
     .sort((first, second) => first.startedAt.localeCompare(second.startedAt));
