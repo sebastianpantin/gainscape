@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
+  CARDIO_BOUNDS,
   BodyweightLoadNotZeroError,
   BodyweightRequiredError,
   cardioExercise,
@@ -207,7 +208,7 @@ describe('lift results beside cardio bouts', () => {
   });
   const bout = fc.record({
     exerciseId: fc.constantFrom('run', 'sprints', 'walk', 'row-intervals', 'custom-run'),
-    durationS: fc.integer({ min: 60, max: 14_400 }),
+    durationS: fc.integer(CARDIO_BOUNDS.steadyDurationS),
     distanceM: fc.option(fc.integer({ min: 1, max: 60_000 }), { nil: null }),
     interval: fc.option(
       fc.record({

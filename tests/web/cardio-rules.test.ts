@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { boutDurationSeconds, CARDIO_BOUNDS } from '../../supabase/functions/_shared/domain/cardio.ts';
-import { MAX_SESSION_DURATION_MS } from '../../supabase/functions/_shared/domain/session-timing.ts';
 import {
   BOUTS_FULL_TEXT,
   boutModeChanges,
@@ -92,7 +91,9 @@ describe('adding bouts', () => {
     const long = { ...steady, durationS: CARDIO_BOUNDS.steadyDurationS.max / 2 };
     expect(canAddBout([long])).toBe(true);
     expect(canAddBout([long, long])).toBe(false);
-    expect(CARDIO_BOUNDS.steadyDurationS.max * 1000).toBe(MAX_SESSION_DURATION_MS);
+  });
+
+  it('says how long the bouts of one workout may be', () => {
     expect(BOUTS_FULL_TEXT).toBe('Bouts in one workout can add up to at most 12 hours.');
   });
 });

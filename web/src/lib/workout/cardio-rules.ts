@@ -5,7 +5,8 @@ import {
   METRES_PER_KM,
   SECONDS_PER_MINUTE,
 } from '@domain/cardio.ts';
-import { roundTo } from '@domain/math.ts';
+import { MS_PER_SECOND, roundTo } from '@domain/math.ts';
+import { MAX_SESSION_DURATION_MS } from '@domain/session-timing.ts';
 import {
   CARDIO_EFFORT_LEVELS,
   CARDIO_RECORD_KINDS,
@@ -86,11 +87,13 @@ export function distanceFromInput(value: number | null, unit: DistanceUnit): num
   return clampedDistanceM(unitToDistanceM(value, unit));
 }
 
-export const BOUTS_FULL_TEXT = `Bouts in one workout can add up to at most ${CARDIO_BOUNDS.steadyDurationS.max / SECONDS_PER_HOUR} hours.`;
+const LONGEST_WORKOUT_S = MAX_SESSION_DURATION_MS / MS_PER_SECOND;
+
+export const BOUTS_FULL_TEXT = `Bouts in one workout can add up to at most ${LONGEST_WORKOUT_S / SECONDS_PER_HOUR} hours.`;
 
 export function boutSecondsLeft(bouts: readonly Pick<BoutValues, 'durationS' | 'interval'>[]): number {
   const totalS = bouts.reduce((sum, bout) => sum + boutDurationSeconds(bout), 0);
-  return CARDIO_BOUNDS.steadyDurationS.max - totalS;
+  return LONGEST_WORKOUT_S - totalS;
 }
 
 export function canAddBout(bouts: readonly Pick<BoutValues, 'durationS' | 'interval'>[]): boolean {

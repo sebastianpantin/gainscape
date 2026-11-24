@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(23);
 
 select tests.create_user('cs_owner') as owner \gset
 select tests.add_session(:'owner', now() - interval '1 hour') as s \gset
@@ -87,6 +87,14 @@ select throws_ok(
 select throws_ok(
   format($$select tests.add_cardio_set(%L, 0, 43201)$$, :'running'),
   '23514', 'new row for relation "sets" violates check constraint "cardio_duration_within_bounds"', 'a steady bout lasts at most 12 hours'
+);
+select lives_ok(
+  format($$select tests.add_cardio_set(%L, 91, 43200)$$, :'running'),
+  'a steady bout may last 12 hours, as long as a workout'
+);
+select throws_ok(
+  format($$select tests.add_cardio_set(%L, 92, 18000, null, null, 5, 3600, 0)$$, :'sprints'),
+  '23514', 'new row for relation "sets" violates check constraint "cardio_duration_within_bounds"', 'an interval bout lasts at most 4 hours'
 );
 select throws_ok(
   format($$select tests.add_cardio_set(%L, 0, 100, null, null, 3, 20)$$, :'sprints'),

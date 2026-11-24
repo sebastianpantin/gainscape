@@ -193,26 +193,17 @@ describe('garminImportCandidate', () => {
   });
 
   it('rejects an activity over twelve hours, the longest Cardio set, and takes one of exactly twelve', () => {
-    expect(candidateOf({ startedAt: '2026-11-22T06:30:05.000Z', durationS: 43_201 })).toMatchObject({
+    expect(candidateOf({ durationS: 43_201 })).toMatchObject({
+      startedAt: '2026-11-23T06:30:05.000Z',
       exerciseId: RUNNING,
       durationS: 43_201,
       status: 'rejected',
       rejection: 'too_long',
     });
-    expect(candidateOf({ startedAt: '2026-11-22T06:30:05.000Z', durationS: 43_200.4 })).toMatchObject({
-      durationS: 43_200,
-      status: 'importable',
-    });
-    expect(candidateOf({ durationS: 6 * 3600 }).status).toBe('importable');
+    expect(candidateOf({ durationS: 43_200.4 })).toMatchObject({ durationS: 43_200, status: 'importable' });
   });
 
-  it('still says too long, with its date, for a watch left running more than half a day', () => {
-    expect(candidateOf({ durationS: 13 * 3600 })).toMatchObject({
-      startedAt: '2026-11-23T06:30:05.000Z',
-      durationS: 46_800,
-      status: 'rejected',
-      rejection: 'too_long',
-    });
+  it('says strength, not too long, for a strength activity left running half a day', () => {
     expect(candidateOf({ type: 'strength_training', durationS: 13 * 3600, distanceM: null }).rejection).toBe(
       'strength',
     );
