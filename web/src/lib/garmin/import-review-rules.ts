@@ -9,6 +9,7 @@ import {
   type GarminRejection,
   type GarminSeenOutcome,
   type GarminSkipReason,
+  MAX_SETS_PER_SESSION,
 } from '@domain/index.ts';
 import { activeExercises, type Exercise, isCardioExercise, type PaceUnit } from '../exercises/catalog-rules.ts';
 import { formatCount, formatXp } from '../format.ts';
@@ -26,7 +27,8 @@ const UNKNOWN_MONTH = 'Unknown date';
 const UNNAMED_GARMIN_TYPE = 'Activity';
 const DAILY_CAP_REASON: GarminSkipReason = 'daily_cap';
 
-export type GreyedReason = GarminRejection | 'already_imported' | 'deleted_earlier' | 'rejected_earlier' | 'same_start';
+export type GreyedReason =
+  GarminRejection | 'already_imported' | 'deleted_earlier' | 'rejected_earlier' | 'same_start' | 'strength';
 
 export interface ReviewRow {
   id: string;
@@ -73,6 +75,8 @@ const GREYED_TEXT: Record<GreyedReason, string> = {
   too_far: `Over ${formatDistance(CARDIO_BOUNDS.distanceM.max, 'km')}`,
   too_short: `Under ${formatDuration(CARDIO_BOUNDS.steadyDurationS.min)}`,
   strength: 'Strength not imported yet',
+  no_sets: 'No sets to import',
+  too_many_sets: `Over ${MAX_SETS_PER_SESSION} sets`,
   unreadable: 'Unreadable',
 };
 
@@ -88,6 +92,7 @@ export function reviewRows(activities: readonly GarminActivity[], context: Revie
       const candidate = garminImportCandidate(activity, context.exerciseIdByGarminType, now);
       const id = `activity-${index}`;
       if (candidate.rejection !== null) return { id, candidate, greyed: candidate.rejection };
+      if (candidate.kind === 'strength') return { id, candidate, greyed: 'strength' };
       const startedAt = candidate.startedAt!;
       const seen = seenOutcome.get(startedAt);
       if (seen !== undefined) return { id, candidate, greyed: GREYED_BY_SEEN[seen] };

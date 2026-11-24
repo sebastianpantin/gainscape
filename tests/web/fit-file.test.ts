@@ -34,6 +34,7 @@ describe('fitActivitiesOf', () => {
         distanceM: 5012.4,
         laps: [{ workoutStepIndex: null, durationS: 1800 }],
         workoutSteps: [],
+        sets: [],
       },
     ]);
   });
@@ -113,6 +114,46 @@ describe('fitActivitiesOf', () => {
       distanceM: 2500,
       interval: { workS: 60, restS: 30, rounds: 4 },
       status: 'importable',
+    });
+  });
+
+  it('reads the sets of a strength activity: first category, reps and weight, without the rests', async () => {
+    const [strength] = await activitiesOfGeneratedFile({
+      startedAt: STARTED_AT,
+      sport: 'training',
+      subSport: 'strengthTraining',
+      timerS: 3000,
+      laps: [],
+      sets: [
+        { categories: ['benchPress', 'pushUp', 'flye'], reps: 8, weightKg: 60 },
+        { restS: 90 },
+        { categories: ['benchPress', 'pushUp', 'flye'], reps: 6, weightKg: 62.5 },
+        { restS: 90 },
+        { categories: ['unknown', 'unknown', 'row'], reps: 12, weightKg: 0 },
+        { categories: ['pullUp'], reps: 5 },
+      ],
+    });
+    expect(strength.type).toBe('strength_training');
+    expect(strength.sets).toEqual([
+      { category: 'bench_press', reps: 8, weightKg: 60 },
+      { category: 'bench_press', reps: 6, weightKg: 62.5 },
+      { category: null, reps: 12, weightKg: 0 },
+      { category: 'pull_up', reps: 5, weightKg: null },
+    ]);
+    expect(garminImportCandidate(strength, new Map(), NOW)).toMatchObject({
+      kind: 'strength',
+      status: 'importable',
+      setGroups: [
+        {
+          category: 'bench_press',
+          sets: [
+            { reps: 8, weightKg: 60 },
+            { reps: 6, weightKg: 62.5 },
+          ],
+        },
+        { category: null, sets: [{ reps: 12, weightKg: 0 }] },
+        { category: 'pull_up', sets: [{ reps: 5, weightKg: 0 }] },
+      ],
     });
   });
 

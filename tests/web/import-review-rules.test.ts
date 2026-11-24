@@ -44,6 +44,7 @@ function activity(overrides: Partial<GarminActivity> = {}): GarminActivity {
     distanceM: 5000,
     laps: [],
     workoutSteps: [],
+    sets: [],
     ...overrides,
   };
 }
@@ -114,7 +115,19 @@ describe('reviewRows', () => {
       activity({ startedAt: '2026-11-23T06:00:00.000Z', durationS: 50_000 }),
       activity({ startedAt: '2026-11-22T06:00:00.000Z', distanceM: 250_000 }),
       activity({ startedAt: '2026-11-21T06:00:00.000Z', durationS: 20 }),
-      activity({ startedAt: '2026-11-20T06:00:00.000Z', type: 'strength_training', distanceM: null }),
+      activity({
+        startedAt: '2026-11-20T06:00:00.000Z',
+        type: 'strength_training',
+        distanceM: null,
+        sets: [{ category: 'bench_press', reps: 8, weightKg: 60 }],
+      }),
+      activity({ startedAt: '2026-11-19T06:00:00.000Z', type: 'strength_training', distanceM: null }),
+      activity({
+        startedAt: '2026-11-18T06:00:00.000Z',
+        type: 'strength_training',
+        distanceM: null,
+        sets: Array.from({ length: 201 }, () => ({ category: 'bench_press', reps: 8, weightKg: 60 })),
+      }),
       activity({ startedAt: 'never' }),
     ]);
     expect(badgeTexts(review.rows, review)).toEqual([
@@ -122,6 +135,8 @@ describe('reviewRows', () => {
       'Over 200 km',
       'Under 1 min',
       'Strength not imported yet',
+      'No sets to import',
+      'Over 200 sets',
       'Unreadable',
     ]);
     expect(review.rows.every((row) => row.greyed !== null)).toBe(true);

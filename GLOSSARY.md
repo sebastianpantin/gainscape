@@ -150,6 +150,10 @@ _Avoid_: sync (sync is a Draft reaching the server)
 The list of Garmin activities from a file, where the user picks which ones become Sessions and under which exercise. Nothing is saved until the user confirms.
 _Avoid_: staging, pending imports
 
+**Set group**:
+Consecutive sets of a Garmin strength activity that Garmin put under the same exercise category. The user gives each Set group one exercise in the Import review, or skips it.
+_Avoid_: exercise block, superset
+
 ## App
 
 **Write**:

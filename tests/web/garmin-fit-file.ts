@@ -8,6 +8,7 @@ import {
   type LapMesg,
   Profile,
   type SessionMesg,
+  type SetMesg,
   type WorkoutMesg,
   type WorkoutStepMesg,
 } from '@garmin/fitsdk';
@@ -15,6 +16,7 @@ import {
 type FitSport = NonNullable<SessionMesg['sport']>;
 type FitSubSport = NonNullable<SessionMesg['subSport']>;
 type FitIntensity = NonNullable<WorkoutStepMesg['intensity']>;
+type FitExerciseCategory = NonNullable<SetMesg['category']>[number];
 
 export type FitWorkoutStepSpec =
   { intensity: FitIntensity; durationS?: number } | { repeatFromStep: number; times: number };
@@ -25,6 +27,9 @@ export interface FitLapSpec {
   intensity?: FitIntensity;
 }
 
+export type FitSetSpec =
+  { restS: number } | { categories?: FitExerciseCategory[]; reps?: number; weightKg?: number; durationS?: number };
+
 export interface FitActivitySpec {
   startedAt: string;
   sport: FitSport;
@@ -34,9 +39,27 @@ export interface FitActivitySpec {
   distanceM?: number;
   workoutSteps?: FitWorkoutStepSpec[];
   laps?: FitLapSpec[];
+  sets?: FitSetSpec[];
 }
 
 const MS_PER_SECOND = 1000;
+const DEFAULT_SET_SECONDS = 30;
+
+function secondsOfSet(set: FitSetSpec): number {
+  return 'restS' in set ? set.restS : (set.durationS ?? DEFAULT_SET_SECONDS);
+}
+
+function setMessage(set: FitSetSpec, messageIndex: number, startMs: number): SetMesg {
+  const durationS = secondsOfSet(set);
+  const timing = {
+    messageIndex,
+    startTime: new Date(startMs),
+    timestamp: new Date(startMs + durationS * MS_PER_SECOND),
+    duration: durationS,
+  };
+  if ('restS' in set) return { ...timing, setType: 'rest' };
+  return { ...timing, setType: 'active', category: set.categories, repetitions: set.reps, weight: set.weightKg };
+}
 
 function workoutStepMessage(step: FitWorkoutStepSpec, messageIndex: number): WorkoutStepMesg {
   if ('repeatFromStep' in step) {
@@ -94,6 +117,12 @@ export function encodeFitActivity(spec: FitActivitySpec): Uint8Array {
     encoder.onMesg(Profile.MesgNum.LAP, lapMessage);
     lapStartMs = lapEndMs;
   }
+
+  let setStartMs = start.getTime();
+  (spec.sets ?? []).forEach((set, messageIndex) => {
+    encoder.onMesg(Profile.MesgNum.SET, setMessage(set, messageIndex, setStartMs));
+    setStartMs += secondsOfSet(set) * MS_PER_SECOND;
+  });
 
   const session: SessionMesg = {
     timestamp: end,

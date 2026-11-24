@@ -1,7 +1,16 @@
-import { type GarminActivity, type GarminLap, type GarminWorkoutStep, isRecord, MS_PER_SECOND } from '@domain/index.ts';
+import {
+  type GarminActivity,
+  garminCategoryKey,
+  type GarminLap,
+  type GarminSet,
+  type GarminWorkoutStep,
+  isRecord,
+  MS_PER_SECOND,
+} from '@domain/index.ts';
 
 const GENERIC_SUB_SPORT = 'generic';
 const TIMED_STEP = 'time';
+const ACTIVE_SET = 'active';
 const SPORTS_NAMED_BY_SUB_SPORT: ReadonlySet<string> = new Set(['training', 'fitness_equipment', 'generic']);
 const GARMIN_TYPE_BY_SPORT_AND_SUB_SPORT: ReadonlyMap<string, string> = new Map([
   ['running/treadmill', 'treadmill_running'],
@@ -33,8 +42,12 @@ function nameOf(value: unknown): string | null {
   return typeof value === 'string' && value !== '' ? value : null;
 }
 
+function timeOf(value: unknown): number {
+  return value instanceof Date ? value.getTime() : typeof value === 'string' ? Date.parse(value) : Number.NaN;
+}
+
 function isoTimeOf(value: unknown): string {
-  const time = value instanceof Date ? value.getTime() : typeof value === 'string' ? Date.parse(value) : Number.NaN;
+  const time = timeOf(value);
   return Number.isNaN(time) ? '' : new Date(time).toISOString();
 }
 
@@ -70,6 +83,30 @@ function lapsOfSession(session: FitMessage, sessionCount: number, laps: readonly
   return sessionCount === 1 ? [...laps] : [];
 }
 
+function firstCategoryOf(categories: unknown): string | null {
+  return garminCategoryKey(nameOf(Array.isArray(categories) ? categories[0] : categories));
+}
+
+function setOf(message: FitMessage): GarminSet {
+  return {
+    category: firstCategoryOf(message.category),
+    reps: numberOf(message.repetitions),
+    weightKg: numberOf(message.weight),
+  };
+}
+
+function startsWithin(session: FitMessage, message: FitMessage): boolean {
+  const sessionStart = timeOf(session.start_time);
+  const sessionSeconds = numberOf(session.total_elapsed_time) ?? numberOf(session.total_timer_time) ?? Number.NaN;
+  const start = timeOf(message.start_time);
+  return start >= sessionStart && start < sessionStart + sessionSeconds * MS_PER_SECOND;
+}
+
+function setsOfSession(session: FitMessage, sessionCount: number, activeSets: readonly FitMessage[]): GarminSet[] {
+  const own = sessionCount === 1 ? activeSets : activeSets.filter((set) => startsWithin(session, set));
+  return own.map(setOf);
+}
+
 export function garminActivitiesFromFit(parsed: unknown): GarminActivity[] {
   const file = messageOf(parsed);
   const sessions = messagesOf(file.sessions);
@@ -78,6 +115,7 @@ export function garminActivitiesFromFit(parsed: unknown): GarminActivity[] {
     durationS: numberOf(lap.total_timer_time),
   }));
   const workoutSteps = workoutStepsOf(messagesOf(messageOf(file.messages).workout_step));
+  const activeSets = messagesOf(file.sets).filter((set) => set.set_type === ACTIVE_SET);
   return sessions.map((session) => ({
     type: garminTypeOfFitSport(nameOf(session.sport), nameOf(session.sub_sport)),
     startedAt: isoTimeOf(session.start_time),
@@ -85,5 +123,6 @@ export function garminActivitiesFromFit(parsed: unknown): GarminActivity[] {
     distanceM: numberOf(session.total_distance) || null,
     laps: lapsOfSession(session, sessions.length, laps),
     workoutSteps,
+    sets: setsOfSession(session, sessions.length, activeSets),
   }));
 }
