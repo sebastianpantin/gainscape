@@ -44,6 +44,7 @@ export interface ReviewSession {
 
 export interface ReviewContext {
   exerciseIdByGarminType: ReadonlyMap<string, string>;
+  exerciseIdByGarminCategory: ReadonlyMap<string, string>;
   seen: readonly SeenGarminActivity[];
   sessions: readonly ReviewSession[];
 }

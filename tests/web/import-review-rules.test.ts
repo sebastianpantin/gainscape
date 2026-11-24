@@ -55,6 +55,7 @@ function context(overrides: Partial<ReviewContext> = {}): ReviewContext {
       ['running', RUNNING.id],
       ['lap_swimming', SWIMMING.id],
     ]),
+    exerciseIdByGarminCategory: new Map(),
     seen: [],
     sessions: [],
     ...overrides,

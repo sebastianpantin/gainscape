@@ -8,8 +8,8 @@ import {
   postFunction,
   rebuildCaches,
   seedRateLimitHits,
-  type TestUser,
 } from './local-stack.ts';
+import { importAs, imported, seenBy, sessionsOf, totalXp, wholeSecondAgo } from './garmin-import-support.ts';
 import { aBout, DAY_MS, editSession, HOUR_MS, payloadAt, postSession } from './session-support.ts';
 
 interface ActivityBody {
@@ -19,14 +19,6 @@ interface ActivityBody {
   durationS: number;
   distanceM: number | null;
   interval: { workS: number; restS: number; rounds: number } | null;
-}
-
-interface ActivityOutcome {
-  startedAt: string;
-  outcome: 'imported' | 'history_only' | 'skipped';
-  sessionId?: string;
-  xp?: number;
-  reason?: string;
 }
 
 let runningId: string;
@@ -47,10 +39,6 @@ afterAll(async () => {
   await db.end();
 });
 
-function wholeSecondAgo(ms: number): string {
-  return new Date(Math.floor((Date.now() - ms) / 1000) * 1000).toISOString();
-}
-
 function aRun(startedAt: string, overrides: Partial<ActivityBody> = {}): ActivityBody {
   return {
     startedAt,
@@ -61,39 +49,6 @@ function aRun(startedAt: string, overrides: Partial<ActivityBody> = {}): Activit
     interval: null,
     ...overrides,
   };
-}
-
-async function importAs(user: TestUser, activities: unknown[]) {
-  return await postFunction('import-activities', user.accessToken, { activities });
-}
-
-async function imported(user: TestUser, activities: ActivityBody[]): Promise<ActivityOutcome[]> {
-  const response = await importAs(user, activities);
-  expect(response.status, response.rawBody).toBe(200);
-  return (response.body as unknown as { activities: ActivityOutcome[] }).activities;
-}
-
-async function seenBy(userId: string) {
-  const rows = await db`
-    select started_at, outcome::text, session_id, garmin_type
-    from public.garmin_activities where user_id = ${userId} order by started_at`;
-  return rows.map((row) => ({
-    startedAt: new Date(row.started_at).toISOString(),
-    outcome: row.outcome as string,
-    sessionId: row.session_id as string | null,
-    garminType: row.garmin_type as string | null,
-  }));
-}
-
-async function sessionsOf(userId: string) {
-  return await db`
-    select id, started_at, ended_at, history_only, notes, session_rpe, summary
-    from public.sessions where user_id = ${userId} order by started_at`;
-}
-
-async function totalXp(userId: string): Promise<number> {
-  const [row] = await db`select coalesce(sum(xp), 0)::int as xp from public.user_skills where user_id = ${userId}`;
-  return row.xp;
 }
 
 describe('import-activities', () => {
