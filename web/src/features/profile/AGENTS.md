@@ -9,7 +9,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
 
 ## Map
 
-- Screens: `ProfileScreen.tsx`, `EditProfileScreen.tsx`, `FriendPreviewScreen.tsx`, `SettingsScreen.tsx` (a thin composition of the sections in `settings/`: one component per section, forms and choices, and one `use-*.ts` hook per piece of state).
+- Screens: `GarminImportScreen.tsx` (the Import review, `/profile/settings/garmin-import`), `ProfileScreen.tsx`, `EditProfileScreen.tsx`, `FriendPreviewScreen.tsx`, `SettingsScreen.tsx` (a thin composition of the sections in `settings/`: one component per section, forms and choices, and one `use-*.ts` hook per piece of state).
 - Hooks:
   - `use-profile.ts`: a cache-first load; `replace` applies optimistic updates and saves the cache.
   - `use-optimistic-profile-save.ts`: applies the change, persists it, and rolls back on failure.
@@ -51,6 +51,7 @@ The Profile tab and everything under it: the user's own profile card and stats (
 - Reset, deletion and sign-out warn about an unsynced draft (`useDraftLossGuard` over `hasDraftOnDevice`), checking both the booted draft store and the `localStorage` fallback.
   - Reset needs `RESET` typed, then calls `resetMyData`, then `forgetUserProgressData`, then `wrote` with `account-reset`.
   - Deletion calls `forgetUserDeviceData`, which clears every per-user key and keeps the forgotten-draft tombstone.
+- Import from a Garmin file: `settings/GarminSection.tsx` parses the chosen .fit file in the browser (`../../lib/garmin/fit-file.ts`, a lazy chunk) and hands the activities to the Import review through `../../lib/garmin/pending-import.ts`, which lives in memory only, so a reload or leaving the review drops them and nothing is saved before Import is pressed. Every decision of the review (rows, default selection, possible duplicates, greying, what is sent) is in `../../lib/garmin/import-review-rules.ts`; the screen only renders it. After `import-activities` answers, call `wrote` with `workout-changed`.
 - Account deletion and export call the `delete-account` and `export-data` Edge Functions. A payload change needs the integration test updated too.
 - Account results show as toasts. A panel toggle or a starting export dismisses the toast. Failures stay in the `problem` alert.
 

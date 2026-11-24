@@ -3,6 +3,7 @@ import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
 import { AccountSection } from './settings/AccountSection.tsx';
 import { AppSection } from './settings/AppSection.tsx';
+import { GarminSection } from './settings/GarminSection.tsx';
 import { TimezoneSection } from './settings/TimezoneSection.tsx';
 import { TrainingSection } from './settings/TrainingSection.tsx';
 import { WeeklyGoalSection } from './settings/WeeklyGoalSection.tsx';
@@ -39,6 +40,7 @@ export function SettingsScreen({ userId, email }: SettingsScreenProps) {
           </section>
         </>
       )}
+      <GarminSection userId={userId} />
       <AppSection />
       <AccountSection
         userId={userId}

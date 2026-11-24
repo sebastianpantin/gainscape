@@ -72,6 +72,7 @@ const ROOTS_CHANGED_BY: Record<Exclude<DataChange, 'account-reset'>, readonly Qu
     'dots-history',
     'rarest-drop',
     'last-workout-date',
+    'garmin-import',
   ],
   'profile-saved': [
     'profile',

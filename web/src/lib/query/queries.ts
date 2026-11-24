@@ -39,6 +39,8 @@ import { fetchRecentSets } from '../progress/recovery.ts';
 import { type FeedCursor, feedCursor } from '../social/social-rules.ts';
 import { fetchWeeklyGoalStatus } from '../progress/weekly-goal.ts';
 import { fetchLiftGoals } from '../progress/lift-goals.ts';
+import { fetchLastImportAt, fetchReviewContext } from '../garmin/garmin-import.ts';
+import type { ReviewRange } from '../garmin/review-context-rules.ts';
 import { loadQuestsCacheFirst } from '../quests/quests.ts';
 import { type QuestLog } from '../quests/quest-rules.ts';
 import { deviceStorage } from '../platform/keyed-store.ts';
@@ -278,6 +280,21 @@ export function liftGoalsQuery(userId: string) {
   });
 }
 
+export function garminLastImportQuery(userId: string) {
+  return queryOptions({
+    queryKey: ['garmin-import', userId, 'last'] as const,
+    queryFn: () => fetchLastImportAt(),
+  });
+}
+
+export function garminImportReviewQuery(userId: string, range: ReviewRange | null) {
+  return queryOptions({
+    queryKey: ['garmin-import', userId, 'review', range?.from ?? null, range?.to ?? null] as const,
+    queryFn: () => fetchReviewContext(range),
+    staleTime: 0,
+  });
+}
+
 export function exerciseListLoadQuery(userId: string) {
   return queryOptions({
     queryKey: ['exercises', userId, 'all'] as const,
@@ -417,6 +434,8 @@ export const EVERY_QUERY = [
   enrollChoicesQuery,
   weeklyGoalQuery,
   liftGoalsQuery,
+  garminLastImportQuery,
+  garminImportReviewQuery,
   exerciseListLoadQuery,
   exerciseListQuery,
   lastLoggedWeightsQuery,
