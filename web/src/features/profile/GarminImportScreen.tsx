@@ -219,7 +219,12 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
       dropPendingImport();
     };
   }, []);
-  const choices = picked ?? firstChoices;
+  const chosenSoFar = picked ?? firstChoices;
+  const choices = useMemo(() => {
+    const learnsBodyweight = bodyweightKnown === true && chosenSoFar?.bodyweightKnown === false;
+    if (review === null || chosenSoFar === null || !learnsBodyweight) return chosenSoFar;
+    return withBodyweightKnown(chosenSoFar, review.rows, review.sessions);
+  }, [review, chosenSoFar, bodyweightKnown]);
   const count = review && choices ? chosenCount(review.rows, choices) : 0;
 
   const runImport = async () => {
@@ -253,10 +258,7 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
         <BodyweightPrompt
           unit={unitPref}
           submitLabel="Save bodyweight"
-          onSave={async (savedKg) => {
-            await saveBodyweight({ userId, bodyweightKg: savedKg, storage: deviceStorage(), queryClient });
-            setPicked(withBodyweightKnown(choices, review.rows, review.sessions));
-          }}
+          onSave={(savedKg) => saveBodyweight({ userId, bodyweightKg: savedKg, storage: deviceStorage(), queryClient })}
         />
       )}
       {review && choices && (

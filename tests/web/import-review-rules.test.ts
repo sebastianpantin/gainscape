@@ -41,6 +41,7 @@ import {
 import {
   decisionFor,
   type ReviewLift,
+  UNDECIDED_GROUP,
   withFilledWeight,
   withSkip,
 } from '../../web/src/lib/garmin/strength-review-rules.ts';
@@ -594,9 +595,33 @@ describe('a strength activity in the review', () => {
     expect(isChosen(review.rows[0], decide(review, deselected, BENCH, BENCH))).toBe(false);
   });
 
+  it('stays deselected by the user when it becomes undecided and is decided again', () => {
+    const review = reviewOf([strength({ sets: [{ category: 'bench_press', reps: 8, weightKg: 0 }] })]);
+    const [row] = review.rows;
+    const typed = (choices: ReviewChoices, weight: string) =>
+      withGroupDecisions(choices, review.sessions, row, [withFilledWeight(decisionFor(BENCH), 0, weight, 'kg')]);
+    const unticked = withRowToggled(typed(decide(review, review.choices, BENCH), '60'), row, false);
+    const retyped = typed(typed(unticked, ''), '70');
+    expect(canBeChosen(row, retyped)).toBe(true);
+    expect(isChosen(row, retyped)).toBe(false);
+    expect(isChosen(row, typed(typed(withRowToggled(retyped, row, true), ''), '80'))).toBe(true);
+  });
+
+  it('stays deselected through Select all taken away, until the user selects it again', () => {
+    const review = reviewOf([strength()]);
+    const [row] = review.rows;
+    const noneSelected = withAllToggled(review.rows, decide(review, review.choices, BENCH, ROW), false);
+    const redecided = decide(review, decide(review, noneSelected, 'skip', 'skip'), BENCH, ROW);
+    expect(isChosen(row, redecided)).toBe(false);
+    expect(isChosen(row, withAllToggled(review.rows, redecided, true))).toBe(true);
+  });
+
   it('is deselected again when a group loses its decision, and when every group is skipped', () => {
     const review = reviewOf([strength()]);
     const decided = decide(review, review.choices, BENCH, ROW);
+    const undone = withGroupDecisions(decided, review.sessions, review.rows[0], [decisionFor(BENCH), UNDECIDED_GROUP]);
+    expect(isChosen(review.rows[0], undone)).toBe(false);
+    expect(rowBadge(review.rows[0], undone, review.sessions)?.text).toBe('Needs exercises');
     const allSkipped = decide(review, decided, 'skip', 'skip');
     expect(isChosen(review.rows[0], allSkipped)).toBe(false);
     expect(rowBadge(review.rows[0], allSkipped, review.sessions)).toEqual({

@@ -176,7 +176,7 @@ test('a strength activity is imported set group by set group, and the next one r
   await expect(groups.nth(0)).toContainText('Bench press');
   await expect(groups.nth(0)).toContainText('8 × 60 kg, 6 × 62.5 kg');
   await expect(groups.nth(1)).toContainText('Unknown exercise');
-  await expect(groups.nth(3)).toContainText('1 set without reps left out.');
+  await expect(groups.nth(3)).toContainText('1 set left out: no reps, or more than a set can hold.');
 
   await pickGroupExercise(groups.nth(0), 'barbell bench', /^Barbell Bench Press/);
   await expect(groups.nth(0)).toContainText('Barbell Bench Press');

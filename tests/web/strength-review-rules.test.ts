@@ -152,10 +152,10 @@ describe('groupView', () => {
 
   it('says how many sets were left out', () => {
     expect(groupView({ ...group('plank', [8, 0]), leftOut: 1 }, UNDECIDED_GROUP, undefined, 'kg').notes).toEqual([
-      '1 set without reps left out.',
+      '1 set left out: no reps, or more than a set can hold.',
     ]);
     expect(groupView({ category: 'plank', sets: [], leftOut: 3 }, UNDECIDED_GROUP, undefined, 'kg').notes).toEqual([
-      '3 sets without reps left out.',
+      '3 sets left out: no reps, or more than a set can hold.',
     ]);
   });
 

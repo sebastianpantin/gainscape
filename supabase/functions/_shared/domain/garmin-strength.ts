@@ -89,8 +89,8 @@ export function garminSetWeight(set: GarminGroupSet, loadType: LoadType, filledK
     return set.weightKg > 0 ? { source: 'left_out', weightKg: 0 } : { source: 'recorded', weightKg: 0 };
   }
   if (loadType !== 'external' || set.weightKg > 0) return { source: 'recorded', weightKg: set.weightKg };
-  const filled = filledKg !== null && filledKg > 0 ? storableWeight(filledKg) : null;
-  return { source: 'asked', weightKg: filled };
+  const filled = filledKg === null ? null : storableWeight(filledKg);
+  return { source: 'asked', weightKg: filled !== null && filled > 0 ? filled : null };
 }
 
 function liftSetsOfGroup(

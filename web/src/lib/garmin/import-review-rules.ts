@@ -84,6 +84,7 @@ export interface ReviewChoices {
   exerciseByRow: ReadonlyMap<string, string>;
   groupsByRow: ReadonlyMap<string, readonly GroupChoice[]>;
   bodyweightKnown: boolean;
+  untickedByUser: ReadonlySet<string>;
 }
 
 const GREYED_BY_SEEN: Record<GarminSeenOutcome, GreyedReason> = {
@@ -227,6 +228,7 @@ export function initialChoices(
         ]),
     ),
     bodyweightKnown: memory.bodyweightKnown,
+    untickedByUser: new Set(),
   };
   const selected = rows.filter((row) => isChosenUnasked(row, unselected, sessions)).map((row) => row.id);
   return { ...unselected, selected: new Set(selected) };
@@ -241,8 +243,17 @@ function withSelection(choices: ReviewChoices, rows: readonly ReviewRow[], on: b
   return { ...choices, selected };
 }
 
+function withTicksOfUser(choices: ReviewChoices, rows: readonly ReviewRow[], on: boolean): ReviewChoices {
+  const untickedByUser = new Set(choices.untickedByUser);
+  for (const row of rows) {
+    if (on) untickedByUser.delete(row.id);
+    else untickedByUser.add(row.id);
+  }
+  return { ...withSelection(choices, rows, on), untickedByUser };
+}
+
 export function withRowToggled(choices: ReviewChoices, row: ReviewRow, on: boolean): ReviewChoices {
-  return canBeChosen(row, choices) ? withSelection(choices, [row], on) : choices;
+  return canBeChosen(row, choices) ? withTicksOfUser(choices, [row], on) : choices;
 }
 
 export function withExercisePicked(
@@ -265,7 +276,7 @@ function withNewlyChoosableSelected(
   const changed = rows.filter((row) => canBeChosen(row, before) !== canBeChosen(row, after));
   const selected = new Set(after.selected);
   for (const row of changed) {
-    if (isChosenUnasked(row, after, sessions)) selected.add(row.id);
+    if (isChosenUnasked(row, after, sessions) && !after.untickedByUser.has(row.id)) selected.add(row.id);
     else selected.delete(row.id);
   }
   return { ...after, selected };
@@ -295,7 +306,7 @@ export function needsBodyweight(rows: readonly ReviewRow[], choices: ReviewChoic
 }
 
 export function withAllToggled(rows: readonly ReviewRow[], choices: ReviewChoices, on: boolean): ReviewChoices {
-  return withSelection(
+  return withTicksOfUser(
     choices,
     rows.filter((row) => canBeChosen(row, choices)),
     on,

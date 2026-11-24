@@ -119,7 +119,7 @@ describe('garminSetWeight', () => {
     expect(garminSetWeight({ reps: 8, weightKg: 0 }, 'external', 42.5)).toEqual({ source: 'asked', weightKg: 42.5 });
   });
 
-  it.each([0, -5, Number.NaN, MAX_SET_LOAD_KG + 1])('does not accept %j as a filled-in weight', (filledKg) => {
+  it.each([0, 0.004, -5, Number.NaN, MAX_SET_LOAD_KG + 1])('does not accept %j as a filled-in weight', (filledKg) => {
     expect(garminSetWeight({ reps: 8, weightKg: 0 }, 'external', filledKg)).toEqual({
       source: 'asked',
       weightKg: null,

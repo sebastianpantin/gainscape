@@ -115,7 +115,7 @@ export function groupView(
     };
   });
   const notes = [
-    group.leftOut > 0 ? `${formatCount(group.leftOut, 'set')} without reps left out.` : null,
+    group.leftOut > 0 ? `${formatCount(group.leftOut, 'set')} left out: no reps, or more than a set can hold.` : null,
     leftOutWeights.size > 0
       ? `${exerciseName ?? 'This exercise'} takes no added weight: ${[...leftOutWeights].join(', ')} left out.`
       : null,
