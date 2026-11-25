@@ -10,13 +10,25 @@ import {
   type ProgressionRule,
   type ReferenceState,
   type ReferenceVar,
+  type RepeatScheme,
+  type SetListScheme,
   type SetShape,
   type SlotDecl,
   type StageDecl,
   type StageIndices,
   type StageScheme,
+  type WeekTableRow,
+  type WeekTableScheme,
 } from './program-types.ts';
-import { evaluateNumber, findSlot, numberContext, optionValue, stageRetestOf } from './program-eval.ts';
+import {
+  evaluateNumber,
+  findSlot,
+  numberContext,
+  optionValue,
+  pctOfSlotTarget,
+  smallestNumber,
+  stageRetestOf,
+} from './program-eval.ts';
 import { dayOf, isRotationPosition, type Position, weekContextOf } from './program-schedule.ts';
 import { type FactSet, type Verdict } from './program-state.ts';
 import { type WeightUnit } from './units.ts';
@@ -40,6 +52,11 @@ export function parseSetRef(ref: string): SetRef | null {
   const index = Number(ref.slice(separator + 1));
   if (!Number.isInteger(index) || index < 0) return null;
   return { slotId: ref.slice(0, separator), index };
+}
+
+export function referencedSetOf(load: Load): SetRef | null {
+  if (load.kind === 'pctOfSlot') return { slotId: load.slot, index: load.idx };
+  return load.kind === 'sameAs' || load.kind === 'pctOfSet' ? parseSetRef(load.ref) : null;
 }
 
 function retestRefOf(slotId: string): string {
@@ -101,8 +118,11 @@ function isSnapshotLoad(definition: ProgramDefinition, load: Load | undefined, d
       const slot = target ? findSlot(definition, target.slotId) : undefined;
       return isSnapshotLoad(definition, declaredLoadOf(slot, target?.index ?? -1), depth + 1);
     }
-    case 'pctOfSlot':
-      return isSnapshotLoad(definition, declaredLoadOf(findSlot(definition, load.slot), load.idx), depth + 1);
+    case 'pctOfSlot': {
+      const target = pctOfSlotTarget(definition, load);
+      const slot = target.kind === 'slot' ? target.slot : undefined;
+      return isSnapshotLoad(definition, declaredLoadOf(slot, load.idx), depth + 1);
+    }
     default:
       return true;
   }
@@ -110,6 +130,57 @@ function isSnapshotLoad(definition: ProgramDefinition, load: Load | undefined, d
 
 function minRepsFor(amrap: boolean, minReps: number | undefined, reps: number | null): number | null {
   return amrap ? (minReps ?? reps) : null;
+}
+
+function setListShapes(scheme: SetListScheme): SetShape[] {
+  return scheme.sets.map((set) => ({
+    reps: set.reps,
+    maxReps: set.maxReps ?? null,
+    load: set.load,
+    amrap: set.amrap ?? false,
+    minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
+    optional: set.optional ?? false,
+  }));
+}
+
+function repeatShapes(scheme: RepeatScheme, count: number): SetShape[] {
+  return Array.from({ length: count }, (_, index) => {
+    const amrap = (scheme.amrapLast ?? false) && index === count - 1;
+    return {
+      reps: scheme.reps,
+      maxReps: scheme.maxReps ?? null,
+      load: scheme.load,
+      amrap,
+      minReps: minRepsFor(amrap, scheme.minReps, scheme.reps),
+      optional: scheme.optional ?? false,
+    };
+  });
+}
+
+function weekTableShapes(scheme: WeekTableScheme, row: WeekTableRow): SetShape[] {
+  return row.sets.map((set) => ({
+    reps: set.reps,
+    maxReps: null,
+    load: { kind: 'pct', pct: set.pct, of: scheme.of },
+    amrap: set.amrap ?? false,
+    minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
+    optional: false,
+  }));
+}
+
+type StageSet = Pick<SetShape, 'reps' | 'amrap' | 'minReps'>;
+
+function stageSetAt(stage: StageDecl, index: number): StageSet {
+  const amrap = stage.amrapLast && index === stage.sets - 1;
+  return { reps: stage.reps, amrap, minReps: amrap ? stage.reps : null };
+}
+
+function stageSetsOf(stage: StageDecl): StageSet[] {
+  return Array.from({ length: stage.sets }, (_, index) => stageSetAt(stage, index));
+}
+
+function stageShapes(scheme: StageScheme, stage: StageDecl): SetShape[] {
+  return stageSetsOf(stage).map((set) => ({ ...set, maxReps: null, load: scheme.load, optional: false }));
 }
 
 function setShapes(
@@ -122,56 +193,43 @@ function setShapes(
   const scheme = slot.scheme;
   switch (scheme.kind) {
     case 'sets':
-      return scheme.sets.map((set) => ({
-        reps: set.reps,
-        maxReps: set.maxReps ?? null,
-        load: set.load,
-        amrap: set.amrap ?? false,
-        minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
-        optional: set.optional ?? false,
-      }));
-    case 'repeat': {
-      const count = evaluateNumber(scheme.count, numberContext(definition, enrollment, position));
-      return Array.from({ length: count }, (_, index) => {
-        const amrap = (scheme.amrapLast ?? false) && index === count - 1;
-        return {
-          reps: scheme.reps,
-          maxReps: scheme.maxReps ?? null,
-          load: scheme.load,
-          amrap,
-          minReps: minRepsFor(amrap, scheme.minReps, scheme.reps),
-          optional: scheme.optional ?? false,
-        };
-      });
-    }
+      return setListShapes(scheme);
+    case 'repeat':
+      return repeatShapes(scheme, evaluateNumber(scheme.count, numberContext(definition, enrollment, position)));
     case 'weekTable': {
       const row = definition.weekTables?.[scheme.table]?.[weekContextOf(position).week - 1];
-      if (!row) return null;
-      return row.sets.map((set) => ({
-        reps: set.reps,
-        maxReps: null,
-        load: { kind: 'pct', pct: set.pct, of: scheme.of },
-        amrap: set.amrap ?? false,
-        minReps: minRepsFor(set.amrap ?? false, set.minReps, set.reps),
-        optional: false,
-      }));
+      return row ? weekTableShapes(scheme, row) : null;
     }
     case 'stages': {
       const stage = scheme.stages[stageIndexOf(scheme, stages, slot.lift)];
-      if (!stage) return null;
-      return Array.from({ length: stage.sets }, (_, index) => {
-        const amrap = stage.amrapLast && index === stage.sets - 1;
-        return {
-          reps: stage.reps,
-          maxReps: null,
-          load: scheme.load,
-          amrap,
-          minReps: amrap ? stage.reps : null,
-          optional: false,
-        };
-      });
+      return stage ? stageShapes(scheme, stage) : null;
     }
   }
+}
+
+export function shortestSetLists(definition: ProgramDefinition, slot: SlotDecl): SetShape[][] {
+  const scheme = slot.scheme;
+  switch (scheme.kind) {
+    case 'sets':
+      return [setListShapes(scheme)];
+    case 'repeat': {
+      const count = smallestNumber(definition, scheme.count);
+      return count === null ? [] : [repeatShapes(scheme, count)];
+    }
+    case 'weekTable':
+      return (definition.weekTables?.[scheme.table] ?? []).map((row) => weekTableShapes(scheme, row));
+    case 'stages':
+      return scheme.stages.map((stage) => stageShapes(scheme, stage));
+  }
+}
+
+export function smallestSetCount(definition: ProgramDefinition, slot: SlotDecl): number | null {
+  const lists = shortestSetLists(definition, slot);
+  return lists.length === 0 ? null : Math.min(...lists.map((sets) => sets.length));
+}
+
+export function fixedRepsOf(shape: SetShape): number | null {
+  return shape.amrap || shape.maxReps !== null ? null : shape.reps;
 }
 
 function dueRetestOf(definition: ProgramDefinition, slot: SlotDecl, state: DayState): ReferenceVar | null {
@@ -259,15 +317,27 @@ function setsForSlot(sets: readonly FactSet[], slot: SlotDecl, exerciseId: strin
   );
 }
 
+function hasStageSet(stage: StageDecl, index: number, set: StageSet): boolean {
+  if (index < 0 || index >= stage.sets) return false;
+  const own = stageSetAt(stage, index);
+  return own.reps === set.reps && own.amrap === set.amrap && own.minReps === set.minReps;
+}
+
 function matchesStage(stage: StageDecl, snapshot: PrescriptionSnapshot): boolean {
-  const index = parseSetRef(snapshot.ref)?.index ?? -1;
-  const amrap = stage.amrapLast && index === stage.sets - 1;
-  return (
-    index >= 0 &&
-    index < stage.sets &&
-    snapshot.reps === stage.reps &&
-    snapshot.amrap === amrap &&
-    snapshot.minReps === (amrap ? stage.reps : null)
+  return hasStageSet(stage, parseSetRef(snapshot.ref)?.index ?? -1, snapshot);
+}
+
+function fullDayAlsoMatches(stage: StageDecl, other: StageDecl): boolean {
+  return stageSetsOf(stage).every((set, index) => hasStageSet(other, index, set));
+}
+
+export function lookAlikeStages(scheme: StageScheme): [number, number][] {
+  return scheme.stages.flatMap((stage, index) =>
+    scheme.stages.flatMap((later, laterIndex): [number, number][] =>
+      laterIndex > index && (fullDayAlsoMatches(stage, later) || fullDayAlsoMatches(later, stage))
+        ? [[index, laterIndex]]
+        : [],
+    ),
   );
 }
 

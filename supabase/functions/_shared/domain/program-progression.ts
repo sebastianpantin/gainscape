@@ -24,6 +24,7 @@ import {
   retestAttemptsOf,
 } from './program-day.ts';
 import {
+  amrapBandAmount,
   evaluateAmount,
   evaluateNumber,
   isBarbellLift,
@@ -154,9 +155,8 @@ const ADJUSTMENT_HANDLERS: AdjustmentHandlers = {
     return changeTo(current + context.enrollment.rounding.increment, 'increment');
   },
   amrapTable: ({ context, state, adjustment, sets, current, changeTo }) => {
-    const reps = loggedSetAt(sets, adjustment.setIndex)?.reps;
-    const band = adjustment.bands.filter(([minReps]) => reps !== undefined && reps >= minReps).at(-1);
-    const amount = band?.[1][context.enrollment.unit] ?? 0;
+    const band = amrapBandAmount(adjustment.bands, loggedSetAt(sets, adjustment.setIndex)?.reps);
+    const amount = band?.[context.enrollment.unit] ?? 0;
     return amount === 0 ? state : changeTo(current + amount, 'increment');
   },
   repsOverStandard: ({ context, state, adjustment, position, sets, current, numbers, changeTo }) => {

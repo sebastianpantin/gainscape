@@ -12,7 +12,7 @@ import {
 import { loadProgramTemplates } from '../../scripts/catalog/program-templates.ts';
 import { catalogEnrollment } from './program-fixtures/catalog.ts';
 import { factClock, sessionFact } from './program-fixtures/facts.ts';
-import { type DayLog, followProgram, loggedAsPrescribed, resolveNext } from './program-fixtures/follow.ts';
+import { type DayLog, followProgram, loggedAsPrescribed, resolveAt, resolveNext } from './program-fixtures/follow.ts';
 import { FIVE_THREE_ONE, fiveThreeOneEnrollment } from './program-fixtures/five_three_one.ts';
 import { FULL_PRIMITIVES, fullPrimitivesEnrollment } from './program-fixtures/full_primitives.ts';
 import { GZCLP, gzclpEnrollment } from './program-fixtures/gzclp.ts';
@@ -20,7 +20,7 @@ import { JUGGERNAUT_2, juggernautEnrollment } from './program-fixtures/juggernau
 import { LINEAR_AFTER_SESSION, linearEnrollment } from './program-fixtures/linear_after_session.ts';
 import { MADCOW_5X5, madcowEnrollment } from './program-fixtures/madcow_5x5.ts';
 import { NSUNS_5DAY, nsunsEnrollment } from './program-fixtures/nsuns_5day.ts';
-import { broken, refOf } from './program-fixtures/prescription-helpers.ts';
+import { broken, refOf, weightsOf } from './program-fixtures/prescription-helpers.ts';
 import { type ProgressionRule, type SlotDecl } from '@domain/program-types.ts';
 import { kgEnrollment, STAGED_WEEKLY } from './program-fixtures/review-fixtures.ts';
 import { RPE_TOP_SET, rpeEnrollment } from './program-fixtures/rpe_top_set.ts';
@@ -50,6 +50,9 @@ const programs: [string, ProgramDefinition, ProgramEnrollment][] = [
     catalogEnrollment(definition),
   ]),
 ];
+
+const benchEnrollment = kgEnrollment('enrollment-staged', { bench: { workingWeight: 100 } }, { bench: 'bench' });
+const failedWeeks: DayLog[] = Array.from({ length: 3 }, (): DayLog[] => [{}, { missedLifts: ['bench'] }]).flat();
 
 function requiredOnly(resolved: readonly ResolvedSlot[]): ResolvedSlot[] {
   return resolved.map((slot) =>
@@ -101,9 +104,6 @@ describe('a day logged exactly as prescribed is judged met', () => {
 });
 
 describe('a prescribed retest is judged whatever its rule is scoped to', () => {
-  const benchEnrollment = kgEnrollment('enrollment-staged', { bench: { workingWeight: 100 } }, { bench: 'bench' });
-  const failedWeeks: DayLog[] = Array.from({ length: 3 }, (): DayLog[] => [{}, { missedLifts: ['bench'] }]).flat();
-
   it.each([
     ['an after-session rule', () => undefined],
     [
@@ -134,8 +134,6 @@ describe('a prescribed retest is judged whatever its rule is scoped to', () => {
 });
 
 describe('the day a Retest is logged', () => {
-  const benchEnrollment = kgEnrollment('enrollment-staged', { bench: { workingWeight: 100 } }, { bench: 'bench' });
-  const failedWeeks: DayLog[] = Array.from({ length: 3 }, (): DayLog[] => [{}, { missedLifts: ['bench'] }]).flat();
   const extraBench: SlotDecl = {
     id: 'b-extra',
     lift: 'bench',
@@ -186,6 +184,36 @@ describe('the day a Retest is logged', () => {
   });
 });
 
+describe('a set that reads a slot whose Retest is due', () => {
+  const backoff: SlotDecl = {
+    id: 'b-backoff',
+    lift: 'bench',
+    role: 'supplemental',
+    scheme: {
+      kind: 'sets',
+      sets: [
+        { reps: 5, load: { kind: 'pctOfSet', ref: 'b-bench:0', pct: 0.8 } },
+        { reps: 5, load: { kind: 'sameAs', ref: 'b-bench:1' } },
+        { reps: 5, load: { kind: 'pctOfSet', ref: 'b-bench:4', pct: 0.8 } },
+      ],
+    },
+  };
+
+  it('has no weight yet whichever set it reads, where the property found sets past the first unsupported', () => {
+    const definition = broken(STAGED_WEEKLY, (copy) => {
+      copy.schedule.days[1].slots.push(backoff);
+    });
+    expect(validateProgramDefinition(definition)).toEqual([]);
+    const { state } = followProgram(definition, benchEnrollment, factClock(), failedWeeks);
+    expect(state.pendingRetests).toEqual({ bench: 'fiveRm' });
+
+    const resolved = resolveAt(definition, benchEnrollment, state, { week: 4, day: 'b' });
+
+    expect(resolved.map((slot) => slot.kind)).toEqual(['exercise', 'exercise']);
+    expect(weightsOf(resolved, 'b-backoff')).toEqual([null, null, null]);
+  });
+});
+
 describe('a required set the device cannot snapshot is not judged', () => {
   it.each([
     ['a last-logged load', { reps: 5, load: { kind: 'lastLogged' } }],
@@ -207,15 +235,16 @@ describe('a required set the device cannot snapshot is not judged', () => {
 });
 
 describe('a rule whose judged sets are not prescribed that day is neutral', () => {
-  it('does not raise the reference for a day of zero reps', () => {
+  it('does not raise the reference for a day of zero reps, in a definition the validator now rejects', () => {
     const definition = broken(STAGED_WEEKLY, (copy) => {
       copy.progression[0].judgedSetIndexes = [7];
     });
-    expect(validateProgramDefinition(definition)).toEqual([]);
-    const enrollment = kgEnrollment('enrollment-staged', { bench: { workingWeight: 100 } }, { bench: 'bench' });
+    expect(validateProgramDefinition(definition)).toEqual([
+      "progression rule 1 (bench) judgedSetIndexes reads set 7, but slot 'a-bench' has 5 sets",
+    ]);
     const zeroReps = Object.fromEntries(Array.from({ length: 5 }, (_, index) => [`a-bench:${index}`, 0]));
 
-    const { state } = followProgram(definition, enrollment, factClock(), [{ reps: zeroReps }, {}]);
+    const { state } = followProgram(definition, benchEnrollment, factClock(), [{ reps: zeroReps }, {}]);
 
     expect(state.days[0].outcomes).toEqual({ bench: 'neutral' });
     expect(refOf(state, 'bench', 'workingWeight')).toBe(100);

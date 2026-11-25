@@ -105,8 +105,18 @@ describe('program template schema', () => {
     expect(parsed.definition).toEqual(definition);
   });
 
-  it.each(fixtureCases)('finds no problem in the %s fixture', (_key, definition) => {
-    expect(programTemplateProblems(template(definition))).toEqual([]);
+  it.each(fixtureCases.filter(([, definition]) => definition !== UNSUPPORTED_JUDGED_SCHEMES))(
+    'finds no problem in the %s fixture',
+    (_key, definition) => {
+      expect(programTemplateProblems(template(definition))).toEqual([]);
+    },
+  );
+
+  it('names the week tables the synthetic_unsupported_judged_schemes fixture runs out of', () => {
+    expect(programTemplateProblems(template(UNSUPPORTED_JUDGED_SCHEMES))).toEqual([
+      `program template "synthetic_unsupported_judged_schemes": slot 'a-bench' uses week table 'main' on a weekly schedule, which runs past its last row`,
+      `program template "synthetic_unsupported_judged_schemes": slot 'a-squat' uses week table 'main' on a weekly schedule, which runs past its last row`,
+    ]);
   });
 
   it('refuses a template without a source and names the field', () => {

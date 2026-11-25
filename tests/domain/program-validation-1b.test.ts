@@ -1,21 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { type ProgramDefinition, validateProgramDefinition } from '@domain/index.ts';
-import { type Adjustment, type ChoiceOptionDecl, type Load, type SlotDecl } from '@domain/program-types.ts';
+import {
+  type Adjustment,
+  type ChoiceOptionDecl,
+  type Load,
+  type SetSpec,
+  type StageDecl,
+} from '@domain/program-types.ts';
 import { FULL_PRIMITIVES } from './program-fixtures/full_primitives.ts';
 import { GZCLP } from './program-fixtures/gzclp.ts';
 import { JUGGERNAUT_2 } from './program-fixtures/juggernaut_2.ts';
 import { LINEAR_AFTER_SESSION } from './program-fixtures/linear_after_session.ts';
 import { MADCOW_5X5 } from './program-fixtures/madcow_5x5.ts';
 import { NSUNS_5DAY } from './program-fixtures/nsuns_5day.ts';
-import { broken } from './program-fixtures/prescription-helpers.ts';
+import { broken, slotIn } from './program-fixtures/prescription-helpers.ts';
+import { STAGED_WEEKLY, UNSUPPORTED_JUDGED_SCHEMES } from './program-fixtures/review-fixtures.ts';
 import { RPE_TOP_SET } from './program-fixtures/rpe_top_set.ts';
+import { SMOLOV_JR } from './program-fixtures/smolov_jr.ts';
 import { TEXAS_METHOD } from './program-fixtures/texas_method.ts';
-
-function slotIn(definition: ProgramDefinition, slotId: string): SlotDecl {
-  const slot = definition.schedule.days.flatMap((day) => day.slots).find((candidate) => candidate.id === slotId);
-  if (!slot) throw new Error(`no slot ${slotId}`);
-  return slot;
-}
 
 function setLoad(definition: ProgramDefinition, slotId: string, load: Load) {
   const scheme = slotIn(definition, slotId).scheme;
@@ -262,5 +264,247 @@ describe('validateProgramDefinition pins for 1b loads', () => {
       setLoad(copy, 'squat-top', { kind: 'rpeLoad', reps, rpe, of: 'e1rm' });
     });
     errorsMention(definition, 'off the RPE chart');
+  });
+});
+
+describe('validateProgramDefinition bounds set indexes by the fewest sets a day can prescribe', () => {
+  const optionCounted = (count: number[]) =>
+    broken(LINEAR_AFTER_SESSION, (copy) => {
+      copy.options = [{ key: 'sets', kind: 'choice', values: count, default: count[0], source: ['synthetic'] }];
+      for (const day of copy.schedule.days) {
+        day.slots[0].scheme = {
+          kind: 'repeat',
+          count: { option: 'sets' },
+          reps: 5,
+          load: { kind: 'pct', pct: 1, of: 'tm' },
+        };
+      }
+    });
+
+  it('judgedSetIndexes 5 on stages 5×3, 6×2, 10×1: the 5×3 day never prescribes it', () => {
+    const definition = broken(STAGED_WEEKLY, (copy) => {
+      copy.progression[0].judgedSetIndexes = [5];
+    });
+    errorsMention(definition, 'judgedSetIndexes', '5', 'a-bench', '5 sets');
+  });
+
+  it('accepts judgedSetIndexes 4 on the same stages, which every stage prescribes', () => {
+    const definition = broken(STAGED_WEEKLY, (copy) => {
+      copy.progression[0].judgedSetIndexes = [4];
+    });
+    expect(validateProgramDefinition(definition)).toEqual([]);
+  });
+
+  it('amrapThreshold setIndex 5 on the GZCLP T1 stages, whose first stage has 5 sets', () => {
+    const definition = broken(GZCLP, (copy) => {
+      copy.progression[0].onMet = [{ kind: 'amrapThreshold', setIndex: 5, reps: 10 }];
+    });
+    errorsMention(definition, 'setIndex', '5', '5 sets');
+  });
+
+  it('judgedSetIndexes 3 on a repeat counted by an option that can be 3', () => {
+    const definition = broken(optionCounted([5, 3]), (copy) => {
+      copy.progression[0].judgedSetIndexes = [3];
+    });
+    errorsMention(definition, 'judgedSetIndexes', '3', 'a-squat', '3 sets');
+  });
+
+  it('accepts judgedSetIndexes 2 on that repeat', () => {
+    const definition = broken(optionCounted([5, 3]), (copy) => {
+      copy.progression[0].judgedSetIndexes = [2];
+    });
+    expect(validateProgramDefinition(definition)).toEqual([]);
+  });
+
+  it('a sameAs ref to set 5 of stages whose first stage has 5 sets', () => {
+    const definition = broken(STAGED_WEEKLY, (copy) => {
+      copy.schedule.days[0].slots.push({
+        id: 'a-backoff',
+        lift: 'bench',
+        role: 'supplemental',
+        scheme: { kind: 'sets', sets: [{ reps: 5, load: { kind: 'sameAs', ref: 'a-bench:5' } }] },
+      });
+    });
+    errorsMention(definition, 'a-bench:5', '5 sets');
+  });
+});
+
+describe('validateProgramDefinition checks the set an e1rmFromSet reads', () => {
+  const topSet = (set: Partial<SetSpec>) =>
+    broken(RPE_TOP_SET, (copy) => {
+      const scheme = slotIn(copy, 'squat-top').scheme;
+      if (scheme.kind === 'sets') scheme.sets[0] = { ...scheme.sets[0], ...set };
+    });
+
+  it('accepts 3 fixed reps', () => {
+    expect(validateProgramDefinition(RPE_TOP_SET)).toEqual([]);
+  });
+
+  it.each([
+    ['8 reps, which the chart does not reach', { reps: 8, load: { kind: 'pct', pct: 0.8, of: 'e1rm' } }],
+    ['open reps', { reps: null }],
+    ['an AMRAP set', { amrap: true }],
+    ['a rep range', { maxReps: 5 }],
+  ] as [string, Partial<SetSpec>][])('rejects %s', (_name, set) => {
+    errorsMention(topSet(set), 'squat', 'setIndex 0 of e1rmFromSet', 'squat-top', 'RPE chart');
+  });
+
+  it('rejects stages where one stage has reps off the chart', () => {
+    const definition = broken(STAGED_WEEKLY, (copy) => {
+      const scheme = slotIn(copy, 'b-bench').scheme;
+      if (scheme.kind === 'stages') scheme.stages[2] = { sets: 5, reps: 8, amrapLast: false };
+      copy.progression[1].always = [{ kind: 'e1rmFromSet', setIndex: 0 }];
+    });
+    errorsMention(definition, 'e1rmFromSet', 'b-bench', 'RPE chart');
+  });
+
+  it('names the setIndex alone when the slot never prescribes that set', () => {
+    const definition = broken(RPE_TOP_SET, (copy) => onlyAdjustment(copy, 0, { kind: 'e1rmFromSet', setIndex: 1 }));
+    expect(validateProgramDefinition(definition).filter((error) => error.includes('RPE chart'))).toEqual([]);
+  });
+});
+
+describe('validateProgramDefinition rejects stages a logged day cannot tell apart', () => {
+  const withStages = (stages: StageDecl[]) =>
+    broken(STAGED_WEEKLY, (copy) => {
+      const scheme = slotIn(copy, 'b-bench').scheme;
+      if (scheme.kind === 'stages') scheme.stages = stages;
+    });
+
+  it('3×5 then 5×5: a 3×5 day logged in full is also the start of a 5×5 day', () => {
+    const definition = withStages([
+      { sets: 3, reps: 5, amrapLast: false },
+      { sets: 5, reps: 5, amrapLast: false },
+    ]);
+    errorsMention(definition, 'b-bench', 'stages 1 and 2', 'tell apart');
+  });
+
+  it('the same stage twice', () => {
+    const definition = withStages([
+      { sets: 5, reps: 3, amrapLast: true },
+      { sets: 6, reps: 2, amrapLast: true },
+      { sets: 5, reps: 3, amrapLast: true },
+    ]);
+    errorsMention(definition, 'b-bench', 'stages 1 and 3', 'tell apart');
+  });
+
+  it('accepts 3×5+ then 5×5+, whose AMRAP set sits at a different index', () => {
+    const definition = withStages([
+      { sets: 3, reps: 5, amrapLast: true },
+      { sets: 5, reps: 5, amrapLast: true },
+    ]);
+    expect(validateProgramDefinition(definition)).toEqual([]);
+  });
+});
+
+describe('validateProgramDefinition rejects empty and short lists the engine would read past', () => {
+  it('an amrapTable with no bands', () => {
+    const definition = broken(NSUNS_5DAY, (copy) => {
+      const adjustment = copy.progression[0].always?.[0];
+      if (adjustment?.kind === 'amrapTable') adjustment.bands = [];
+    });
+    errorsMention(definition, 'amrapTable', 'no bands');
+  });
+
+  it('a stages scheme with no stages', () => {
+    const definition = broken(STAGED_WEEKLY, (copy) => {
+      const scheme = slotIn(copy, 'a-bench').scheme;
+      if (scheme.kind === 'stages') scheme.stages = [];
+    });
+    errorsMention(definition, 'a-bench', 'no stages');
+  });
+
+  it('a cumulativeAddOn with 2 byWeek entries on the 3-week Smolov Jr cycle', () => {
+    const definition = broken(SMOLOV_JR, (copy) => {
+      for (const day of copy.schedule.days) {
+        const scheme = day.slots[0].scheme;
+        if (scheme.kind === 'repeat' && scheme.load.kind === 'cumulativeAddOn') {
+          scheme.load.byWeek = scheme.load.byWeek.slice(0, 2);
+        }
+      }
+    });
+    errorsMention(definition, 'cumulativeAddOn', '2 byWeek entries', 'week 3');
+  });
+
+  it('a cumulativeAddOn with no byWeek entries on a weekly schedule', () => {
+    const definition = broken(LINEAR_AFTER_SESSION, (copy) => {
+      setLoad(copy, 'a-squat', { kind: 'cumulativeAddOn', pct: 0.7, of: 'tm', byWeek: [] });
+    });
+    errorsMention(definition, 'cumulativeAddOn', '0 byWeek entries', 'week 1');
+  });
+
+  it('accepts a cumulativeAddOn with more byWeek entries than the cycle has weeks', () => {
+    const definition = broken(SMOLOV_JR, (copy) => {
+      for (const day of copy.schedule.days) {
+        const scheme = day.slots[0].scheme;
+        if (scheme.kind === 'repeat' && scheme.load.kind === 'cumulativeAddOn') {
+          scheme.load.byWeek = [...scheme.load.byWeek, { kg: 10, lb: 25 }];
+        }
+      }
+    });
+    expect(validateProgramDefinition(definition)).toEqual([]);
+  });
+});
+
+describe('validateProgramDefinition rejects what the agreement property found the engine cannot prescribe', () => {
+  it('a week table on a weekly schedule, which has no row once the weeks pass its last one', () => {
+    errorsMention(UNSUPPORTED_JUDGED_SCHEMES, 'a-bench', "week table 'main'", 'weekly schedule');
+  });
+
+  it('a weekTablePct load on a weekly schedule', () => {
+    const definition = broken(UNSUPPORTED_JUDGED_SCHEMES, (copy) => {
+      for (const slot of copy.schedule.days[0].slots) {
+        slot.scheme = {
+          kind: 'repeat',
+          count: 3,
+          reps: 5,
+          load: { kind: 'weekTablePct', table: 'main', set: 0, of: 'tm' },
+        };
+      }
+    });
+    errorsMention(definition, 'a-squat', "week table 'main'", 'weekly schedule');
+  });
+
+  it('a week table with no rows on a rotation, which reads its first row every day', () => {
+    const definition = broken(GZCLP, (copy) => {
+      copy.weekTables = { main: [] };
+      slotIn(copy, 'a1-squat-t1').scheme = { kind: 'weekTable', table: 'main', of: 'workingWeight' };
+    });
+    errorsMention(definition, 'a1-squat-t1', "week table 'main'", 'no rows');
+  });
+
+  it('a set that reads an earlier set of its own slot, which the resolver cannot reach (basic-pct:0)', () => {
+    const definition = broken(FULL_PRIMITIVES, (copy) => {
+      const scheme = slotIn(copy, 'basic-pct').scheme;
+      if (scheme.kind === 'sets') scheme.sets[2].load = { kind: 'pctOfSet', ref: 'basic-pct:0', pct: 0.9 };
+    });
+    errorsMention(definition, 'basic-pct', "its own set 'basic-pct:0'");
+  });
+
+  it('a pctOfSlot that reads its own slot (wed-squat:0)', () => {
+    const definition = broken(TEXAS_METHOD, (copy) => {
+      setLoad(copy, 'wed-squat', { kind: 'pctOfSlot', day: 'wed', slot: 'wed-squat', idx: 0, pct: 0.8 });
+    });
+    errorsMention(definition, 'wed-squat', "its own set 'wed-squat:0'");
+  });
+
+  it("an opening increment keyed by an option whose cases lack one of the option's values (fine)", () => {
+    const definition = broken(JUGGERNAUT_2, (copy) => {
+      copy.progression[0].onMet = [
+        {
+          kind: 'increment',
+          by: { kg: 2.5, lb: 5 },
+          opening: { times: 2, by: { option: 'perRep', cases: { standard: { kg: 5, lb: 10 } } } },
+        },
+      ];
+    });
+    errorsMention(definition, 'perRep', 'fine');
+  });
+
+  it('a weekTablePct that reads set 3 of a table whose rows have 3 sets', () => {
+    const definition = broken(FULL_PRIMITIVES, (copy) => {
+      setLoad(copy, 'basic-first-set-last', { kind: 'weekTablePct', table: 'main', set: 3, of: 'tm' });
+    });
+    errorsMention(definition, 'basic-first-set-last', 'set 3', "week table 'main'", '3 sets');
   });
 });

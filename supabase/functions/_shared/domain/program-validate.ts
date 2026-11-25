@@ -1,7 +1,17 @@
-import { parseSetRef } from './program-day.ts';
+import {
+  fixedRepsOf,
+  lookAlikeStages,
+  parseSetRef,
+  referencedSetOf,
+  setRefOf,
+  shortestSetLists,
+  smallestSetCount,
+} from './program-day.ts';
+import { type AmrapBand, areAmrapBandsRising, pctOfSlotTarget, rpeLoadPct } from './program-eval.ts';
 import {
   type Adjustment,
   type ChoiceOptionDecl,
+  type CumulativeAddOnLoad,
   type Load,
   type NumberExpr,
   type OptionDecl,
@@ -12,12 +22,15 @@ import {
   type ProgramEnrollment,
   type ProgressionRule,
   type SetScheme,
+  type SetShape,
   type SlotDecl,
+  type StageScheme,
   type UnitAmountExpr,
+  type WeekTablePctLoad,
 } from './program-types.ts';
-import { rpeChartPct } from './rpe-chart.ts';
+import { isRepCountOnRpeChart } from './rpe-chart.ts';
 import { isRecord } from './types.ts';
-import { type UnitAmount, type WeightUnit } from './units.ts';
+import { type WeightUnit } from './units.ts';
 
 const SCHEDULE_KINDS: readonly string[] = ['cycle', 'weekly', 'rotation'];
 const SCHEME_KINDS: readonly string[] = ['sets', 'repeat', 'weekTable', 'stages'];
@@ -49,30 +62,16 @@ const ADJUSTMENT_KINDS_WITHOUT_SEMANTICS: readonly string[] = ['customRule'];
 const INITIAL_KINDS: readonly string[] = ['copy', 'scale', 'onRamp'];
 const OPTION_KINDS: readonly string[] = ['choice', 'number'];
 
-function knownSetCount(definition: ProgramDefinition, scheme: SetScheme): number | null {
-  switch (scheme.kind) {
-    case 'sets':
-      return scheme.sets.length;
-    case 'repeat':
-      return typeof scheme.count === 'number' ? scheme.count : null;
-    case 'weekTable': {
-      const rows = definition.weekTables?.[scheme.table];
-      return rows && rows.length > 0 ? Math.min(...rows.map((row) => row.sets.length)) : null;
-    }
-    case 'stages':
-      return scheme.stages.length > 0 ? Math.max(...scheme.stages.map((stage) => stage.sets)) : null;
-    default:
-      return null;
-  }
-}
-
 function referencedSlotIds(slot: SlotDecl): string[] {
   return schemeLoads(slot.scheme).flatMap((load) => {
-    if (load.kind === 'pctOfSlot') return load.slot === slot.id ? [] : [load.slot];
-    if (load.kind !== 'sameAs' && load.kind !== 'pctOfSet') return [];
-    const target = parseSetRef(load.ref)?.slotId;
+    const target = referencedSetOf(load)?.slotId;
     return target === undefined || target === slot.id ? [] : [target];
   });
+}
+
+function hasFixedRepsOnRpeChart(set: SetShape | undefined): boolean {
+  const reps = set ? fixedRepsOf(set) : null;
+  return reps !== null && isRepCountOnRpeChart(reps);
 }
 
 function schemeLoads(scheme: SetScheme): Load[] {
@@ -203,18 +202,26 @@ class DefinitionChecker {
       this.checkVar(scheme.of, where);
     }
     if (scheme.kind === 'repeat') this.checkNumber(scheme.count, `${where} count`);
-    schemeLoads(scheme).forEach((load, index) => {
+    if (scheme.kind === 'stages') this.checkStages(scheme, where);
+    for (const load of schemeLoads(scheme)) {
       this.checkLoad(load, where);
-      this.checkOwnSetReference(slot, load, index, where);
-    });
+      this.checkOwnSetReference(slot, load, where);
+    }
   }
 
-  private checkOwnSetReference(slot: SlotDecl, load: Load, index: number, where: string) {
-    if (load.kind !== 'sameAs' && load.kind !== 'pctOfSet') return;
-    const target = parseSetRef(load.ref);
-    if (target?.slotId !== slot.id) return;
-    if (slot.scheme.kind !== 'sets' || target.index >= index) {
-      this.errors.push(`${where} refers to its own set '${load.ref}', which cannot resolve`);
+  private checkStages(scheme: StageScheme, where: string) {
+    if (scheme.stages.length === 0) this.errors.push(`${where} has a stages scheme with no stages`);
+    for (const [stage, later] of lookAlikeStages(scheme)) {
+      this.errors.push(`${where} has stages ${stage + 1} and ${later + 1}, which a logged day cannot tell apart`);
+    }
+  }
+
+  private checkOwnSetReference(slot: SlotDecl, load: Load, where: string) {
+    const target = referencedSetOf(load);
+    if (target?.slotId === slot.id) {
+      this.errors.push(
+        `${where} refers to its own set '${setRefOf(target.slotId, target.index)}', which cannot resolve`,
+      );
     }
   }
 
@@ -254,7 +261,7 @@ class DefinitionChecker {
         this.checkSetRef(load.ref, where);
         return;
       case 'weekTablePct':
-        this.checkTable(load.table, where);
+        this.checkTableSet(load, where);
         this.checkVar(load.of, where);
         return;
       case 'pctOfSet':
@@ -266,35 +273,57 @@ class DefinitionChecker {
         return;
       case 'rpeLoad':
         this.checkVar(load.of, where);
-        if (rpeChartPct(load.reps, load.rpe) === null) {
+        if (rpeLoadPct(load) === null) {
           this.errors.push(`${where} asks for ${load.reps} reps @ RPE ${load.rpe}, which is off the RPE chart`);
         }
         return;
       case 'cumulativeAddOn':
         this.checkNumber(load.pct, where);
         this.checkVar(load.of, where);
+        this.checkAddOnWeeks(load, where);
         return;
       default:
         return;
     }
   }
 
+  private checkTableSet(load: WeekTablePctLoad, where: string) {
+    this.checkTable(load.table, where);
+    const rows = this.definition.weekTables?.[load.table] ?? [];
+    const shortest = Math.min(...rows.map((row) => row.sets.length));
+    if (load.set >= shortest) {
+      this.errors.push(
+        `${where} reads set ${load.set} of week table '${load.table}', whose shortest row has ${shortest} sets`,
+      );
+    }
+  }
+
+  private checkAddOnWeeks(load: CumulativeAddOnLoad, where: string) {
+    const schedule = this.definition.schedule;
+    const lastWeek = schedule.kind === 'cycle' ? schedule.weeksPerCycle : 1;
+    if (load.byWeek.length < lastWeek) {
+      this.errors.push(
+        `${where} has a cumulativeAddOn with ${load.byWeek.length} byWeek entries, but the schedule reaches week ${lastWeek}`,
+      );
+    }
+  }
+
   private checkPctOfSlot(load: PctOfSlotLoad, where: string) {
     this.checkNumber(load.pct, where);
-    if (this.definition.schedule.kind === 'rotation') {
-      this.errors.push(`${where} uses pctOfSlot on a rotation schedule, which has no current week to read`);
+    const target = pctOfSlotTarget(this.definition, load);
+    switch (target.kind) {
+      case 'noCurrentWeek':
+        this.errors.push(`${where} uses pctOfSlot on a rotation schedule, which has no current week to read`);
+        return;
+      case 'unknownDay':
+        this.errors.push(`${where} refers to unknown day '${load.day}'`);
+        return;
+      case 'slotNotOnDay':
+        this.errors.push(`${where} refers to slot '${load.slot}', which is not on day '${load.day}'`);
+        return;
+      case 'slot':
+        this.checkSetIndex(target.slot, load.idx, `${load.slot}:${load.idx}`, where);
     }
-    const day = this.definition.schedule.days.find((candidate) => candidate.key === load.day);
-    if (!day) {
-      this.errors.push(`${where} refers to unknown day '${load.day}'`);
-      return;
-    }
-    const slot = day.slots.find((candidate) => candidate.id === load.slot);
-    if (!slot) {
-      this.errors.push(`${where} refers to slot '${load.slot}', which is not on day '${load.day}'`);
-      return;
-    }
-    this.checkSetIndex(slot, load.idx, `${load.slot}:${load.idx}`, where);
   }
 
   private checkSetRef(ref: string, where: string) {
@@ -308,7 +337,7 @@ class DefinitionChecker {
   }
 
   private checkSetIndex(slot: SlotDecl, index: number, ref: string, where: string) {
-    const count = knownSetCount(this.definition, slot.scheme);
+    const count = smallestSetCount(this.definition, slot);
     if (count !== null && index >= count) {
       this.errors.push(`${where} refers to set '${ref}', but slot '${slot.id}' has ${count} sets`);
     }
@@ -344,7 +373,7 @@ class DefinitionChecker {
     if (rule.judgedSetIndexes.length === 0) this.errors.push(`${where} has judgedSetIndexes that judge no set`);
     for (const setIndex of rule.judgedSetIndexes) {
       for (const slot of this.judgedSlotsOf(rule)) {
-        const count = knownSetCount(this.definition, slot.scheme);
+        const count = smallestSetCount(this.definition, slot);
         if (count !== null && setIndex >= count) {
           this.errors.push(`${where} judgedSetIndexes reads set ${setIndex}, but slot '${slot.id}' has ${count} sets`);
         }
@@ -366,14 +395,23 @@ class DefinitionChecker {
     if (adjustment.kind === 'repsOverStandard') this.checkStandards(adjustment.standardByWave, where);
     if (adjustment.kind === 'amrapTable') this.checkBands(adjustment.bands, where);
     if ('setIndex' in adjustment) {
-      for (const slot of this.judgedSlotsOf(rule)) {
-        const count = knownSetCount(this.definition, slot.scheme);
-        if (count !== null && adjustment.setIndex >= count) {
-          this.errors.push(
-            `${where} reads setIndex ${adjustment.setIndex} of ${adjustment.kind}, but slot '${slot.id}' has ${count} sets`,
-          );
-        }
-      }
+      for (const slot of this.judgedSlotsOf(rule)) this.checkAdjustedSet(slot, adjustment, where);
+    }
+  }
+
+  private checkAdjustedSet(slot: SlotDecl, adjustment: Extract<Adjustment, { setIndex: number }>, where: string) {
+    const reads = `${where} reads setIndex ${adjustment.setIndex} of ${adjustment.kind}`;
+    const count = smallestSetCount(this.definition, slot);
+    if (count !== null && adjustment.setIndex >= count) {
+      this.errors.push(`${reads}, but slot '${slot.id}' has ${count} sets`);
+      return;
+    }
+    if (adjustment.kind !== 'e1rmFromSet') return;
+    const lists = shortestSetLists(this.definition, slot);
+    if (!lists.every((sets) => hasFixedRepsOnRpeChart(sets[adjustment.setIndex]))) {
+      this.errors.push(
+        `${reads}, but slot '${slot.id}' does not always prescribe a fixed rep count on the RPE chart there`,
+      );
     }
   }
 
@@ -386,9 +424,10 @@ class DefinitionChecker {
     }
   }
 
-  private checkBands(bands: [number, UnitAmount][], where: string) {
-    const minReps = bands.map(([reps]) => reps);
-    if (minReps.some((reps, index) => index > 0 && reps <= minReps[index - 1])) {
+  private checkBands(bands: readonly AmrapBand[], where: string) {
+    if (bands.length === 0) this.errors.push(`${where} has an amrapTable with no bands`);
+    if (!areAmrapBandsRising(bands)) {
+      const minReps = bands.map(([reps]) => reps);
       this.errors.push(`${where} has amrapTable bands whose minReps do not rise: ${minReps.join(', ')}`);
     }
   }
@@ -398,6 +437,7 @@ class DefinitionChecker {
       case 'increment':
         if ('byPct' in adjustment) this.checkNumber(adjustment.byPct, where);
         else this.checkAmount(adjustment.by, where);
+        if ('opening' in adjustment && adjustment.opening) this.checkAmount(adjustment.opening.by, where);
         return;
       case 'tmReset':
         this.checkNumber(adjustment.pct, where);
@@ -422,7 +462,15 @@ class DefinitionChecker {
   }
 
   private checkTable(table: string, where: string) {
-    if (!this.definition.weekTables?.[table]) this.errors.push(`${where} uses unknown week table '${table}'`);
+    const rows = this.definition.weekTables?.[table];
+    const schedule = this.definition.schedule.kind;
+    if (!rows) {
+      this.errors.push(`${where} uses unknown week table '${table}'`);
+    } else if (schedule === 'weekly') {
+      this.errors.push(`${where} uses week table '${table}' on a weekly schedule, which runs past its last row`);
+    } else if (schedule === 'rotation' && rows.length === 0) {
+      this.errors.push(`${where} uses week table '${table}', which has no rows`);
+    }
   }
 
   private checkOption(option: string, where: string) {

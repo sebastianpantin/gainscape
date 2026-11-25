@@ -15,9 +15,16 @@ import {
   type SlotRole,
 } from './program-types.ts';
 import { declaredLoadOf, parseSetRef, setRefOf, prescribeDay, prescribeSlot, RETEST_REPS } from './program-day.ts';
-import { evaluateAmount, evaluateNumber, findSlot, isBarbellLift, numberContext } from './program-eval.ts';
+import {
+  evaluateAmount,
+  evaluateNumber,
+  findSlot,
+  isBarbellLift,
+  numberContext,
+  pctOfSlotTarget,
+  rpeLoadPct,
+} from './program-eval.ts';
 import { type Position, positionAt, weekContextOf } from './program-schedule.ts';
-import { rpeChartPct } from './rpe-chart.ts';
 import { shownWeight, unitToKg } from './units.ts';
 
 export interface PrescribedSet {
@@ -71,6 +78,8 @@ interface ResolvedLoad {
 
 type LoadResult = { kind: 'load'; load: ResolvedLoad } | { kind: 'unsupported'; primitive: string };
 
+const NO_LOAD_YET: LoadResult = { kind: 'load', load: { weight: null, weightKg: null, pct: null } };
+
 function prescribedLoad(
   context: ResolveContext,
   onBar: boolean,
@@ -91,11 +100,12 @@ function relativeLoad(
   context: ResolveContext,
   onBar: boolean,
   primitive: string,
-  base: SlotSetsResult,
+  base: ReferencedSets,
   index: number,
   pct: number,
 ): LoadResult {
   if (base.kind === 'unsupported') return base;
+  if (base.kind === 'retestDue') return prescribedLoad(context, onBar, undefined, pct);
   const weight = base.sets[index]?.weight;
   if (weight === undefined) return { kind: 'unsupported', primitive };
   return prescribedLoad(context, onBar, weight === null ? undefined : weight * pct, pct);
@@ -107,9 +117,10 @@ function referencedSlotSets(
   slot: SlotDecl | undefined,
   depth: number,
   position = context.position,
-): SlotSetsResult {
+): ReferencedSets {
   if (!slot || depth >= MAX_REFERENCE_DEPTH) return { kind: 'unsupported', primitive };
   const daySlot = prescribeSlot(context.definition, context.enrollment, context.state, position, slot);
+  if (daySlot.kind === 'retest') return { kind: 'retestDue' };
   return resolveSlotSets({ ...context, position }, daySlot, depth + 1);
 }
 
@@ -134,7 +145,7 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
       return prescribedLoad(context, onBar, raw === undefined ? undefined : raw * pct + add, pct);
     }
     case 'rpeLoad': {
-      const pct = rpeChartPct(load.reps, load.rpe);
+      const pct = rpeLoadPct(load);
       if (pct === null) return { kind: 'unsupported', primitive: load.kind };
       const raw = referenceInEnrollmentUnit(load.of);
       return prescribedLoad(context, onBar, raw === undefined ? undefined : raw * pct, pct);
@@ -156,6 +167,7 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
       const targetSlot = target ? findSlot(definition, target.slotId) : undefined;
       const sets = referencedSlotSets(context, load.kind, targetSlot, depth);
       if (sets.kind === 'unsupported') return sets;
+      if (sets.kind === 'retestDue') return NO_LOAD_YET;
       const set = target ? sets.sets[target.index] : undefined;
       if (!set) return { kind: 'unsupported', primitive: load.kind };
       return {
@@ -170,16 +182,15 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
       return relativeLoad(context, onBar, load.kind, sets, target?.index ?? -1, evaluateNumber(load.pct, numbers));
     }
     case 'pctOfSlot': {
-      const targetSlot = definition.schedule.days
-        .find((day) => day.key === load.day)
-        ?.slots.find((candidate) => candidate.id === load.slot);
-      const sets = referencedSlotSets(context, load.kind, targetSlot, depth, positionAt(position, load.day));
+      const target = pctOfSlotTarget(definition, load);
+      if (target.kind !== 'slot') return { kind: 'unsupported', primitive: load.kind };
+      const sets = referencedSlotSets(context, load.kind, target.slot, depth, positionAt(position, load.day));
       return relativeLoad(context, onBar, load.kind, sets, load.idx, evaluateNumber(load.pct, numbers));
     }
     case 'lastLogged': {
       const exerciseId = enrollment.bindings[slot.lift];
       const kg = exerciseId ? context.lastLogged[exerciseId] : undefined;
-      if (kg === undefined) return { kind: 'load', load: { weight: null, weightKg: null, pct: null } };
+      if (kg === undefined) return NO_LOAD_YET;
       return {
         kind: 'load',
         load: { weight: shownWeight(kg, enrollment.unit), weightKg: kg, pct: null },
@@ -189,6 +200,8 @@ function resolveLoad(context: ResolveContext, slot: SlotDecl, load: Load, index:
 }
 
 type SlotSetsResult = { kind: 'sets'; sets: PrescribedSet[] } | { kind: 'unsupported'; primitive: string };
+
+type ReferencedSets = SlotSetsResult | { kind: 'retestDue' };
 
 function retestSet(ref: string, suggestedWeightKg: number | null): PrescribedSet {
   return {
