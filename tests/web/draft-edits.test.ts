@@ -266,13 +266,13 @@ describe('set limit', () => {
     expect(addSet(fullDraft(), 1)).toEqual(fullDraft());
   });
 
-  it('adds no bout and no cardio exercise once the bouts add up to 4 hours, but still adds a lift', () => {
-    const fourHours = workout({
-      exercises: [cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 14_400 }] })],
+  it('adds no bout and no cardio exercise once the bouts add up to 12 hours, but still adds a lift', () => {
+    const twelveHours = workout({
+      exercises: [cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 43_200 }] })],
     });
-    expect(addSet(fourHours, 0)).toBe(fourHours);
-    expect(addCardioExercise(fourHours, 'row', 'Rowing', cardioExercise().activity)).toBe(fourHours);
-    const withLift = addSet(addExercise(fourHours, 'press', 'Press', 'external'), 1);
+    expect(addSet(twelveHours, 0)).toBe(twelveHours);
+    expect(addCardioExercise(twelveHours, 'row', 'Rowing', cardioExercise().activity)).toBe(twelveHours);
+    const withLift = addSet(addExercise(twelveHours, 'press', 'Press', 'external'), 1);
     expect(withLift.exercises[1].sets).toHaveLength(1);
   });
 
@@ -458,7 +458,7 @@ describe('insertWarmupDrills', () => {
     expect(new Set(inserted.exercises.map((exercise) => exercise.clientId)).size).toBe(4);
   });
 
-  it('inserts nothing when the drills would not fit the set limit or the 4 hours of bouts', () => {
+  it('inserts nothing when the drills would not fit the set limit or the 12 hours of bouts', () => {
     const nearlyFullSets = workout({
       exercises: [
         {
@@ -471,13 +471,13 @@ describe('insertWarmupDrills', () => {
       ],
     });
     expect(insertWarmupDrills(nearlyFullSets, 0, drills)).toBe(nearlyFullSets);
-    const nearlyFourHours = workout({
+    const nearlyTwelveHours = workout({
       exercises: [
-        cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 14_400 - 60 }] }),
+        cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 43_200 - 60 }] }),
         ...workout().exercises,
       ],
     });
-    expect(insertWarmupDrills(nearlyFourHours, 1, drills)).toBe(nearlyFourHours);
-    expect(insertWarmupDrills(nearlyFourHours, 1, drills.slice(0, 1)).exercises).toHaveLength(4);
+    expect(insertWarmupDrills(nearlyTwelveHours, 1, drills)).toBe(nearlyTwelveHours);
+    expect(insertWarmupDrills(nearlyTwelveHours, 1, drills.slice(0, 1)).exercises).toHaveLength(4);
   });
 });

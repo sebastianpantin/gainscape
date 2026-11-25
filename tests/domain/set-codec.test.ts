@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
+  CARDIO_BOUNDS,
   type CardioSetInput,
   decodeStoredSet,
   encodeStoredSet,
@@ -154,7 +155,7 @@ describe('encodeStoredSet', () => {
       ),
     });
     const bouts = fc.record({
-      durationS: fc.integer({ min: 1, max: 14_400 }),
+      durationS: fc.integer({ min: 1, max: CARDIO_BOUNDS.steadyDurationS.max }),
       distanceM: fc.option(fc.integer({ min: 1, max: 100_000 })),
       interval: fc.option(
         fc.record({

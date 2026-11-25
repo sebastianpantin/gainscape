@@ -10,6 +10,7 @@ import {
   intervalDurationSeconds,
   isPaceImplausible,
   KindMismatchError,
+  MAX_SESSION_DURATION_MS,
   paceBonus,
   processSession,
   resolveEffort,
@@ -140,13 +141,17 @@ describe('boutDurationSeconds', () => {
 describe('CARDIO_BOUNDS', () => {
   it('matches the logging limits of steady and interval bouts', () => {
     expect(CARDIO_BOUNDS).toEqual({
-      steadyDurationS: { min: 60, max: 14_400 },
+      steadyDurationS: { min: 60, max: 43_200 },
       intervalDurationS: { min: 5, max: 14_400 },
       intervalRounds: { min: 1, max: 100 },
       intervalWorkS: { min: 5, max: 3600 },
       intervalRestS: { min: 0, max: 3600 },
       distanceM: { min: 1, max: 200_000 },
     });
+  });
+
+  it('lets a steady bout last as long as a workout, so one long walk or hike is one set', () => {
+    expect(CARDIO_BOUNDS.steadyDurationS.max * 1000).toBe(MAX_SESSION_DURATION_MS);
   });
 });
 

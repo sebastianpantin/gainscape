@@ -633,12 +633,12 @@ describe('cardio bouts in an edit', () => {
     });
   });
 
-  it('adds no bout and no cardio exercise once the bouts add up to 4 hours, but still adds a lift', () => {
-    const fourHours = updateBout(edit, 0, 'bout-0', { durationS: 14_400 });
-    expect(addEditSet(fourHours, 0)).toBe(fourHours);
+  it('adds no bout and no cardio exercise once the bouts add up to 12 hours, but still adds a lift', () => {
+    const twelveHours = updateBout(edit, 0, 'bout-0', { durationS: 43_200 });
+    expect(addEditSet(twelveHours, 0)).toBe(twelveHours);
     const swimming = { id: poolId, name: 'Swimming', modality: 'cardio' as const, activity: activity('per_100m') };
-    expect(addEditExercise(fourHours, swimming)).toBe(fourHours);
-    const withLift = addEditExercise(fourHours, { id: pullUpId, name: 'Pull-up', loadType: 'bodyweight' });
+    expect(addEditExercise(twelveHours, swimming)).toBe(twelveHours);
+    const withLift = addEditExercise(twelveHours, { id: pullUpId, name: 'Pull-up', loadType: 'bodyweight' });
     expect(withLift.exercises.at(-1)?.sets).toHaveLength(1);
   });
 

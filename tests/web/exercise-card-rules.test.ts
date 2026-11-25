@@ -296,11 +296,11 @@ describe('routineToOffer', () => {
     expect(routineToOffer(draft, 5, catalog)?.routine.name).toBe('Deadlift routine');
   });
 
-  it('offers no routine whose drills would not fit the set limit or the 4 hours of bouts', () => {
+  it('offers no routine whose drills would not fit the set limit or the 12 hours of bouts', () => {
     const manySets = Array.from({ length: MAX_SETS_PER_SESSION - 3 }, (_, index) => set(`s${index}`));
     expect(routineToOffer(draftOf([lift('squat', manySets)]), 0, catalog)).toBeNull();
-    const nearlyFourHours = cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 14_400 - 180 }] });
-    expect(routineToOffer(draftOf([nearlyFourHours, lift('squat', [set('s1')])]), 1, catalog)).toBeNull();
+    const nearlyTwelveHours = cardioExercise({ sets: [{ ...cardioExercise().sets[0], durationS: 43_200 - 180 }] });
+    expect(routineToOffer(draftOf([nearlyTwelveHours, lift('squat', [set('s1')])]), 1, catalog)).toBeNull();
   });
 });
 
