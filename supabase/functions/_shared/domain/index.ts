@@ -28,6 +28,7 @@ export * from './challenges.ts';
 export * from './events.ts';
 export * from './quests.ts';
 export * from './garmin-import.ts';
+export * from './garmin-strength.ts';
 export { KG_PER_LB, kgToUnit, shownWeight, unitToKg, type WeightUnit } from './units.ts';
 export { DEFAULT_ROUNDING, type RoundingMode, type RoundingSetting, roundLoad } from './load-rounding.ts';
 export { rpeChartPct } from './rpe-chart.ts';

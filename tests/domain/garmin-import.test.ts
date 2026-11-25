@@ -6,7 +6,9 @@ import {
   garminImportChunks,
   type GarminImportCandidate,
   garminImportCandidate,
+  type GarminSet,
   type GarminWorkoutStep,
+  MAX_SETS_PER_SESSION,
 } from '@domain/index.ts';
 
 const NOW = Date.parse('2026-11-24T12:00:00.000Z');
@@ -28,8 +30,21 @@ function activity(overrides: Partial<GarminActivity> = {}): GarminActivity {
     distanceM: 5000,
     laps: [],
     workoutSteps: [],
+    sets: [],
     ...overrides,
   };
+}
+
+const BENCH_SET: GarminSet = { category: 'bench_press', reps: 8, weightKg: 60 };
+
+function strengthCandidateOf(overrides: Partial<GarminActivity> = {}): GarminImportCandidate {
+  return candidateOf({
+    type: 'strength_training',
+    durationS: 3000,
+    distanceM: null,
+    sets: [BENCH_SET, BENCH_SET, { category: 'row', reps: 10, weightKg: 40 }],
+    ...overrides,
+  });
 }
 
 function candidateOf(overrides: Partial<GarminActivity> = {}): GarminImportCandidate {
@@ -61,6 +76,8 @@ function timedLaps(...laps: [workoutStepIndex: number | null, durationS: number]
 describe('garminImportCandidate', () => {
   it('turns a steady run with distance into one importable Cardio set of the mapped exercise', () => {
     expect(candidateOf()).toEqual({
+      kind: 'cardio',
+      setGroups: [],
       startedAt: '2026-11-23T06:30:05.000Z',
       garminType: 'running',
       exerciseId: RUNNING,
@@ -246,10 +263,13 @@ describe('garminImportCandidate', () => {
     expect(candidateOf({ durationS: 43_200.4 })).toMatchObject({ durationS: 43_200, status: 'importable' });
   });
 
-  it('says strength, not too long, for a strength activity left running half a day', () => {
-    expect(candidateOf({ type: 'strength_training', durationS: 13 * 3600, distanceM: null }).rejection).toBe(
-      'strength',
-    );
+  it('says too long for a strength activity left running over half a day', () => {
+    expect(strengthCandidateOf({ durationS: 13 * 3600 })).toMatchObject({
+      kind: 'strength',
+      status: 'rejected',
+      rejection: 'too_long',
+      setGroups: [],
+    });
   });
 
   it('keeps an interval that fills the activity exactly', () => {
@@ -303,18 +323,84 @@ describe('garminImportCandidate', () => {
     });
   });
 
-  it('rejects a strength activity, mapped or not', () => {
-    const withStrengthMapped = new Map([...EXERCISE_BY_TYPE, ['strength_training', RUNNING]]);
-    const strength = activity({ type: 'strength_training', distanceM: null });
-    expect(garminImportCandidate(strength, EXERCISE_BY_TYPE, NOW)).toMatchObject({
+  it('carries the set groups of a strength activity, with no exercise, distance or interval of its own', () => {
+    expect(strengthCandidateOf()).toEqual({
+      kind: 'strength',
+      startedAt: '2026-11-23T06:30:05.000Z',
       garminType: 'strength_training',
       exerciseId: null,
-      status: 'rejected',
-      rejection: 'strength',
+      durationS: 3000,
+      distanceM: null,
+      interval: null,
+      setGroups: [
+        {
+          category: 'bench_press',
+          sets: [
+            { reps: 8, weightKg: 60 },
+            { reps: 8, weightKg: 60 },
+          ],
+          leftOut: 0,
+        },
+        { category: 'row', sets: [{ reps: 10, weightKg: 40 }], leftOut: 0 },
+      ],
+      historyOnly: false,
+      status: 'importable',
+      rejection: null,
     });
+  });
+
+  it('never gives a strength activity an exercise from the activity type table', () => {
+    const withStrengthMapped = new Map([...EXERCISE_BY_TYPE, ['strength_training', RUNNING]]);
+    const strength = activity({ type: 'strength_training', distanceM: null, sets: [BENCH_SET] });
     expect(garminImportCandidate(strength, withStrengthMapped, NOW)).toMatchObject({
+      kind: 'strength',
       exerciseId: null,
-      rejection: 'strength',
+      status: 'importable',
+    });
+  });
+
+  it('marks a strength activity older than the edit window as history only', () => {
+    expect(strengthCandidateOf({ startedAt: '2026-10-01T08:00:00.000Z' })).toMatchObject({
+      historyOnly: true,
+      status: 'history_only',
+    });
+  });
+
+  it('has no shortest duration for a strength activity', () => {
+    expect(strengthCandidateOf({ durationS: 20 })).toMatchObject({ durationS: 20, status: 'importable' });
+  });
+
+  it('rejects a strength activity with no set that can be imported', () => {
+    expect(strengthCandidateOf({ sets: [] })).toMatchObject({
+      kind: 'strength',
+      status: 'rejected',
+      rejection: 'no_sets',
+    });
+    expect(strengthCandidateOf({ sets: [{ category: 'plank', reps: null, weightKg: 0 }] })).toMatchObject({
+      status: 'rejected',
+      rejection: 'no_sets',
+      setGroups: [],
+    });
+  });
+
+  it('rejects a strength activity with more sets than a Session allows, and takes one at the limit', () => {
+    const setsOf = (count: number) => Array.from({ length: count }, () => BENCH_SET);
+    expect(strengthCandidateOf({ sets: setsOf(MAX_SETS_PER_SESSION + 1) })).toMatchObject({
+      status: 'rejected',
+      rejection: 'too_many_sets',
+    });
+    expect(strengthCandidateOf({ sets: setsOf(MAX_SETS_PER_SESSION) }).status).toBe('importable');
+  });
+
+  it('ignores the sets of an activity that is no strength activity', () => {
+    expect(candidateOf({ sets: [BENCH_SET] })).toMatchObject({ kind: 'cardio', setGroups: [], status: 'importable' });
+  });
+
+  it('reads a strength activity that starts in the future as unreadable', () => {
+    expect(strengthCandidateOf({ startedAt: '2026-11-25T06:30:05.000Z' })).toMatchObject({
+      kind: 'strength',
+      status: 'rejected',
+      rejection: 'unreadable',
     });
   });
 
@@ -326,6 +412,8 @@ describe('garminImportCandidate', () => {
     ['a negative distance', { distanceM: -1 }],
   ])('rejects an activity with %s as unreadable', (_case, overrides) => {
     expect(candidateOf(overrides)).toEqual({
+      kind: 'cardio',
+      setGroups: [],
       startedAt: null,
       garminType: 'running',
       exerciseId: null,
@@ -348,7 +436,7 @@ describe('garminImportCandidate', () => {
     expect(candidateOf({ startedAt: '2026-11-24T11:34:00.000Z', durationS: 1800 }).status).toBe('importable');
   });
 
-  it('sets no Effort: a candidate carries only time, distance and interval', () => {
+  it('sets no Effort: a candidate carries only time, distance, interval and set groups', () => {
     expect(Object.keys(candidateOf()).sort()).toEqual(
       [
         'distanceM',
@@ -357,7 +445,9 @@ describe('garminImportCandidate', () => {
         'garminType',
         'historyOnly',
         'interval',
+        'kind',
         'rejection',
+        'setGroups',
         'startedAt',
         'status',
       ].sort(),

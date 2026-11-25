@@ -1,12 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { columnsOf, parsedRows } from '../rows.ts';
-import type { ReviewContext, ReviewSession } from './import-review-rules.ts';
+import type { LoggedSession, ReviewContext } from './import-review-rules.ts';
 import { querySeenGarminActivities } from './seen-activities-rules.ts';
 
 const garminActivityTypeRowSchema = z.object({ key: z.string(), exercise_id: z.string() });
 
 const GARMIN_ACTIVITY_TYPE_COLUMNS = columnsOf(garminActivityTypeRowSchema);
+
+const garminExercisePickRowSchema = z.object({ category: z.string(), exercise_id: z.string() });
+
+const GARMIN_EXERCISE_PICK_COLUMNS = columnsOf(garminExercisePickRowSchema);
 
 const reviewSessionRowSchema = z.object({
   started_at: z.string(),
@@ -31,7 +35,13 @@ async function queryExerciseIdByGarminType(client: SupabaseClient): Promise<Map<
   return new Map(parsedRows(garminActivityTypeRowSchema, types.data).map((row) => [row.key, row.exercise_id]));
 }
 
-async function querySessionsWithin(client: SupabaseClient, range: ReviewRange): Promise<ReviewSession[]> {
+async function queryExerciseIdByGarminCategory(client: SupabaseClient): Promise<Map<string, string>> {
+  const picks = await client.from('garmin_exercise_picks').select(GARMIN_EXERCISE_PICK_COLUMNS);
+  if (picks.error) throw picks.error;
+  return new Map(parsedRows(garminExercisePickRowSchema, picks.data).map((row) => [row.category, row.exercise_id]));
+}
+
+async function querySessionsWithin(client: SupabaseClient, range: ReviewRange): Promise<LoggedSession[]> {
   const sessions = await client
     .from('sessions')
     .select(REVIEW_SESSION_COLUMNS)
@@ -47,12 +57,13 @@ async function querySessionsWithin(client: SupabaseClient, range: ReviewRange): 
 }
 
 export async function queryReviewContext(client: SupabaseClient, range: ReviewRange | null): Promise<ReviewContext> {
-  const [exerciseIdByGarminType, seen, sessions] = await Promise.all([
+  const [exerciseIdByGarminType, exerciseIdByGarminCategory, seen, sessions] = await Promise.all([
     queryExerciseIdByGarminType(client),
+    queryExerciseIdByGarminCategory(client),
     range === null ? [] : querySeenGarminActivities(client, range.from, range.to),
     range === null ? [] : querySessionsWithin(client, range),
   ]);
-  return { exerciseIdByGarminType, seen, sessions };
+  return { exerciseIdByGarminType, exerciseIdByGarminCategory, seen, sessions };
 }
 
 export async function queryLastImportAt(client: SupabaseClient): Promise<string | null> {

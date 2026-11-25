@@ -117,6 +117,10 @@ export function measuresRepsCapacity(loadType: LoadType): boolean {
   return loadType === 'bodyweight';
 }
 
+export function countsBodyweight(loadType: LoadType): boolean {
+  return loadType !== 'external';
+}
+
 export function setKind(set: Pick<SetInput, 'kind'>): SetKind {
   return set.kind ?? 'lift';
 }

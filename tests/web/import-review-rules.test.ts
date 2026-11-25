@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GarminActivity } from '@domain/index.ts';
+import type { GarminActivity, GarminSet } from '@domain/index.ts';
 import type { Exercise } from '../../web/src/lib/exercises/catalog-rules.ts';
 import {
   activitiesRange,
@@ -13,28 +13,56 @@ import {
   importStatusText,
   importSummary,
   initialChoices,
+  isChosen,
   lastImportText,
+  type LoggedSession,
+  needsBodyweight,
   needsExercisePick,
   pickableExercises,
+  type ReviewChoices,
   type ReviewContext,
   type ReviewExercise,
   reviewExercises,
+  type ReviewMemory,
   reviewMonths,
   type ReviewRow,
   reviewRows,
+  type ReviewSession,
+  reviewSessions,
   rowBadge,
   rowFacts,
   rowTitle,
   withAllToggled,
+  withBodyweightKnown,
   withExercisePicked,
+  withGroupDecisions,
   withRowToggled,
 } from '../../web/src/lib/garmin/import-review-rules.ts';
+import {
+  decisionFor,
+  type ReviewLift,
+  UNDECIDED_GROUP,
+  withFilledWeight,
+  withSkip,
+} from '../../web/src/lib/garmin/strength-review-rules.ts';
 
 const NOW = Date.parse('2026-11-24T12:00:00.000Z');
 const RUNNING: ReviewExercise = { id: 'ex-running', name: 'Running', tracksDistance: true, paceUnit: 'per_km' };
 const SWIMMING: ReviewExercise = { id: 'ex-swimming', name: 'Swimming', tracksDistance: true, paceUnit: 'per_100m' };
 const YOGA: ReviewExercise = { id: 'ex-yoga', name: 'Yoga', tracksDistance: false, paceUnit: 'per_km' };
 const EXERCISES = new Map([RUNNING, SWIMMING, YOGA].map((exercise) => [exercise.id, exercise]));
+const BENCH: ReviewLift = { id: 'ex-bench', name: 'Barbell Bench Press', loadType: 'external' };
+const ROW: ReviewLift = { id: 'ex-row', name: 'Barbell Row', loadType: 'external' };
+const PUSH_UP: ReviewLift = { id: 'ex-push-up', name: 'Push-up', loadType: 'bodyweight' };
+const LIFTS = new Map([BENCH, ROW, PUSH_UP].map((lift) => [lift.id, lift]));
+const CATALOG = [
+  ...[...EXERCISES.values()].map((exercise) => ({ id: exercise.id, modality: 'cardio' })),
+  ...[...LIFTS.values()].map((lift) => ({ id: lift.id, modality: 'lift' })),
+] as unknown as Exercise[];
+
+function asReviewSessions(sessions: readonly LoggedSession[]): ReviewSession[] {
+  return reviewSessions(sessions, CATALOG);
+}
 
 function activity(overrides: Partial<GarminActivity> = {}): GarminActivity {
   return {
@@ -44,6 +72,7 @@ function activity(overrides: Partial<GarminActivity> = {}): GarminActivity {
     distanceM: 5000,
     laps: [],
     workoutSteps: [],
+    sets: [],
     ...overrides,
   };
 }
@@ -54,20 +83,32 @@ function context(overrides: Partial<ReviewContext> = {}): ReviewContext {
       ['running', RUNNING.id],
       ['lap_swimming', SWIMMING.id],
     ]),
+    exerciseIdByGarminCategory: new Map(),
     seen: [],
     sessions: [],
     ...overrides,
   };
 }
 
-function reviewOf(activities: GarminActivity[], contextOverrides: Partial<ReviewContext> = {}) {
+function reviewOf(
+  activities: GarminActivity[],
+  contextOverrides: Partial<ReviewContext> = {},
+  memoryOverrides: Partial<ReviewMemory> = {},
+) {
   const reviewContext = context(contextOverrides);
   const rows = reviewRows(activities, reviewContext, NOW);
-  return { rows, reviewContext, choices: initialChoices(rows, reviewContext.sessions) };
+  const sessions = asReviewSessions(reviewContext.sessions);
+  const memory: ReviewMemory = {
+    exerciseIdByGarminCategory: reviewContext.exerciseIdByGarminCategory,
+    lifts: LIFTS,
+    bodyweightKnown: true,
+    ...memoryOverrides,
+  };
+  return { rows, reviewContext, sessions, choices: initialChoices(rows, sessions, memory) };
 }
 
 const badgeTexts = (rows: ReviewRow[], review: ReturnType<typeof reviewOf>) =>
-  rows.map((row) => rowBadge(row, review.choices, review.reviewContext.sessions)?.text ?? null);
+  rows.map((row) => rowBadge(row, review.choices, review.sessions)?.text ?? null);
 
 describe('reviewRows', () => {
   it('lists the newest activity first', () => {
@@ -114,14 +155,21 @@ describe('reviewRows', () => {
       activity({ startedAt: '2026-11-23T06:00:00.000Z', durationS: 50_000 }),
       activity({ startedAt: '2026-11-22T06:00:00.000Z', distanceM: 250_000 }),
       activity({ startedAt: '2026-11-21T06:00:00.000Z', durationS: 20 }),
-      activity({ startedAt: '2026-11-20T06:00:00.000Z', type: 'strength_training', distanceM: null }),
+      activity({ startedAt: '2026-11-19T06:00:00.000Z', type: 'strength_training', distanceM: null }),
+      activity({
+        startedAt: '2026-11-18T06:00:00.000Z',
+        type: 'strength_training',
+        distanceM: null,
+        sets: Array.from({ length: 201 }, () => ({ category: 'bench_press', reps: 8, weightKg: 60 })),
+      }),
       activity({ startedAt: 'never' }),
     ]);
     expect(badgeTexts(review.rows, review)).toEqual([
       'Over 12 h',
       'Over 200 km',
       'Under 1 min',
-      'Strength not imported yet',
+      'No sets to import',
+      'Over 200 sets',
       'Unreadable',
     ]);
     expect(review.rows.every((row) => row.greyed !== null)).toBe(true);
@@ -155,7 +203,7 @@ describe('the default selection', () => {
     ];
     const review = reviewOf([activity()], { sessions });
     expect(chosenCount(review.rows, review.choices)).toBe(0);
-    expect(rowBadge(review.rows[0], review.choices, sessions, 'UTC')).toEqual({
+    expect(rowBadge(review.rows[0], review.choices, review.sessions, 'UTC')).toEqual({
       kind: 'possible_duplicate',
       text: 'Possible duplicate',
       note: 'Matches a workout logged Mon 23 Nov, 06:45',
@@ -181,7 +229,7 @@ describe('the default selection', () => {
     const sessions = [{ startedAt, endedAt, exerciseIds: [exerciseId] }];
     const review = reviewOf([activity()], { sessions });
     expect(chosenCount(review.rows, review.choices)).toBe(1);
-    expect(rowBadge(review.rows[0], review.choices, sessions)).toBeNull();
+    expect(rowBadge(review.rows[0], review.choices, review.sessions)).toBeNull();
   });
 
   it('counts a workout that touches the activity at one end as overlapping', () => {
@@ -193,7 +241,7 @@ describe('the default selection', () => {
       },
     ];
     const review = reviewOf([activity()], { sessions });
-    expect(rowBadge(review.rows[0], review.choices, sessions)?.kind).toBe('possible_duplicate');
+    expect(rowBadge(review.rows[0], review.choices, review.sessions)?.kind).toBe('possible_duplicate');
   });
 
   it('leaves an activity without an exercise out until one is picked', () => {
@@ -217,9 +265,9 @@ describe('the default selection', () => {
       },
     ];
     const review = reviewOf([activity({ type: 'surfing' })], { sessions });
-    const picked = withExercisePicked(review.choices, sessions, review.rows[0], SWIMMING.id);
+    const picked = withExercisePicked(review.choices, review.sessions, review.rows[0], SWIMMING.id);
     expect(chosenCount(review.rows, picked)).toBe(0);
-    expect(rowBadge(review.rows[0], picked, sessions)?.kind).toBe('possible_duplicate');
+    expect(rowBadge(review.rows[0], picked, review.sessions)?.kind).toBe('possible_duplicate');
     expect(chosenCount(review.rows, withRowToggled(picked, review.rows[0], true))).toBe(1);
   });
 
@@ -263,7 +311,7 @@ describe('Select all', () => {
 
   it('clears the selection and keeps the picked exercises', () => {
     const review = reviewOf(activities, { sessions });
-    const picked = withExercisePicked(review.choices, sessions, review.rows[1], RUNNING.id);
+    const picked = withExercisePicked(review.choices, review.sessions, review.rows[1], RUNNING.id);
     const none = withAllToggled(review.rows, picked, false);
     expect(chosenCount(review.rows, none)).toBe(0);
     expect(chosenCount(review.rows, withAllToggled(review.rows, none, true))).toBe(3);
@@ -483,5 +531,239 @@ describe('the text around the review', () => {
 
   it('says when the last import happened', () => {
     expect(lastImportText('2026-11-24T15:57:00.000Z', 'UTC')).toBe('Last import: Tue 24 Nov, 15:57');
+  });
+});
+
+describe('a strength activity in the review', () => {
+  const BENCH_SET: GarminSet = { category: 'bench_press', reps: 8, weightKg: 60 };
+  const ROW_SET: GarminSet = { category: 'row', reps: 10, weightKg: 40 };
+  const PUSH_UP_SET: GarminSet = { category: 'push_up', reps: 12, weightKg: 0 };
+
+  function strength(overrides: Partial<GarminActivity> = {}): GarminActivity {
+    return activity({
+      type: 'strength_training',
+      durationS: 3000,
+      distanceM: null,
+      sets: [BENCH_SET, BENCH_SET, ROW_SET],
+      ...overrides,
+    });
+  }
+
+  function decide(review: ReturnType<typeof reviewOf>, choices: ReviewChoices, ...lifts: (ReviewLift | 'skip')[]) {
+    const decisions = lifts.map((lift) => (lift === 'skip' ? withSkip(decisionFor(BENCH), true) : decisionFor(lift)));
+    return withGroupDecisions(choices, review.sessions, review.rows[0], decisions);
+  }
+
+  it('is no longer greyed: it waits for its exercises, deselected', () => {
+    const review = reviewOf([strength()]);
+    const [row] = review.rows;
+    expect(row.greyed).toBeNull();
+    expect(needsExercisePick(row)).toBe(false);
+    expect(canBeChosen(row, review.choices)).toBe(false);
+    expect(chosenCount(review.rows, review.choices)).toBe(0);
+    expect(rowBadge(row, review.choices, review.sessions)).toEqual({ kind: 'needs_exercise', text: 'Needs exercises' });
+    expect(rowFacts(row, review.choices, EXERCISES, 'kg')).toBe('3 sets in 2 groups · 50 min');
+    expect(rowTitle(row, 'UTC')).toBe('Mon 23 Nov, 06:30 · Strength training');
+  });
+
+  it('cannot be selected by hand or by Select all while a group is undecided', () => {
+    const review = reviewOf([strength(), activity({ startedAt: '2026-11-22T06:00:00.000Z' })]);
+    const [strengthRow, runRow] = review.rows;
+    expect(withRowToggled(review.choices, strengthRow, true)).toBe(review.choices);
+    const all = withAllToggled(review.rows, review.choices, true);
+    expect(isChosen(strengthRow, all)).toBe(false);
+    expect(isChosen(runRow, all)).toBe(true);
+    expect(allSelected(review.rows, all)).toBe(true);
+  });
+
+  it('is selected once every group has an exercise or Skip', () => {
+    const review = reviewOf([strength()]);
+    const half = decide(review, review.choices, BENCH);
+    expect(canBeChosen(review.rows[0], half)).toBe(false);
+    const whole = decide(review, half, BENCH, ROW);
+    expect(isChosen(review.rows[0], whole)).toBe(true);
+    expect(rowBadge(review.rows[0], whole, review.sessions)).toBeNull();
+    expect(importButtonLabel(chosenCount(review.rows, whole))).toBe('Import 1 workout');
+    const skipped = decide(review, review.choices, BENCH, 'skip');
+    expect(isChosen(review.rows[0], skipped)).toBe(true);
+  });
+
+  it('keeps a selection the user took away when a decided group changes again', () => {
+    const review = reviewOf([strength()]);
+    const decided = decide(review, review.choices, BENCH, ROW);
+    const deselected = withRowToggled(decided, review.rows[0], false);
+    expect(isChosen(review.rows[0], decide(review, deselected, BENCH, BENCH))).toBe(false);
+  });
+
+  it('stays deselected by the user when it becomes undecided and is decided again', () => {
+    const review = reviewOf([strength({ sets: [{ category: 'bench_press', reps: 8, weightKg: 0 }] })]);
+    const [row] = review.rows;
+    const typed = (choices: ReviewChoices, weight: string) =>
+      withGroupDecisions(choices, review.sessions, row, [withFilledWeight(decisionFor(BENCH), 0, weight, 'kg')]);
+    const unticked = withRowToggled(typed(decide(review, review.choices, BENCH), '60'), row, false);
+    const retyped = typed(typed(unticked, ''), '70');
+    expect(canBeChosen(row, retyped)).toBe(true);
+    expect(isChosen(row, retyped)).toBe(false);
+    expect(isChosen(row, typed(typed(withRowToggled(retyped, row, true), ''), '80'))).toBe(true);
+  });
+
+  it('stays deselected through Select all taken away, until the user selects it again', () => {
+    const review = reviewOf([strength()]);
+    const [row] = review.rows;
+    const noneSelected = withAllToggled(review.rows, decide(review, review.choices, BENCH, ROW), false);
+    const redecided = decide(review, decide(review, noneSelected, 'skip', 'skip'), BENCH, ROW);
+    expect(isChosen(row, redecided)).toBe(false);
+    expect(isChosen(row, withAllToggled(review.rows, redecided, true))).toBe(true);
+  });
+
+  it('is deselected again when a group loses its decision, and when every group is skipped', () => {
+    const review = reviewOf([strength()]);
+    const decided = decide(review, review.choices, BENCH, ROW);
+    const undone = withGroupDecisions(decided, review.sessions, review.rows[0], [decisionFor(BENCH), UNDECIDED_GROUP]);
+    expect(isChosen(review.rows[0], undone)).toBe(false);
+    expect(rowBadge(review.rows[0], undone, review.sessions)?.text).toBe('Needs exercises');
+    const allSkipped = decide(review, decided, 'skip', 'skip');
+    expect(isChosen(review.rows[0], allSkipped)).toBe(false);
+    expect(rowBadge(review.rows[0], allSkipped, review.sessions)).toEqual({
+      kind: 'needs_exercise',
+      text: 'Every group skipped',
+    });
+  });
+
+  it('prefills the exercise remembered for a category and selects an activity that needs nothing more', () => {
+    const remembered = {
+      exerciseIdByGarminCategory: new Map([
+        ['bench_press', BENCH.id],
+        ['row', ROW.id],
+      ]),
+    };
+    const review = reviewOf([strength()], remembered);
+    expect(review.choices.groupsByRow.get(review.rows[0].id)).toEqual([decisionFor(BENCH), decisionFor(ROW)]);
+    expect(isChosen(review.rows[0], review.choices)).toBe(true);
+  });
+
+  it('prefills only what it remembers, and nothing for an exercise that is gone', () => {
+    const remembered = {
+      exerciseIdByGarminCategory: new Map([
+        ['bench_press', 'ex-archived'],
+        ['row', ROW.id],
+      ]),
+    };
+    const review = reviewOf([strength()], remembered);
+    expect(review.choices.groupsByRow.get(review.rows[0].id)).toMatchObject([
+      { exercise: null },
+      { exercise: { id: ROW.id } },
+    ]);
+    expect(canBeChosen(review.rows[0], review.choices)).toBe(false);
+  });
+
+  it('asks for a missing weight before it can be selected', () => {
+    const review = reviewOf([strength({ sets: [{ category: 'bench_press', reps: 8, weightKg: 0 }] })]);
+    const picked = decide(review, review.choices, BENCH);
+    expect(canBeChosen(review.rows[0], picked)).toBe(false);
+    expect(rowBadge(review.rows[0], picked, review.sessions)?.text).toBe('Needs a weight');
+    const filled = withGroupDecisions(picked, review.sessions, review.rows[0], [
+      withFilledWeight(decisionFor(BENCH), 0, '42.5', 'kg'),
+    ]);
+    expect(isChosen(review.rows[0], filled)).toBe(true);
+    expect(activitiesToImport(review.rows, filled, EXERCISES)).toMatchObject([
+      { sets: [{ exerciseId: BENCH.id, reps: 8, weightKg: 42.5 }] },
+    ]);
+  });
+
+  it('needs the bodyweight of the user for a bodyweight exercise, and is selected once it is known', () => {
+    const review = reviewOf([strength({ sets: [PUSH_UP_SET] })], {}, { bodyweightKnown: false });
+    const picked = decide(review, review.choices, PUSH_UP);
+    expect(needsBodyweight(review.rows, review.choices)).toBe(false);
+    expect(needsBodyweight(review.rows, picked)).toBe(true);
+    expect(canBeChosen(review.rows[0], picked)).toBe(false);
+    expect(rowBadge(review.rows[0], picked, review.sessions)?.text).toBe('Needs your bodyweight');
+    const known = withBodyweightKnown(picked, review.rows, review.sessions);
+    expect(needsBodyweight(review.rows, known)).toBe(false);
+    expect(isChosen(review.rows[0], known)).toBe(true);
+  });
+
+  it('flags a workout with Lift sets logged at the same time as a possible duplicate, deselected', () => {
+    const sessions = [
+      { startedAt: '2026-11-23T06:45:00.000Z', endedAt: '2026-11-23T07:30:00.000Z', exerciseIds: [ROW.id] },
+    ];
+    const review = reviewOf([strength()], { sessions });
+    const decided = decide(review, review.choices, BENCH, BENCH);
+    expect(canBeChosen(review.rows[0], decided)).toBe(true);
+    expect(isChosen(review.rows[0], decided)).toBe(false);
+    expect(rowBadge(review.rows[0], decided, review.sessions, 'UTC')).toEqual({
+      kind: 'possible_duplicate',
+      text: 'Possible duplicate',
+      note: 'Matches a workout logged Mon 23 Nov, 06:45',
+    });
+    expect(isChosen(review.rows[0], withRowToggled(decided, review.rows[0], true))).toBe(true);
+  });
+
+  it('does not take a run logged at the same time for a duplicate of a strength activity', () => {
+    const sessions = [
+      { startedAt: '2026-11-23T06:45:00.000Z', endedAt: '2026-11-23T07:30:00.000Z', exerciseIds: [RUNNING.id] },
+    ];
+    const review = reviewOf([strength()], { sessions });
+    expect(isChosen(review.rows[0], decide(review, review.choices, BENCH, ROW))).toBe(true);
+  });
+
+  it('sends the Lift sets in file order with the picks to remember, next to a Cardio activity', () => {
+    const review = reviewOf([strength(), activity({ startedAt: '2026-11-22T06:00:00.000Z' })]);
+    const decided = decide(review, review.choices, BENCH, ROW);
+    expect(activitiesToImport(review.rows, decided, EXERCISES)).toEqual([
+      {
+        startedAt: '2026-11-22T06:00:00.000Z',
+        garminType: 'running',
+        exerciseId: RUNNING.id,
+        durationS: 1800,
+        distanceM: 5000,
+        interval: null,
+        historyOnly: false,
+      },
+      {
+        startedAt: '2026-11-23T06:30:05.000Z',
+        garminType: 'strength_training',
+        durationS: 3000,
+        historyOnly: false,
+        sets: [
+          { exerciseId: BENCH.id, reps: 8, weightKg: 60 },
+          { exerciseId: BENCH.id, reps: 8, weightKg: 60 },
+          { exerciseId: ROW.id, reps: 10, weightKg: 40 },
+        ],
+        picks: [
+          { category: 'bench_press', exerciseId: BENCH.id },
+          { category: 'row', exerciseId: ROW.id },
+        ],
+      },
+    ]);
+  });
+
+  it('marks an old strength activity as history only once it is decided', () => {
+    const review = reviewOf([strength({ startedAt: '2026-10-01T08:00:00.000Z' })]);
+    const decided = decide(review, review.choices, BENCH, ROW);
+    expect(rowBadge(review.rows[0], decided, review.sessions)).toEqual({ kind: 'history_only', text: 'History only' });
+    expect(activitiesToImport(review.rows, decided, EXERCISES)[0].historyOnly).toBe(true);
+  });
+
+  it('ignores group decisions for a row that is no strength activity', () => {
+    const review = reviewOf([activity()]);
+    expect(withGroupDecisions(review.choices, review.sessions, review.rows[0], [decisionFor(BENCH)])).toBe(
+      review.choices,
+    );
+  });
+});
+
+describe('reviewSessions', () => {
+  it('marks a logged workout that holds a Lift or Hold set', () => {
+    const logged = [
+      { startedAt: '2026-11-23T06:00:00.000Z', endedAt: '2026-11-23T07:00:00.000Z', exerciseIds: [RUNNING.id] },
+      { startedAt: '2026-11-22T06:00:00.000Z', endedAt: '2026-11-22T07:00:00.000Z', exerciseIds: [RUNNING.id, ROW.id] },
+      { startedAt: '2026-11-21T06:00:00.000Z', endedAt: '2026-11-21T07:00:00.000Z', exerciseIds: ['gone'] },
+    ];
+    expect(asReviewSessions(logged).map((session) => session.holdsLiftSets)).toEqual([false, true, false]);
+    expect(asReviewSessions(logged)[0]).toMatchObject({
+      startMs: Date.parse('2026-11-23T06:00:00.000Z'),
+      endMs: Date.parse('2026-11-23T07:00:00.000Z'),
+    });
   });
 });

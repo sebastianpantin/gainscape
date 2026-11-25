@@ -9,7 +9,7 @@ import {
   expectUniqueButtonNamesInLists,
 } from './support/a11y.ts';
 import { openFromProfile, register, uniqueUsername } from './support/app.ts';
-import { boutsOf, sessionCount } from './support/db.ts';
+import { boutsOf, liftSetsOf, sessionCount } from './support/db.ts';
 import { expect, test } from './support/fixtures.ts';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -125,6 +125,129 @@ test('an activity Gainscape maps to no exercise is imported under the exercise t
   await expect(workouts(page)).toHaveCount(1);
   const sessionId = (await workouts(page).first().getAttribute('href'))!.split('/').at(-1)!;
   expect(await boutsOf(sessionId)).toMatchObject([{ duration_s: 1800 }]);
+});
+
+function aGymWorkout(overrides: Partial<FitActivitySpec> = {}): FitActivitySpec {
+  return {
+    startedAt: hoursAgoOnTheSecond(20),
+    sport: 'training',
+    subSport: 'strengthTraining',
+    timerS: 3000,
+    laps: [],
+    sets: [
+      { categories: ['benchPress', 'pushUp', 'flye'], reps: 8, weightKg: 60 },
+      { restS: 90 },
+      { categories: ['benchPress', 'pushUp', 'flye'], reps: 6, weightKg: 62.5 },
+      { restS: 90 },
+      { categories: ['unknown', 'unknown', 'row'], reps: 10, weightKg: 0 },
+      { restS: 60 },
+      { categories: ['pushUp'], reps: 15, weightKg: 0 },
+      { categories: ['plank'] },
+    ],
+    ...overrides,
+  };
+}
+
+function setGroups(page: Page) {
+  return page.getByRole('list', { name: /^Set groups of .* · Strength training$/ }).getByRole('listitem');
+}
+
+async function pickGroupExercise(group: ReturnType<typeof setGroups>, search: string, exercise: RegExp) {
+  await group.getByRole('button', { name: /^(Choose|Change) exercise for group / }).click();
+  await group.getByRole('searchbox', { name: 'Search exercises' }).fill(search);
+  await group.getByRole('button', { name: exercise }).click();
+}
+
+test('a strength activity is imported set group by set group, and the next one remembers the exercise', async ({
+  page,
+}) => {
+  const username = uniqueUsername('ga_st');
+  await register(page, username);
+  await openFromProfile(page, 'Settings');
+  await chooseFile(page, writeFitActivity('gym.fit', aGymWorkout()));
+
+  const gym = page.getByRole('listitem').filter({ hasText: 'Strength training' });
+  await expect(gym).toContainText('4 sets in 4 groups · 50 min');
+  await expect(gym).toContainText('Needs exercises');
+  await expect(gym.getByRole('checkbox').first()).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Import 0 workouts' })).toBeDisabled();
+  const groups = setGroups(page);
+  await expect(groups).toHaveCount(4);
+  await expect(groups.nth(0)).toContainText('Bench press');
+  await expect(groups.nth(0)).toContainText('8 × 60 kg, 6 × 62.5 kg');
+  await expect(groups.nth(1)).toContainText('Unknown exercise');
+  await expect(groups.nth(3)).toContainText('1 set left out: no reps, or more than a set can hold.');
+
+  await pickGroupExercise(groups.nth(0), 'barbell bench', /^Barbell Bench Press/);
+  await expect(groups.nth(0)).toContainText('Barbell Bench Press');
+  await pickGroupExercise(groups.nth(1), 'barbell row', /^Barbell Row/);
+  const missingWeight = groups.nth(1).getByRole('spinbutton', { name: /^Weight for set 1 \(kg\), group 2, / });
+  await expect(missingWeight).toBeVisible();
+  await groups
+    .nth(2)
+    .getByRole('button', { name: /^Choose exercise for group 3, Push up/ })
+    .click();
+  await expect(groups.nth(2).getByRole('searchbox', { name: 'Search exercises' })).toBeVisible();
+  await expect(gym).toContainText('Needs exercises');
+  await expectNoAxeViolations(page, 'Import review with set groups');
+  await expectTouchTargets(page, EVERY_CONTROL);
+  await expectUniqueButtonNamesInLists(page);
+
+  await groups
+    .nth(2)
+    .getByRole('checkbox', { name: /^Skip group 3, Push up/ })
+    .check();
+  await expect(gym).toContainText('Needs a weight');
+  await missingWeight.fill('40');
+  await expect(gym).not.toContainText('Needs a weight');
+  const skipRow = groups.nth(1).getByRole('checkbox', { name: /^Skip group 2, / });
+  await skipRow.check();
+  await expect(missingWeight).toHaveCount(0);
+  await skipRow.uncheck();
+  await expect(missingWeight).toHaveValue('40');
+  await pickGroupExercise(groups.nth(1), 'barbell row', /^Barbell Row/);
+  await expect(missingWeight).toHaveValue('');
+  await expect(gym).toContainText('Needs a weight');
+  await missingWeight.fill('40');
+  await expect(gym.getByRole('checkbox').first()).toBeChecked();
+  expect(await sessionCount(username)).toBe(0);
+  await page.getByRole('button', { name: 'Import 1 workout' }).click();
+
+  await expect(garminSection(page).getByRole('status')).toContainText(/1 workout earned [\d,]+ XP\./);
+  await garminSection(page).getByRole('link', { name: 'See History' }).click();
+  await expect(workouts(page)).toHaveCount(1);
+  const sessionId = (await workouts(page).first().getAttribute('href'))!.split('/').at(-1)!;
+  expect(await liftSetsOf(sessionId)).toEqual([
+    { exercise: 'Barbell Bench Press', reps: 8, weight_kg: 60 },
+    { exercise: 'Barbell Bench Press', reps: 6, weight_kg: 62.5 },
+    { exercise: 'Barbell Row', reps: 10, weight_kg: 40 },
+  ]);
+
+  await openFromProfile(page, 'Settings');
+  await chooseFile(page, writeFitActivity('gym-again.fit', aGymWorkout({ startedAt: hoursAgoOnTheSecond(4) })));
+  const nextGroups = setGroups(page);
+  await expect(nextGroups.nth(0)).toContainText('Barbell Bench Press');
+  await expect(
+    nextGroups.nth(0).getByRole('button', { name: /^Change exercise for group 1, Bench press/ }),
+  ).toBeVisible();
+  await expect(
+    nextGroups.nth(1).getByRole('button', { name: /^Choose exercise for group 2, Unknown exercise/ }),
+  ).toBeVisible();
+
+  await nextGroups
+    .nth(1)
+    .getByRole('checkbox', { name: /^Skip group 2, / })
+    .check();
+  await pickGroupExercise(nextGroups.nth(2), 'push', /^Push-up/);
+  const nextGym = page.getByRole('listitem').filter({ hasText: 'Strength training' });
+  await expect(nextGym).toContainText('Needs your bodyweight');
+  await page.getByRole('spinbutton', { name: 'Bodyweight (kg)' }).fill('80');
+  await page.getByRole('button', { name: 'Save bodyweight' }).click();
+  await expect(nextGym).not.toContainText('Needs your bodyweight');
+  await expect(nextGym.getByRole('checkbox').first()).toBeChecked();
+  await page.getByRole('button', { name: 'Import 1 workout' }).click();
+  await expect(garminSection(page).getByRole('status')).toContainText(/1 workout earned [\d,]+ XP\./);
+  expect(await sessionCount(username)).toBe(2);
 });
 
 test('a file that holds no Garmin activity says so and opens no review', async ({ page }) => {

@@ -171,3 +171,26 @@
 .import-badge.possible_duplicate {
   color: var(--color-text);
 }
+
+.import-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.import-group {
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-well);
+  border: var(--border-width) solid var(--color-panel-border);
+}
+
+.import-group-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}

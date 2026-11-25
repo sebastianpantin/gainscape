@@ -1,4 +1,7 @@
+import { MS_PER_SECOND } from './math.ts';
+
 export const MAX_SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
+export const MAX_SESSION_DURATION_S = MAX_SESSION_DURATION_MS / MS_PER_SECOND;
 const ALLOWED_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const EARLIEST_SESSION_START_MS = Date.UTC(1970, 0, 1);
 

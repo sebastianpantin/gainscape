@@ -108,6 +108,13 @@ export async function setsOf(sessionId: string) {
     from public.sets where session_id = ${sessionId} order by position`;
 }
 
+export async function liftSetsOf(sessionId: string) {
+  return db`
+    select e.name as exercise, s.reps, s.weight_kg::float as weight_kg
+    from public.sets s join public.exercises e on e.id = s.exercise_id
+    where s.session_id = ${sessionId} and s.reps is not null order by s.position`;
+}
+
 export async function boutsOf(sessionId: string) {
   return db`
     select duration_s, distance_m::float as distance_m, interval_rounds, effort_value::float as effort_value

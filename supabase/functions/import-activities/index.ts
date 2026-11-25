@@ -1,6 +1,7 @@
 import { sql, type Transaction } from '../_shared/db.ts';
 import {
   GARMIN_IMPORT_CHUNK,
+  type GarminExercisePick,
   type GarminImportOutcome,
   type GarminSeenOutcome,
   type GarminSkipReason,
@@ -10,7 +11,11 @@ import {
 import { HttpError } from '../_shared/http.ts';
 import { rateLimitAllows } from '../_shared/rate-limit.ts';
 import { serveAuthenticated } from '../_shared/serve-authenticated.ts';
-import { rememberImportedGarminActivities, seenGarminActivityOutcomes } from '../_shared/stores/garmin-activities.ts';
+import {
+  rememberGarminExercisePicks,
+  rememberImportedGarminActivities,
+  seenGarminActivityOutcomes,
+} from '../_shared/stores/garmin-activities.ts';
 import { storeNewSession } from '../_shared/stores/new-session.ts';
 import { lockUser } from '../_shared/stores/sessions.ts';
 import { type ConfirmedActivity, type ImportActivitiesPayload, parseImportActivitiesPayload } from './payload.ts';
@@ -38,7 +43,7 @@ async function importActivity(
   run: ImportRun,
   activity: ConfirmedActivity,
 ): Promise<GarminImportOutcome> {
-  const { startedAt, endedAt, set } = activity;
+  const { startedAt, endedAt, sets } = activity;
   const skipped = (reason: GarminSkipReason): GarminImportOutcome => ({ startedAt, outcome: 'skipped', reason });
 
   const seen = run.seen.get(startedAt);
@@ -60,7 +65,7 @@ async function importActivity(
       programDayId: null,
       program: null,
       challenge: null,
-      sets: [set],
+      sets,
     },
     run.lastCompletedAt,
     run.now,
@@ -94,7 +99,12 @@ async function importActivities(userId: string, payload: ImportActivitiesPayload
       .map((activity, sentAt) => ({ activity, sentAt }))
       .sort((a, b) => a.activity.startedAt.localeCompare(b.activity.startedAt) || a.sentAt - b.sentAt);
     const outcomes: GarminImportOutcome[] = [];
-    for (const { activity, sentAt } of inStartOrder) outcomes[sentAt] = await importActivity(tx, run, activity);
+    const picks: GarminExercisePick[] = [];
+    for (const { activity, sentAt } of inStartOrder) {
+      outcomes[sentAt] = await importActivity(tx, run, activity);
+      if (outcomes[sentAt].outcome !== 'skipped') picks.push(...activity.picks);
+    }
+    await rememberGarminExercisePicks(tx, userId, picks);
     await rememberImportedGarminActivities(
       tx,
       userId,

@@ -1,8 +1,9 @@
 import { CARDIO_BOUNDS, intervalDurationSeconds, isLoggableInterval } from './cardio.ts';
 import { isWithinEditWindow } from './edit-window.ts';
+import { type GarminSet, type GarminSetGroup, garminSetGroups, garminUsableSetCount } from './garmin-strength.ts';
 import { MS_PER_SECOND, roundTo } from './math.ts';
-import { implausibleTiming } from './session-timing.ts';
-import type { CardioInterval } from './types.ts';
+import { implausibleTiming, MAX_SESSION_DURATION_S } from './session-timing.ts';
+import { type CardioInterval, MAX_SETS_PER_SESSION } from './types.ts';
 
 export interface GarminWorkoutStep {
   intensity: string | null;
@@ -21,19 +22,24 @@ export interface GarminActivity {
   distanceM: number | null;
   laps: readonly GarminLap[];
   workoutSteps: readonly GarminWorkoutStep[];
+  sets: readonly GarminSet[];
 }
 
-export type GarminRejection = 'unreadable' | 'strength' | 'too_short' | 'too_long' | 'too_far';
+export type GarminRejection = 'unreadable' | 'too_short' | 'too_long' | 'too_far' | 'no_sets' | 'too_many_sets';
+
+export type GarminCandidateKind = 'cardio' | 'strength';
 
 export type GarminCandidateStatus = 'importable' | 'history_only' | 'needs_exercise' | 'rejected';
 
 export interface GarminImportCandidate {
+  kind: GarminCandidateKind;
   startedAt: string | null;
   garminType: string | null;
   exerciseId: string | null;
   durationS: number | null;
   distanceM: number | null;
   interval: CardioInterval | null;
+  setGroups: GarminSetGroup[];
   historyOnly: boolean;
   status: GarminCandidateStatus;
   rejection: GarminRejection | null;
@@ -136,18 +142,30 @@ function sizeRejection(durationS: number, distanceM: number | null): GarminRejec
   return null;
 }
 
+function strengthRejection(durationS: number, setGroups: readonly GarminSetGroup[]): GarminRejection | null {
+  const usableSets = garminUsableSetCount(setGroups);
+  if (durationS > MAX_SESSION_DURATION_S) return 'too_long';
+  if (usableSets === 0) return 'no_sets';
+  if (usableSets > MAX_SETS_PER_SESSION) return 'too_many_sets';
+  return null;
+}
+
 export function garminImportCandidate(
   activity: GarminActivity,
   exerciseIdByGarminType: ReadonlyMap<string, string>,
   now: number,
 ): GarminImportCandidate {
+  const kind: GarminCandidateKind =
+    activity.type !== null && GARMIN_STRENGTH_TYPES.has(activity.type) ? 'strength' : 'cardio';
   const rejected = (rejection: GarminRejection): GarminImportCandidate => ({
+    kind,
     startedAt: null,
     garminType: activity.type,
     exerciseId: null,
     durationS: null,
     distanceM: null,
     interval: null,
+    setGroups: [],
     historyOnly: false,
     status: 'rejected',
     rejection,
@@ -156,26 +174,40 @@ export function garminImportCandidate(
   if (startedAt === null || hasUnreadableMeasures(activity)) return rejected('unreadable');
 
   const measured = {
+    kind,
     startedAt,
     garminType: activity.type,
     durationS: Math.round(activity.durationS),
-    distanceM: loggedDistance(activity.distanceM),
+    distanceM: kind === 'strength' ? null : loggedDistance(activity.distanceM),
     historyOnly: !isWithinEditWindow(startedAt, now),
   };
-  if (activity.type !== null && GARMIN_STRENGTH_TYPES.has(activity.type)) {
-    return { ...rejected('strength'), ...measured };
+  const isImplausible = implausibleTiming(startedAt, garminActivityEnd(measured), now) !== null;
+  if (kind === 'strength') {
+    const setGroups = garminSetGroups(activity.sets);
+    const unusable = strengthRejection(measured.durationS, setGroups);
+    if (unusable !== null) return { ...rejected(unusable), ...measured };
+    if (isImplausible) return rejected('unreadable');
+    return {
+      ...measured,
+      exerciseId: null,
+      interval: null,
+      setGroups,
+      status: measured.historyOnly ? 'history_only' : 'importable',
+      rejection: null,
+    };
   }
 
   const exerciseId = (activity.type === null ? undefined : exerciseIdByGarminType.get(activity.type)) ?? null;
   const tooBigOrSmall = sizeRejection(measured.durationS, measured.distanceM);
   if (tooBigOrSmall !== null) return { ...rejected(tooBigOrSmall), ...measured, exerciseId };
-  if (implausibleTiming(startedAt, garminActivityEnd(measured), now) !== null) return rejected('unreadable');
+  if (isImplausible) return rejected('unreadable');
 
   const status = exerciseId === null ? 'needs_exercise' : measured.historyOnly ? 'history_only' : 'importable';
   return {
     ...measured,
     exerciseId,
     interval: structuredInterval(activity, measured.durationS),
+    setGroups: [],
     status,
     rejection: null,
   };

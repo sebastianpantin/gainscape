@@ -68,6 +68,7 @@ describe('garminActivitiesFromFit', () => {
         distanceM: 5000.55,
         laps: [],
         workoutSteps: [],
+        sets: [],
       },
     ]);
   });
@@ -153,6 +154,53 @@ describe('garminActivitiesFromFit', () => {
       laps: [{ wkt_step_index: index(0) }],
     });
     expect(activities.map((activity) => activity.laps)).toEqual([[], []]);
+  });
+
+  it('reads the active sets in file order: first category, reps and weight in kilograms', () => {
+    const [strength] = garminActivitiesFromFit({
+      sessions: [session({ sport: 'training', sub_sport: 'strength_training', total_distance: undefined })],
+      sets: [
+        { set_type: 'active', category: ['bench_press', 'push_up', 'flye'], repetitions: 8, weight: 60 },
+        { set_type: 'rest', duration: 90 },
+        { set_type: 'active', category: ['unknown', 'unknown', 'row'], repetitions: 12, weight: 0 },
+        { set_type: 'active', category: 'pull_up', repetitions: 5 },
+        { set_type: 'active', category: [65534, 65534, 65534], repetitions: 10, weight: 20 },
+        { set_type: 'active', repetitions: 10, weight: 20 },
+        { set_type: 'active', category: ['plank'], weight: 0 },
+        'not a message',
+      ],
+    });
+    expect(strength.sets).toEqual([
+      { category: 'bench_press', reps: 8, weightKg: 60 },
+      { category: null, reps: 12, weightKg: 0 },
+      { category: 'pull_up', reps: 5, weightKg: null },
+      { category: null, reps: 10, weightKg: 20 },
+      { category: null, reps: 10, weightKg: 20 },
+      { category: 'plank', reps: null, weightKg: 0 },
+    ]);
+  });
+
+  it('gives each session of a multisport file the sets that start within its time', () => {
+    const at = (time: string) => new Date(`2026-11-23T${time}.000Z`);
+    const [strength, run] = garminActivitiesFromFit({
+      sessions: [
+        session({
+          sport: 'training',
+          sub_sport: 'strength_training',
+          start_time: at('06:30:05'),
+          total_elapsed_time: 600,
+        }),
+        session({ start_time: at('06:40:05'), total_elapsed_time: 600 }),
+      ],
+      sets: [
+        { set_type: 'active', category: ['row'], repetitions: 10, weight: 40, start_time: at('06:31:00') },
+        { set_type: 'active', category: ['row'], repetitions: 9, weight: 40, start_time: at('06:40:04') },
+        { set_type: 'active', category: ['row'], repetitions: 8, weight: 40, start_time: at('06:40:05') },
+        { set_type: 'active', category: ['row'], repetitions: 7, weight: 40 },
+      ],
+    });
+    expect(strength.sets.map((set) => set.reps)).toEqual([10, 9]);
+    expect(run.sets.map((set) => set.reps)).toEqual([8]);
   });
 
   it.each([null, undefined, 'FIT', 7, [], {}, { sessions: 'none' }, { sessions: [null, 'x'] }])(

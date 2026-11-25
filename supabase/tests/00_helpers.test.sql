@@ -160,6 +160,8 @@ begin
   insert into public.lift_goals (user_id, exercise_id, target_kg, reps) values (give_everything.owner, lift, 100, 5);
   insert into public.garmin_activities (user_id, started_at, outcome, session_id, garmin_type)
   values (give_everything.owner, date_trunc('second', now()), 'imported', session_id, 'running');
+  insert into public.garmin_exercise_picks (user_id, category, exercise_id)
+  values (give_everything.owner, 'bench_press', lift);
   insert into public.exercises (id, owner_user_id, name, load_type, equipment)
   values (custom_id, give_everything.owner, 'Test custom lift', 'external', 'other');
   insert into public.exercise_skills (exercise_id, skill_id, share_bp) values (custom_id, skill, 10000);

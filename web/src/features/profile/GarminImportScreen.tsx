@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 import { BackLink } from '../../components/BackLink.tsx';
 import { ProblemWithRetry } from '../../components/ScreenProblem.tsx';
 import { ListSkeleton } from '../../components/ScreenSkeleton.tsx';
+import type { LiftExercise } from '../../lib/exercises/catalog-rules.ts';
 import { importActivities } from '../../lib/garmin/garmin-import.ts';
 import {
   activitiesRange,
@@ -13,10 +14,13 @@ import {
   canBeChosen,
   chosenCount,
   fileSummary,
+  groupDecisionsOfRow,
   importButtonLabel,
   importSummary,
   initialChoices,
   isChosen,
+  isStrengthRow,
+  needsBodyweight,
   needsExercisePick,
   pickableExercises,
   type ReviewChoices,
@@ -26,11 +30,14 @@ import {
   type ReviewRow,
   reviewRows,
   type ReviewSession,
+  reviewSessions,
   rowBadge,
   rowFacts,
   rowTitle,
   withAllToggled,
+  withBodyweightKnown,
   withExercisePicked,
+  withGroupDecisions,
   withRowToggled,
 } from '../../lib/garmin/import-review-rules.ts';
 import {
@@ -39,11 +46,16 @@ import {
   holdFinishedImport,
   type PendingImport,
 } from '../../lib/garmin/pending-import.ts';
+import { pickableLifts, type ReviewLift, reviewLifts } from '../../lib/garmin/strength-review-rules.ts';
+import { deviceStorage } from '../../lib/platform/keyed-store.ts';
 import { usePreferences } from '../../lib/profile/preferences.ts';
-import { exerciseListQuery, garminImportReviewQuery } from '../../lib/query/queries.ts';
+import { exerciseListQuery, garminImportReviewQuery, latestBodyweightQuery } from '../../lib/query/queries.ts';
 import { loadedState } from '../../lib/query/query-state-rules.ts';
 import { wrote } from '../../lib/query/writes.ts';
 import { useGoBack } from '../../lib/ui/use-go-back.ts';
+import { BodyweightPrompt } from '../workout/BodyweightPrompt.tsx';
+import { GarminSetGroups } from './GarminSetGroups.tsx';
+import { saveBodyweight } from './save-bodyweight.ts';
 
 const SETTINGS_PATH = '/profile/settings';
 
@@ -53,13 +65,31 @@ interface ReviewListProps {
   choices: ReviewChoices;
   exercisesById: ReadonlyMap<string, ReviewExercise>;
   pickable: ReviewExercise[];
+  lifts: ReadonlyMap<string, ReviewLift>;
+  pickableLiftExercises: LiftExercise[];
   disabled: boolean;
   onChoices: (choices: ReviewChoices) => void;
 }
 
-function ReviewList({ rows, sessions, choices, exercisesById, pickable, disabled, onChoices }: ReviewListProps) {
+interface OpenPicker {
+  rowId: string;
+  group: number;
+}
+
+function ReviewList({
+  rows,
+  sessions,
+  choices,
+  exercisesById,
+  pickable,
+  lifts,
+  pickableLiftExercises,
+  disabled,
+  onChoices,
+}: ReviewListProps) {
   const { unitPref } = usePreferences();
   const headingPrefix = useId();
+  const [openPicker, setOpenPicker] = useState<OpenPicker | null>(null);
   const months = useMemo(() => reviewMonths(rows), [rows]);
 
   return (
@@ -117,6 +147,20 @@ function ReviewList({ rows, sessions, choices, exercisesById, pickable, disabled
                       ))}
                     </select>
                   )}
+                  {isStrengthRow(row) && (
+                    <GarminSetGroups
+                      activityTitle={title}
+                      groups={row.candidate.setGroups}
+                      decisions={groupDecisionsOfRow(row, choices)}
+                      lifts={lifts}
+                      pickable={pickableLiftExercises}
+                      unit={unitPref}
+                      disabled={disabled}
+                      openGroup={openPicker?.rowId === row.id ? openPicker.group : null}
+                      onOpenGroup={(group) => setOpenPicker(group === null ? null : { rowId: row.id, group })}
+                      onDecisions={(decisions) => onChoices(withGroupDecisions(choices, sessions, row, decisions))}
+                    />
+                  )}
                 </li>
               );
             })}
@@ -134,24 +178,38 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
   const range = useMemo(() => activitiesRange(pending.activities), [pending.activities]);
   const contextQuery = useQuery(garminImportReviewQuery(userId, range));
   const exercisesQuery = useQuery(exerciseListQuery(userId));
+  const bodyweightQuery = useQuery(latestBodyweightQuery(userId));
+  const { unitPref } = usePreferences();
   const [picked, setPicked] = useState<ReviewChoices | null>(null);
   const [importing, setImporting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   const context = contextQuery.data;
   const exercises = exercisesQuery.data;
-  const loaded = loadedState(context && exercises ? true : undefined, contextQuery.error ?? exercisesQuery.error);
+  const bodyweightKg = bodyweightQuery.data;
+  const loaded = loadedState(
+    context && exercises && bodyweightKg !== undefined ? true : undefined,
+    contextQuery.error ?? exercisesQuery.error ?? bodyweightQuery.error,
+  );
   const review = useMemo(() => {
     if (context === undefined || exercises === undefined) return null;
-    const rows = reviewRows(pending.activities, context, now);
+    const pickableLiftExercises = pickableLifts(exercises);
     return {
-      rows,
-      sessions: context.sessions,
+      rows: reviewRows(pending.activities, context, now),
+      sessions: reviewSessions(context.sessions, exercises),
       exercisesById: reviewExercises(exercises),
       pickable: pickableExercises(exercises),
-      firstChoices: initialChoices(rows, context.sessions),
+      lifts: reviewLifts(pickableLiftExercises),
+      pickableLiftExercises,
+      exerciseIdByGarminCategory: context.exerciseIdByGarminCategory,
     };
   }, [context, exercises, pending.activities, now]);
+  const bodyweightKnown = bodyweightKg === undefined ? undefined : bodyweightKg !== null;
+  const firstChoices = useMemo(() => {
+    if (review === null || bodyweightKnown === undefined) return null;
+    const { exerciseIdByGarminCategory, lifts } = review;
+    return initialChoices(review.rows, review.sessions, { exerciseIdByGarminCategory, lifts, bodyweightKnown });
+  }, [review, bodyweightKnown]);
   const onScreen = useRef(false);
   const imported = useRef<GarminImportOutcome[]>([]);
   useEffect(() => {
@@ -161,7 +219,12 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
       dropPendingImport();
     };
   }, []);
-  const choices = picked ?? review?.firstChoices ?? null;
+  const chosenSoFar = picked ?? firstChoices;
+  const choices = useMemo(() => {
+    const learnsBodyweight = bodyweightKnown === true && chosenSoFar?.bodyweightKnown === false;
+    if (review === null || chosenSoFar === null || !learnsBodyweight) return chosenSoFar;
+    return withBodyweightKnown(chosenSoFar, review.rows, review.sessions);
+  }, [review, chosenSoFar, bodyweightKnown]);
   const count = review && choices ? chosenCount(review.rows, choices) : 0;
 
   const runImport = async () => {
@@ -188,7 +251,14 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
       {loaded.status === 'failed' && (
         <ProblemWithRetry
           problem={loaded.problem}
-          onRetry={() => Promise.all([contextQuery.refetch(), exercisesQuery.refetch()])}
+          onRetry={() => Promise.all([contextQuery.refetch(), exercisesQuery.refetch(), bodyweightQuery.refetch()])}
+        />
+      )}
+      {review && choices && needsBodyweight(review.rows, choices) && (
+        <BodyweightPrompt
+          unit={unitPref}
+          submitLabel="Save bodyweight"
+          onSave={(savedKg) => saveBodyweight({ userId, bodyweightKg: savedKg, storage: deviceStorage(), queryClient })}
         />
       )}
       {review && choices && (
@@ -198,6 +268,8 @@ function ImportReview({ userId, pending }: { userId: string; pending: PendingImp
           choices={choices}
           exercisesById={review.exercisesById}
           pickable={review.pickable}
+          lifts={review.lifts}
+          pickableLiftExercises={review.pickableLiftExercises}
           disabled={importing}
           onChoices={setPicked}
         />

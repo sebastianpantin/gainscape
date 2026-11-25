@@ -18,7 +18,10 @@ export function fetchLastImportAt(): Promise<string | null> {
   return queryLastImportAt(supabase);
 }
 
-function sentActivity({ startedAt, garminType, exerciseId, durationS, distanceM, interval }: ActivityToImport) {
+function sentActivity(activity: ActivityToImport) {
+  const { startedAt, garminType, durationS } = activity;
+  if ('sets' in activity) return { startedAt, garminType, durationS, sets: activity.sets, picks: activity.picks };
+  const { exerciseId, distanceM, interval } = activity;
   return { startedAt, garminType, exerciseId, durationS, distanceM, interval };
 }
 
