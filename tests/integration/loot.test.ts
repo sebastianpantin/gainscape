@@ -365,12 +365,16 @@ describe('inventory', () => {
     ]);
     await post(user, payload);
 
-    const drops = await db`select item_id, quantity from public.drops where session_id = ${payload.id}`;
+    const drops = await db`
+      select item_id, quantity from public.drops where session_id = ${payload.id} and source = 'regular'`;
     expect(drops).toHaveLength(2);
     expect(drops[0].item_id).toBe(drops[1].item_id);
-    const items = await db`select item_id, quantity from public.user_items where user_id = ${user.id}`;
-    expect(items).toEqual([{ item_id: drops[0].item_id, quantity: pair![0].quantity + pair![1].quantity }]);
-    const ledger = await db`select delta, reason from public.item_ledger where user_id = ${user.id} order by id`;
+    const itemId = drops[0].item_id as string;
+    const items = await db`
+      select item_id, quantity from public.user_items where user_id = ${user.id} and item_id = ${itemId}`;
+    expect(items).toEqual([{ item_id: itemId, quantity: pair![0].quantity + pair![1].quantity }]);
+    const ledger = await db`
+      select delta, reason from public.item_ledger where user_id = ${user.id} and item_id = ${itemId} order by id`;
     expect(ledger).toEqual(pair!.map((hit) => ({ delta: hit.quantity, reason: 'drop' })));
   });
 });
