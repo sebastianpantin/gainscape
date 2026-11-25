@@ -32,12 +32,14 @@ const sessionKeyArb = fc
     startedAt: new Date(HISTORY_START_MS + day * DAY_MS + minute * 60_000).toISOString(),
   }));
 
-const historyRowArb = fc.record({
-  exerciseId: fc.constantFrom(...EXERCISES),
-  session: sessionKeyArb,
-  isWarmup: fc.boolean(),
-  strengthCandidate: fc.option(fc.integer({ min: 20, max: 300 }), { nil: null }),
-});
+const historyRowArb = fc
+  .record({
+    exerciseId: fc.constantFrom(...EXERCISES),
+    session: sessionKeyArb,
+    isWarmup: fc.boolean(),
+    strengthCandidate: fc.option(fc.integer({ min: 20, max: 300 }), { nil: null }),
+  })
+  .map((row) => (row.isWarmup ? { ...row, strengthCandidate: null } : row));
 
 function ascendingDistinct(keys: readonly SessionKey[]): SessionKey[] {
   const byId = new Map(keys.map((key) => [key.id, key]));
