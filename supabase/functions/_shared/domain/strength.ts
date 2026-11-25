@@ -68,12 +68,28 @@ function maxOrNull(...values: (number | null)[]): number | null {
   return present.length > 0 ? Math.max(...present) : null;
 }
 
+function wasTrainedWithoutABreak(
+  rows: readonly StrengthHistoryRow[],
+  since: SessionKey,
+  until: SessionKey,
+  longestGapMs: number,
+): boolean {
+  const trainedAt = rows
+    .filter((row) => !row.isWarmup && compareSessionKeys(row.session, since) >= 0)
+    .map((row) => Date.parse(row.session.startedAt))
+    .sort((a, b) => a - b);
+  return [...trainedAt, Date.parse(until.startedAt)].every(
+    (startedMs, index, times) => index === 0 || startedMs - times[index - 1] <= longestGapMs,
+  );
+}
+
 export function strengthStateAt(
   history: readonly StrengthHistoryRow[],
   session: SessionKey,
   cfg: BalanceConfig,
 ): StrengthState {
-  const windowStartMs = Date.parse(session.startedAt) - cfg.e1rmWindowDays * MS_PER_DAY;
+  const windowMs = cfg.e1rmWindowDays * MS_PER_DAY;
+  const windowStartMs = Date.parse(session.startedAt) - windowMs;
   const rowsByExercise = new Map<string, StrengthHistoryRow[]>();
   for (const row of history) {
     if (!isBefore(row.session, session)) continue;
@@ -93,13 +109,15 @@ export function strengthStateAt(
         (latest, candidate) => (latest === null || compareSessionKeys(candidate, latest) > 0 ? candidate : latest),
         null,
       );
-    const fromMostRecentSession = withCandidates.filter(
-      (row) => mostRecentSession && row.session.id === mostRecentSession.id,
-    );
+    const carriedSince =
+      mostRecentSession !== null && wasTrainedWithoutABreak(rows, mostRecentSession, session, windowMs)
+        ? mostRecentSession
+        : null;
+    const carried = withCandidates.filter((row) => row.session.id === carriedSince?.id);
 
     state[exerciseId] = {
       windowMax: maxOrNull(...inWindow.map((row) => row.strengthCandidate)),
-      fallbackMax: maxOrNull(...fromMostRecentSession.map((row) => row.strengthCandidate)),
+      fallbackMax: maxOrNull(...carried.map((row) => row.strengthCandidate)),
       hasPriorSession: true,
     };
   }

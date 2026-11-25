@@ -215,11 +215,13 @@ function trim(
       ),
     ]),
   );
-  const selected = prior.filter(
-    (row) =>
+  const selected = prior.filter((row) => {
+    const latest = latestWithCandidates.get(row.exerciseId);
+    return (
       Date.parse(row.session.startedAt) >= windowStartMs ||
-      latestWithCandidates.get(row.exerciseId)?.id === row.session.id,
-  );
+      (latest != null && row.session.startedAt >= latest.startedAt)
+    );
+  });
   const firstWorkingSets = exerciseIds.flatMap((exerciseId) => {
     const first = latestBy(
       prior.filter((row) => row.exerciseId === exerciseId && !row.isWarmup).map((row) => row.session),

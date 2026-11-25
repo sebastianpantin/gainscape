@@ -267,7 +267,32 @@ describe('prior state loaded from stored rows', () => {
 
     const [middleBench] =
       await db`select e1rm_before_kg::float, rir_source from public.sets where id = ${middle.sets[0].id}`;
-    expect(middleBench).toEqual({ e1rm_before_kg: 111, rir_source: 'estimated' });
+    expect(middleBench).toEqual({ e1rm_before_kg: null, rir_source: 'cold_start' });
+
+    const incremental = await normalizedSnapshot(user.id);
+    expect((await rebuildCaches(user.id)).status).toBe(200);
+    expect(await normalizedSnapshot(user.id)).toEqual(incremental);
+  });
+
+  it('keeps the estimate of a lift trained all along without a new candidate, and matches a rebuild', async () => {
+    const user = await createTestUser();
+    const tooFarFromFailure = { reps: 15, effort: { type: 'rir', value: 0 } } as const;
+    const tested = withFreshIds(payloadAt(hoursAgo(4), [aSet(benchId, 0, 100)]));
+    const lighter = withFreshIds(payloadAt(hoursAgo(3), [aSet(benchId, 0, 40, tooFarFromFailure)]));
+    const lighterAgain = withFreshIds(payloadAt(hoursAgo(2), [aSet(benchId, 0, 40, tooFarFromFailure)]));
+    for (const payload of [tested, lighter, lighterAgain]) await postSession(user, payload);
+    await ageSession(tested.id, '100 days');
+    await ageSession(lighter.id, '70 days');
+    await ageSession(lighterAgain.id, '30 days');
+    expect((await rebuildCaches(user.id)).status).toBe(200);
+    const [testedBench] = await db`select e1rm_candidate_kg::float from public.sets where id = ${tested.sets[0].id}`;
+
+    const today = withFreshIds(payloadAt(hoursAgo(1), [aSet(benchId, 0, 80, { effort: null })]));
+    await postSession(user, today);
+    const [todayBench] =
+      await db`select e1rm_before_kg::float, rir_source from public.sets where id = ${today.sets[0].id}`;
+    expect(testedBench.e1rm_candidate_kg).toBeGreaterThan(100);
+    expect(todayBench).toEqual({ e1rm_before_kg: testedBench.e1rm_candidate_kg, rir_source: 'estimated' });
 
     const incremental = await normalizedSnapshot(user.id);
     expect((await rebuildCaches(user.id)).status).toBe(200);

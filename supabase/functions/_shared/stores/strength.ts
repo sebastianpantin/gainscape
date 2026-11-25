@@ -32,7 +32,7 @@ export async function loadStrengthHistory(
         and (s.started_at, s.id) < (${before.startedAt}::timestamptz, ${before.id}::uuid)
     ),
     latest_session_with_candidates as (
-      select distinct on (exercise_id) exercise_id, session_id
+      select distinct on (exercise_id) exercise_id, started_at
       from prior
       where candidate is not null
       order by exercise_id, started_at desc, session_id desc
@@ -46,7 +46,10 @@ export async function loadStrengthHistory(
     select exercise_id, session_id, started_at, is_warmup, candidate
     from prior
     where started_at >= ${windowStart}::timestamptz
-       or (exercise_id, session_id) in (select exercise_id, session_id from latest_session_with_candidates)
+       or exists (
+         select 1 from latest_session_with_candidates latest
+         where latest.exercise_id = prior.exercise_id and prior.started_at >= latest.started_at
+       )
     union all
     select exercise_id, session_id, started_at, false, null
     from first_working_set`;

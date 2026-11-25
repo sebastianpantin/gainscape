@@ -53,7 +53,7 @@ SQL that restates domain or web rules (change both sides together, with a new mi
 - `cardio_duration_within_bounds` (last in 070) restates `countedWorkSeconds`, `intervalDurationSeconds` and `CARDIO_BOUNDS` (`domain/cardio.ts`). A steady bout may last 12 hours, as long as a workout (`MAX_SESSION_DURATION_MS`), so a long walk or hike fits; an interval stays at 4 hours.
 - `set_is_lift_cardio_or_hold` and the hold branches (044) restate `HOLD_BOUNDS` in `domain/types.ts`.
 - `save_exercise_note` trims an explicit, locale-independent whitespace set (ECMAScript whitespace and line terminators including U+FEFF, plus U+0085), the same set as `trimNote` in `web/src/lib/exercises/exercise-note-rules.ts`; never use `\s` (038).
-- `exercise_strength_state` (016) matches the domain `strengthStateAt`.
+- `exercise_strength_state` (016, restated in 072) matches the domain `strengthStateAt`, including the break rule: `fallback_max` is null once the lift went longer than the window without a working set.
 - `private.compiled_program_definition` (040) compiles a user program into a domain rotation definition; its output must parse with `parseProgramDefinition` and match the web `customTemplateKey` / `customLiftKey` (`tests/integration/program-follow-parity.test.ts`).
 - Stored level efforts hold the RIR of `effortLevelRir` in `domain/balance.ts`; changing that mapping needs a data migration of `sets.effort_value` (015 did this for `easy`).
 

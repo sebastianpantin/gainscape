@@ -72,7 +72,8 @@ Owning modules: `strength.ts`, `fatigue.ts`.
 
 Each lift tracks a 1RM estimate (estimated one-rep max) with the Epley formula on load and reps to failure (reps + RIR). Pure bodyweight lifts track max reps instead.
 
-- The current 1RM estimate is the best one from the last `e1rmWindowDays`, else the best from your latest session with that lift.
+- The current 1RM estimate is the best one from the last `e1rmWindowDays`, else the best from your latest session with that lift that showed one, for as long as the lift is trained at least once every `e1rmWindowDays` (warm-ups do not count).
+- After a longer break the estimate is gone: it expires, it does not shrink. The next session with the lift starts without one, so its Effort is trusted and its unrated sets are cold start, and what it shows becomes the new estimate. Why: an old estimate after a long break told the engine every set was easy, so a returning lifter earned almost nothing, and unrated sets could never pull it down. A decay curve would be a guess; the comeback session is evidence. A lift trained every week keeps its estimate even when no set updates it, because unrated sets only write a new estimate when they beat the old one.
 - Sets beyond `epleyMaxRepsToFailure` reps to failure give no estimate.
 - One session raises the estimate by at most `maxStrengthGainPerSession`.
 - An Estimated RIR raises strength only when the set beats the prediction. A logged Effort counts toward it, within the Flag limit above.

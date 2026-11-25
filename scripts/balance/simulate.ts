@@ -67,17 +67,19 @@ function loggedEffort(trueRir: number, noise: number, unrated: boolean): EffortI
 
 function recentHistoryOnly(history: StrengthHistoryRow[], nowMs: number, cfg: BalanceConfig): StrengthHistoryRow[] {
   const keepAfterMs = nowMs - (cfg.e1rmWindowDays + 7) * DAY_MS;
-  const latestSessionIdWithCandidates = new Map<string, string>();
+  const latestStartWithCandidates = new Map<string, string>();
   const firstWorkingSetRow = new Map<string, StrengthHistoryRow>();
   for (const row of history) {
-    if (row.strengthCandidate !== null) latestSessionIdWithCandidates.set(row.exerciseId, row.session.id);
+    if (row.strengthCandidate !== null) latestStartWithCandidates.set(row.exerciseId, row.session.startedAt);
     if (!row.isWarmup && !firstWorkingSetRow.has(row.exerciseId)) firstWorkingSetRow.set(row.exerciseId, row);
   }
-  const kept = history.filter(
-    (row) =>
+  const kept = history.filter((row) => {
+    const latestStart = latestStartWithCandidates.get(row.exerciseId);
+    return (
       Date.parse(row.session.startedAt) >= keepAfterMs ||
-      latestSessionIdWithCandidates.get(row.exerciseId) === row.session.id,
-  );
+      (latestStart !== undefined && row.session.startedAt >= latestStart)
+    );
+  });
   for (const marker of firstWorkingSetRow.values()) if (!kept.includes(marker)) kept.unshift(marker);
   return kept;
 }
