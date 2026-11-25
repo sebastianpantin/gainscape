@@ -1,3 +1,9 @@
+- prs: [256, 257]
+  version: 0.30.1
+  date: 2026-11-25
+  title: Back after a break
+  items:
+    - Coming back to a lift after more than 8 weeks away now starts fresh. Your first session back sets a new strength estimate from what you actually lift, instead of measuring you against your old numbers, so the XP from that session reflects how hard it really was.
 - prs: [245, 247, 248, 254]
   version: 0.30.0
   date: 2026-11-25
