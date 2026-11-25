@@ -14,3 +14,7 @@ export function rpeChartPct(reps: number, rpe: number): number | null {
   if (!Number.isInteger(reps) || column < 0) return null;
   return PCT_BY_REPS_AND_RPE[reps - 1]?.[column] ?? null;
 }
+
+export function isRepCountOnRpeChart(reps: number): boolean {
+  return rpeChartPct(reps, RPE_COLUMNS[0]) !== null;
+}

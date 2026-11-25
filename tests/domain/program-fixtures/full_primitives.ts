@@ -186,6 +186,7 @@ export const FULL_PRIMITIVES: ProgramDefinition = {
                   { kg: 0, lb: 0 },
                   { kg: 5, lb: 10 },
                   { kg: 8.75, lb: 20 },
+                  { kg: 8.75, lb: 20 },
                 ],
               },
             },

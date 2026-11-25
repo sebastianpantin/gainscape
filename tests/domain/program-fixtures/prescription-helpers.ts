@@ -6,7 +6,8 @@ import {
   type ReferenceVar,
   type ResolvedSlot,
 } from '@domain/index.ts';
-import { type ReferenceState } from '@domain/program-types.ts';
+import { findSlot } from '@domain/program-eval.ts';
+import { type ReferenceState, type SlotDecl } from '@domain/program-types.ts';
 import { type RuleKey } from '@domain/program-state.ts';
 
 export function slotOf(resolved: readonly ResolvedSlot[], slotId: string): PrescribedExercise {
@@ -44,6 +45,12 @@ export function refOf(state: ProgramState, lift: string, variable: ReferenceVar)
 
 export function missesOf(state: ProgramState, rule: RuleKey): number {
   return state.consecutiveMisses[rule] ?? 0;
+}
+
+export function slotIn(definition: ProgramDefinition, slotId: string): SlotDecl {
+  const slot = findSlot(definition, slotId);
+  if (!slot) throw new Error(`no slot ${slotId}`);
+  return slot;
 }
 
 export function broken(definition: ProgramDefinition, mutate: (copy: ProgramDefinition) => void): ProgramDefinition {
