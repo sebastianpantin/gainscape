@@ -55,7 +55,7 @@ How hard the lifter says a set was, logged as an effort level, reps in reserve (
 _Avoid_: rating, difficulty, intensity
 
 **1RM estimate**:
-The heaviest single rep the server believes the lifter can do on a lift, worked out from their recent sets. A lift has none until its first session is done.
+The heaviest single rep the server believes the lifter can do on a lift, worked out from their recent sets. A lift has none until its first session is done, and loses it after 56 days without a working set of that lift; the next session with the lift learns it again.
 _Avoid_: max, PR, e1RM (in prose)
 
 **Estimated RIR**:

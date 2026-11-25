@@ -32,12 +32,14 @@ const sessionKeyArb = fc
     startedAt: new Date(HISTORY_START_MS + day * DAY_MS + minute * 60_000).toISOString(),
   }));
 
-const historyRowArb = fc.record({
-  exerciseId: fc.constantFrom(...EXERCISES),
-  session: sessionKeyArb,
-  isWarmup: fc.boolean(),
-  strengthCandidate: fc.option(fc.integer({ min: 20, max: 300 }), { nil: null }),
-});
+const historyRowArb = fc
+  .record({
+    exerciseId: fc.constantFrom(...EXERCISES),
+    session: sessionKeyArb,
+    isWarmup: fc.boolean(),
+    strengthCandidate: fc.option(fc.integer({ min: 20, max: 300 }), { nil: null }),
+  })
+  .map((row) => (row.isWarmup ? { ...row, strengthCandidate: null } : row));
 
 function ascendingDistinct(keys: readonly SessionKey[]): SessionKey[] {
   const byId = new Map(keys.map((key) => [key.id, key]));
@@ -65,6 +67,27 @@ describe('strengthTracker', () => {
       ),
       { numRuns: 300 },
     );
+  });
+});
+
+describe('strengthTracker with prior rows later than recorded ones', () => {
+  it('admits prior and recorded rows in one session order, so a break is seen where the history has one', () => {
+    const row = (session: SessionKey, strengthCandidate: number | null): StrengthHistoryRow => ({
+      exerciseId: 'bench',
+      session,
+      isWarmup: false,
+      strengthCandidate,
+    });
+    const first: SessionKey = { id: 'first', startedAt: '2026-03-06T06:03:00.000Z' };
+    const priorButLater: SessionKey = { id: 'prior', startedAt: '2026-03-07T06:00:00.000Z' };
+    const asked: SessionKey = { id: 'asked', startedAt: '2026-05-02T06:00:00.000Z' };
+    const priorRows = [row(priorButLater, null)];
+    const tracker = strengthTracker(priorRows, cfg);
+    tracker.stateAt(first);
+    tracker.record([row(first, 20)]);
+    const expected = strengthStateAt([...priorRows, row(first, 20)], asked, cfg);
+    expect(expected.bench).toEqual({ windowMax: null, fallbackMax: 20, hasPriorSession: true });
+    expect(tracker.stateAt(asked)).toEqual(expected);
   });
 });
 

@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
   currentStrength,
+  e1rmAtSessionStart,
   effectiveReps,
   type EffortInput,
   epley,
@@ -423,11 +424,74 @@ describe('strength state at a session', () => {
         historyRow('bench', 'old', 100, 120),
         historyRow('bench', 'recent', 70, 100),
         historyRow('bench', 'recent', 70, 105),
+        historyRow('bench', 'without-candidates', 20, null),
       ],
       { id: 'now', startedAt: sessionStart },
       TEST_BALANCE,
     );
     expect(state.bench).toEqual({ windowMax: null, fallbackMax: 105, hasPriorSession: true });
+  });
+
+  it('keeps the last estimate of a lift trained at least every 56 days, however old its last candidate', () => {
+    const weeklyWithoutCandidates = Array.from({ length: 12 }, (_, week) =>
+      historyRow('bench', `week-${week}`, 77 - week * 7, null),
+    );
+    const state = strengthStateAt(
+      [historyRow('bench', 'tested', 84, 120), ...weeklyWithoutCandidates],
+      { id: 'now', startedAt: sessionStart },
+      TEST_BALANCE,
+    );
+    expect(state.bench).toEqual({ windowMax: null, fallbackMax: 120, hasPriorSession: true });
+  });
+
+  it('drops the last estimate when the lift was not trained for more than 56 days before this session', () => {
+    const stateAfter = (daysSinceLastSet: number, offsetMs = 0) =>
+      strengthStateAt(
+        [historyRow('bench', 'tested', 100, 120), historyRow('bench', 'last', daysSinceLastSet, null, offsetMs)],
+        { id: 'now', startedAt: sessionStart },
+        TEST_BALANCE,
+      ).bench;
+    expect(stateAfter(50)).toEqual({ windowMax: null, fallbackMax: 120, hasPriorSession: true });
+    expect(stateAfter(56)).toEqual({ windowMax: null, fallbackMax: 120, hasPriorSession: true });
+    expect(stateAfter(56, 1)).toEqual({ windowMax: null, fallbackMax: null, hasPriorSession: true });
+    expect(e1rmAtSessionStart({ bench: stateAfter(57) }, 'bench')).toBeNull();
+  });
+
+  it('drops the last estimate after a break in the middle, also when the lift was trained since', () => {
+    const state = strengthStateAt(
+      [
+        historyRow('bench', 'tested', 130, 120),
+        historyRow('bench', 'comeback', 60, null),
+        historyRow('bench', 'again', 20, null),
+      ],
+      { id: 'now', startedAt: sessionStart },
+      TEST_BALANCE,
+    );
+    expect(state.bench).toEqual({ windowMax: null, fallbackMax: null, hasPriorSession: true });
+  });
+
+  it('takes the estimate of the comeback when a session after the break showed one', () => {
+    const state = strengthStateAt(
+      [
+        historyRow('bench', 'before-the-break', 200, 120),
+        historyRow('bench', 'comeback', 130, 90),
+        historyRow('bench', 'since', 80, null),
+        historyRow('bench', 'lately', 40, null),
+      ],
+      { id: 'now', startedAt: sessionStart },
+      TEST_BALANCE,
+    );
+    expect(state.bench).toEqual({ windowMax: null, fallbackMax: 90, hasPriorSession: true });
+  });
+
+  it('does not count a warm-up as training the lift', () => {
+    const warmUp = { ...historyRow('bench', 'warm-up', 30, null), isWarmup: true };
+    const state = strengthStateAt(
+      [historyRow('bench', 'tested', 80, 120), warmUp],
+      { id: 'now', startedAt: sessionStart },
+      TEST_BALANCE,
+    );
+    expect(state.bench).toEqual({ windowMax: null, fallbackMax: null, hasPriorSession: true });
   });
 
   it('ignores sessions that start after the current one', () => {
@@ -460,6 +524,69 @@ describe('strength state at a session', () => {
       bench: { windowMax: null, fallbackMax: 100, hasPriorSession: true },
     });
     expect(result).toMatchObject({ rirFlagged: true, rirForXp: 6, e1rmCandidateKg: epley(75, 8) });
+  });
+});
+
+describe('a lift that comes back after a break', () => {
+  const day = (index: number, sets: SessionInput['sets']): SessionInput => ({
+    id: `session-${index}`,
+    startedAt: new Date(Date.parse(sessionStart) + index * DAY_MS).toISOString(),
+    sets,
+  });
+  const firstSets = (sessions: SessionInput[]) =>
+    replayHistory(sessions, catalog, TEST_BALANCE, freshUser).sessions.map((entry) => entry.outputs.sets[0]);
+
+  it('trusts the logged Effort of the comeback and starts the next session from what it showed', () => {
+    const [first, comeback, next] = firstSets([
+      day(0, [aSet('bench', 100, 5, failure)]),
+      day(70, [aSet('bench', 70, 5, failure)]),
+      day(73, [aSet('bench', 70, 5, null)]),
+    ]);
+    expect(first).toMatchObject({ e1rmCandidateKg: epley(100, 5) });
+    expect(comeback).toMatchObject({
+      e1rmBeforeKg: null,
+      rirSource: 'logged',
+      rirForXp: 0,
+      rirFlagged: false,
+      e1rmCandidateKg: epley(70, 5),
+    });
+    expect(comeback.xp).toBeGreaterThan(0);
+    expect(next).toMatchObject({ e1rmBeforeKg: epley(70, 5), rirSource: 'estimated', rir: 0 });
+  });
+
+  it('scores an unrated comeback as cold start and learns the estimate from it', () => {
+    const [, comeback, next] = firstSets([
+      day(0, [aSet('bench', 100, 5, failure)]),
+      day(70, [aSet('bench', 70, 5, null)]),
+      day(73, [aSet('bench', 70, 5, null)]),
+    ]);
+    expect(comeback).toMatchObject({ rirSource: 'cold_start', xp: 10, e1rmCandidateKg: epley(70, 7) });
+    expect(next).toMatchObject({ e1rmBeforeKg: epley(70, 7), rirSource: 'estimated' });
+  });
+
+  it('would have flagged the same comeback and kept the old estimate within 56 days', () => {
+    const [, back] = firstSets([day(0, [aSet('bench', 100, 5, failure)]), day(50, [aSet('bench', 70, 5, failure)])]);
+    expect(back).toMatchObject({ e1rmBeforeKg: epley(100, 5), rirFlagged: true });
+  });
+
+  it('keeps earning from the estimate when unrated sets are logged every week past the window', () => {
+    const weekly = Array.from({ length: 12 }, (_, week) =>
+      day(week * 7, [aSet('bench', 100, 5, week === 0 ? failure : null)]),
+    );
+    const sets = firstSets(weekly);
+    expect(sets.slice(1).map((set) => set.rirSource)).toEqual(Array.from({ length: 11 }, () => 'estimated'));
+    expect(sets[9]).toMatchObject({ e1rmBeforeKg: epley(100, 5), xp: sets[1].xp });
+    expect(sets[9].xp).toBeGreaterThan(0);
+  });
+
+  it('still reports a record in the comeback session', () => {
+    const replay = replayHistory(
+      [day(0, [aSet('bench', 100, 5, failure)]), day(70, [aSet('bench', 105, 5, failure)])],
+      catalog,
+      TEST_BALANCE,
+      freshUser,
+    );
+    expect(replay.sessions[1].outputs.prs.length).toBeGreaterThan(0);
   });
 });
 

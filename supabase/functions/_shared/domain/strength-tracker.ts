@@ -13,6 +13,7 @@ interface ExerciseTrack {
   undominatedCandidates: TimedCandidate[];
   latestSession: SessionKey | null;
   latestSessionMax: number | null;
+  lastTrainedMs: number | null;
 }
 
 interface StrengthTracker {
@@ -43,18 +44,27 @@ function keepIfUndominated(candidates: TimedCandidate[], entry: TimedCandidate):
   candidates.splice(firstDominated, position - firstDominated, entry);
 }
 
-function admit(tracks: Map<string, ExerciseTrack>, row: StrengthHistoryRow): void {
+function admit(tracks: Map<string, ExerciseTrack>, row: StrengthHistoryRow, longestGapMs: number): void {
   const track = tracks.get(row.exerciseId) ?? {
     hasWorkingSet: false,
     undominatedCandidates: [],
     latestSession: null,
     latestSessionMax: null,
+    lastTrainedMs: null,
   };
   tracks.set(row.exerciseId, track);
-  if (!row.isWarmup) track.hasWorkingSet = true;
+  const startedMs = Date.parse(row.session.startedAt);
+  if (!row.isWarmup) {
+    if (track.lastTrainedMs !== null && startedMs - track.lastTrainedMs > longestGapMs) {
+      track.latestSession = null;
+      track.latestSessionMax = null;
+    }
+    track.hasWorkingSet = true;
+    track.lastTrainedMs = startedMs;
+  }
   const candidate = row.strengthCandidate;
   if (candidate === null) return;
-  keepIfUndominated(track.undominatedCandidates, { startedMs: Date.parse(row.session.startedAt), value: candidate });
+  keepIfUndominated(track.undominatedCandidates, { startedMs, value: candidate });
   if (track.latestSession === null || compareSessionKeys(row.session, track.latestSession) > 0) {
     track.latestSession = row.session;
     track.latestSessionMax = candidate;
@@ -69,6 +79,7 @@ function windowMax(candidates: TimedCandidate[], windowStartMs: number): number 
 }
 
 export function strengthTracker(priorRows: readonly StrengthHistoryRow[], cfg: BalanceConfig): StrengthTracker {
+  const windowMs = cfg.e1rmWindowDays * MS_PER_DAY;
   const tracks = new Map<string, ExerciseTrack>();
   const prior = [...priorRows].sort((a, b) => compareSessionKeys(a.session, b.session));
   const recorded: StrengthHistoryRow[] = [];
@@ -82,21 +93,26 @@ export function strengthTracker(priorRows: readonly StrengthHistoryRow[], cfg: B
         throw new RangeError(`strength asked for session ${session.id} after the later ${lastAnswered.id}`);
       }
       lastAnswered = session;
-      while (priorAdmitted < prior.length && isBefore(prior[priorAdmitted].session, session)) {
-        admit(tracks, prior[priorAdmitted]);
-        priorAdmitted += 1;
+      for (;;) {
+        const nextPrior = prior.at(priorAdmitted);
+        const nextRecorded = recorded.at(recordedAdmitted);
+        const priorIsDue = nextPrior !== undefined && isBefore(nextPrior.session, session);
+        const recordedIsDue = nextRecorded !== undefined && isBefore(nextRecorded.session, session);
+        if (!priorIsDue && !recordedIsDue) break;
+        const priorGoesFirst =
+          priorIsDue && (!recordedIsDue || compareSessionKeys(nextPrior.session, nextRecorded.session) <= 0);
+        admit(tracks, priorGoesFirst ? nextPrior : nextRecorded!, windowMs);
+        if (priorGoesFirst) priorAdmitted += 1;
+        else recordedAdmitted += 1;
       }
-      while (recordedAdmitted < recorded.length && isBefore(recorded[recordedAdmitted].session, session)) {
-        admit(tracks, recorded[recordedAdmitted]);
-        recordedAdmitted += 1;
-      }
-      const windowStartMs = Date.parse(session.startedAt) - cfg.e1rmWindowDays * MS_PER_DAY;
+      const windowStartMs = Date.parse(session.startedAt) - windowMs;
       const state: Record<string, ExerciseStrength> = {};
       for (const [exerciseId, track] of tracks) {
         if (!track.hasWorkingSet) continue;
         state[exerciseId] = {
           windowMax: windowMax(track.undominatedCandidates, windowStartMs),
-          fallbackMax: track.latestSessionMax,
+          fallbackMax:
+            track.lastTrainedMs !== null && track.lastTrainedMs >= windowStartMs ? track.latestSessionMax : null,
           hasPriorSession: true,
         };
       }
