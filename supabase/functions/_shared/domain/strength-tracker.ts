@@ -93,13 +93,17 @@ export function strengthTracker(priorRows: readonly StrengthHistoryRow[], cfg: B
         throw new RangeError(`strength asked for session ${session.id} after the later ${lastAnswered.id}`);
       }
       lastAnswered = session;
-      while (priorAdmitted < prior.length && isBefore(prior[priorAdmitted].session, session)) {
-        admit(tracks, prior[priorAdmitted], windowMs);
-        priorAdmitted += 1;
-      }
-      while (recordedAdmitted < recorded.length && isBefore(recorded[recordedAdmitted].session, session)) {
-        admit(tracks, recorded[recordedAdmitted], windowMs);
-        recordedAdmitted += 1;
+      for (;;) {
+        const nextPrior = prior.at(priorAdmitted);
+        const nextRecorded = recorded.at(recordedAdmitted);
+        const priorIsDue = nextPrior !== undefined && isBefore(nextPrior.session, session);
+        const recordedIsDue = nextRecorded !== undefined && isBefore(nextRecorded.session, session);
+        if (!priorIsDue && !recordedIsDue) break;
+        const priorGoesFirst =
+          priorIsDue && (!recordedIsDue || compareSessionKeys(nextPrior.session, nextRecorded.session) <= 0);
+        admit(tracks, priorGoesFirst ? nextPrior : nextRecorded!, windowMs);
+        if (priorGoesFirst) priorAdmitted += 1;
+        else recordedAdmitted += 1;
       }
       const windowStartMs = Date.parse(session.startedAt) - windowMs;
       const state: Record<string, ExerciseStrength> = {};

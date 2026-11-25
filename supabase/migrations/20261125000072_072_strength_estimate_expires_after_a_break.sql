@@ -31,7 +31,7 @@ as $$
            coalesce(max(gaps.started_at) filter (where gaps.follows_a_break), '-infinity'::timestamptz) as since
     from gaps
     group by gaps.exercise_id
-    having max(gaps.started_at) >= as_of - make_interval(days => window_days)
+    having as_of - max(gaps.started_at) <= make_interval(days => window_days)
   ),
   latest_session_with_candidates as (
     select distinct on (prior.exercise_id) prior.exercise_id, prior.session_id
@@ -42,7 +42,7 @@ as $$
     order by prior.exercise_id, prior.started_at desc, prior.session_id desc
   )
   select prior.exercise_id,
-         max(prior.candidate) filter (where prior.started_at >= as_of - make_interval(days => window_days)),
+         max(prior.candidate) filter (where as_of - prior.started_at <= make_interval(days => window_days)),
          max(prior.candidate) filter (
            where (prior.exercise_id, prior.session_id) in (
              select latest.exercise_id, latest.session_id from latest_session_with_candidates latest
