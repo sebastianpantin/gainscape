@@ -407,7 +407,7 @@ describe('how a row reads', () => {
           { intensity: 'active', durationS: 60 },
           { intensity: 'rest', durationS: 30 },
         ],
-        laps: [0, 1, 0, 1, 0].map((workoutStepIndex) => ({ workoutStepIndex })),
+        laps: [0, 1, 0, 1, 0].map((workoutStepIndex) => ({ workoutStepIndex, durationS: null })),
       }),
     ]);
     expect(rowFacts(review.rows[0], review.choices, EXERCISES, 'kg')).toBe(

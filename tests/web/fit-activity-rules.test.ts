@@ -35,6 +35,7 @@ describe('garminTypeOfFitSport', () => {
     ['fitness_equipment', 'elliptical', 'elliptical'],
     ['fitness_equipment', 'stair_climbing', 'stair_climbing'],
     ['training', 'strength_training', 'strength_training'],
+    ['training', 'cardio_training', 'indoor_cardio'],
   ])('reads %s with %s as the Garmin type %s', (sport, subSport, type) => {
     expect(garminTypeOfFitSport(sport, subSport)).toBe(type);
   });
@@ -104,7 +105,7 @@ describe('garminActivitiesFromFit', () => {
   it('reads the workout steps in step order, with a duration only for timed steps', () => {
     const parsed = {
       sessions: [session()],
-      laps: [{ wkt_step_index: index(1) }, { wkt_step_index: index(2) }, {}],
+      laps: [{ wkt_step_index: index(1), total_timer_time: 60.4 }, { wkt_step_index: index(2) }, {}],
       messages: {
         workout_step: [
           { message_index: index(2), duration_type: 'time', duration_value: 30_000, intensity: 'rest' },
@@ -115,7 +116,11 @@ describe('garminActivitiesFromFit', () => {
       },
     };
     expect(garminActivitiesFromFit(parsed)[0]).toMatchObject({
-      laps: [{ workoutStepIndex: 1 }, { workoutStepIndex: 2 }, { workoutStepIndex: null }],
+      laps: [
+        { workoutStepIndex: 1, durationS: 60.4 },
+        { workoutStepIndex: 2, durationS: null },
+        { workoutStepIndex: null, durationS: null },
+      ],
       workoutSteps: [
         { intensity: 'warmup', durationS: null },
         { intensity: 'active', durationS: 60 },
@@ -135,8 +140,11 @@ describe('garminActivitiesFromFit', () => {
       ],
       laps,
     });
-    expect(swim.laps).toEqual([{ workoutStepIndex: 0 }]);
-    expect(ride.laps).toEqual([{ workoutStepIndex: 1 }, { workoutStepIndex: 2 }]);
+    expect(swim.laps).toEqual([{ workoutStepIndex: 0, durationS: null }]);
+    expect(ride.laps).toEqual([
+      { workoutStepIndex: 1, durationS: null },
+      { workoutStepIndex: 2, durationS: null },
+    ]);
   });
 
   it('gives a multisport file without lap ranges no laps, so each session stays one steady set', () => {

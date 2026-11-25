@@ -11,6 +11,7 @@ const GARMIN_TYPE_BY_SPORT_AND_SUB_SPORT: ReadonlyMap<string, string> = new Map(
   ['swimming/lap_swimming', 'lap_swimming'],
   ['swimming/open_water', 'open_water_swimming'],
   ['rowing/indoor_rowing', 'indoor_rowing'],
+  ['training/cardio_training', 'indoor_cardio'],
 ]);
 const UNWRITTEN_STEP: GarminWorkoutStep = Object.freeze({ intensity: null, durationS: null });
 
@@ -72,7 +73,10 @@ function lapsOfSession(session: FitMessage, sessionCount: number, laps: readonly
 export function garminActivitiesFromFit(parsed: unknown): GarminActivity[] {
   const file = messageOf(parsed);
   const sessions = messagesOf(file.sessions);
-  const laps = messagesOf(file.laps).map((lap) => ({ workoutStepIndex: messageIndexOf(lap.wkt_step_index) }));
+  const laps = messagesOf(file.laps).map((lap) => ({
+    workoutStepIndex: messageIndexOf(lap.wkt_step_index),
+    durationS: numberOf(lap.total_timer_time),
+  }));
   const workoutSteps = workoutStepsOf(messagesOf(messageOf(file.messages).workout_step));
   return sessions.map((session) => ({
     type: garminTypeOfFitSport(nameOf(session.sport), nameOf(session.sub_sport)),
