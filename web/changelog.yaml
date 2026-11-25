@@ -1,3 +1,13 @@
+- prs: [245, 247, 248, 254]
+  version: 0.30.0
+  date: 2026-11-25
+  title: Import from Garmin
+  items:
+    - Bring your Garmin workouts into Gainscape. In Settings, under Garmin, choose a .fit file you exported from Garmin Connect. An Import review shows what is in it, and nothing is saved until you confirm.
+    - Runs, rides, swims, walks and other cardio become workouts with their time and distance, and a structured interval workout keeps its intervals. They earn XP and records like workouts you log yourself. Anything older than 7 days is saved as history only.
+    - Strength workouts come in too. The review shows the sets your watch recorded in groups. Pick the exercise for each group, or skip it, and Gainscape remembers your pick for next time. If the watch recorded no weight for a set, you can fill it in.
+    - The review watches for repeats. Activities you already imported or deleted are greyed out, and one that overlaps a workout you logged is marked as a possible duplicate.
+    - A cardio set can now last up to 12 hours instead of 4, so a long walk or hike fits.
 - prs: [242, 243]
   version: 0.29.0
   date: 2026-11-18
