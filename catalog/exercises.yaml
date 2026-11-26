@@ -800,6 +800,45 @@
   load_type: external
   equipment: dumbbell
   shares: { grip: 10000 }
+- key: eccentric_wrist_curl
+  name: Eccentric Wrist Curl
+  load_type: external
+  equipment: dumbbell
+  variation_of: dumbbell_wrist_curl
+  shares: { grip: 10000 }
+- key: dumbbell_reverse_wrist_curl
+  name: Dumbbell Reverse Wrist Curl
+  load_type: external
+  equipment: dumbbell
+  shares: { grip: 10000 }
+- key: eccentric_reverse_wrist_curl
+  name: Eccentric Reverse Wrist Curl
+  load_type: external
+  equipment: dumbbell
+  variation_of: dumbbell_reverse_wrist_curl
+  shares: { grip: 10000 }
+- key: dumbbell_pronation
+  name: Dumbbell Pronation
+  load_type: external
+  equipment: dumbbell
+  shares: { grip: 8000, arms: 2000 }
+- key: dumbbell_supination
+  name: Dumbbell Supination
+  load_type: external
+  equipment: dumbbell
+  shares: { grip: 8000, arms: 2000 }
+- key: isometric_wrist_flexion
+  name: Isometric Wrist Flexion
+  load_type: external
+  equipment: dumbbell
+  measure: time
+  shares: { grip: 10000 }
+- key: isometric_wrist_extension
+  name: Isometric Wrist Extension
+  load_type: external
+  equipment: dumbbell
+  measure: time
+  shares: { grip: 10000 }
 - key: box_squat
   name: Box Squat
   load_type: external

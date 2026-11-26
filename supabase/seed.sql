@@ -170,6 +170,13 @@ insert into public.exercises (id, key, name, modality, load_type, equipment, var
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_wrist_curl'), 'barbell_wrist_curl', 'Barbell Wrist Curl', 'lift', 'external', 'barbell', null, null, null, null, null, true, 'reps'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_reverse_wrist_curl'), 'barbell_reverse_wrist_curl', 'Barbell Reverse Wrist Curl', 'lift', 'external', 'barbell', null, null, null, null, null, true, 'reps'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_wrist_curl'), 'dumbbell_wrist_curl', 'Dumbbell Wrist Curl', 'lift', 'external', 'dumbbell', null, null, null, null, null, true, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'eccentric_wrist_curl'), 'eccentric_wrist_curl', 'Eccentric Wrist Curl', 'lift', 'external', 'dumbbell', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_wrist_curl'), null, null, null, null, true, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_reverse_wrist_curl'), 'dumbbell_reverse_wrist_curl', 'Dumbbell Reverse Wrist Curl', 'lift', 'external', 'dumbbell', null, null, null, null, null, true, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'eccentric_reverse_wrist_curl'), 'eccentric_reverse_wrist_curl', 'Eccentric Reverse Wrist Curl', 'lift', 'external', 'dumbbell', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_reverse_wrist_curl'), null, null, null, null, true, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_pronation'), 'dumbbell_pronation', 'Dumbbell Pronation', 'lift', 'external', 'dumbbell', null, null, null, null, null, true, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_supination'), 'dumbbell_supination', 'Dumbbell Supination', 'lift', 'external', 'dumbbell', null, null, null, null, null, true, 'reps'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'isometric_wrist_flexion'), 'isometric_wrist_flexion', 'Isometric Wrist Flexion', 'lift', 'external', 'dumbbell', null, null, null, null, null, true, 'time'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'isometric_wrist_extension'), 'isometric_wrist_extension', 'Isometric Wrist Extension', 'lift', 'external', 'dumbbell', null, null, null, null, null, true, 'time'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'box_squat'), 'box_squat', 'Box Squat', 'lift', 'external', 'barbell', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'back_squat'), null, null, null, null, true, 'reps'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'zercher_squat'), 'zercher_squat', 'Zercher Squat', 'lift', 'external', 'barbell', null, null, null, null, null, true, 'reps'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'overhead_squat'), 'overhead_squat', 'Overhead Squat', 'lift', 'external', 'barbell', null, null, null, null, null, true, 'reps'),
@@ -622,6 +629,15 @@ insert into public.exercise_skills (exercise_id, skill_id, share_bp) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_wrist_curl'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 10000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_reverse_wrist_curl'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 10000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_wrist_curl'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'eccentric_wrist_curl'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_reverse_wrist_curl'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'eccentric_reverse_wrist_curl'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_pronation'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 8000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_pronation'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'arms'), 2000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_supination'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 8000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_supination'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'arms'), 2000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'isometric_wrist_flexion'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 10000),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'isometric_wrist_extension'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'grip'), 10000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'box_squat'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'legs'), 9000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'box_squat'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'core'), 1000),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'zercher_squat'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'legs'), 8500),
@@ -797,7 +813,8 @@ insert into public.garmin_activity_types (key, exercise_id) values
 insert into public.programs (id, key, owner_user_id, name) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl'), 'ppl', null, 'Push / Pull / Legs'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower'), 'upper_lower', null, 'Upper / Lower'),
-  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x'), 'full_body_2x', null, 'Full Body 2x')
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x'), 'full_body_2x', null, 'Full Body 2x'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:golfers_elbow_rehab'), 'golfers_elbow_rehab', null, 'Golfer''s Elbow Rehab')
 on conflict (id) do update set key = excluded.key, name = excluded.name, updated_at = now();
 
 delete from public.program_days where program_id in (select id from public.programs where owner_user_id is null);
@@ -809,7 +826,8 @@ insert into public.program_days (id, program_id, position, name) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:upper'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower'), 0, 'Upper'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower:lower'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:upper_lower'), 1, 'Lower'),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:a'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x'), 0, 'Day A'),
-  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x'), 1, 'Day B');
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x'), 1, 'Day B'),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:golfers_elbow_rehab:daily'), extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:golfers_elbow_rehab'), 0, 'Daily');
 
 insert into public.program_day_exercises (day_id, position, exercise_id, target_sets, target_reps_min, target_reps_max) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:ppl:push'), 0, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'barbell_bench_press'), 4, 6, 10),
@@ -848,7 +866,11 @@ insert into public.program_day_exercises (day_id, position, exercise_id, target_
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 1, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'overhead_press'), 3, 6, 10),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 2, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'pull_up'), 3, 5, 10),
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 3, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'leg_press'), 3, 10, 15),
-  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 4, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'hanging_leg_raise'), 2, 8, 12);
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:full_body_2x:b'), 4, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'hanging_leg_raise'), 2, 8, 12),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:golfers_elbow_rehab:daily'), 0, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'eccentric_wrist_curl'), 3, 15, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:golfers_elbow_rehab:daily'), 1, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_wrist_curl'), 3, 15, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:golfers_elbow_rehab:daily'), 2, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_pronation'), 3, 15, 15),
+  (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'program:golfers_elbow_rehab:daily'), 3, extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'dumbbell_supination'), 3, 15, 15);
 
 insert into public.challenges (id, key, name, kind, definition, retired_at) values
   (extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'challenge:deadlift_and_pull_up'), 'deadlift_and_pull_up', 'Deadlift and Pull-up', 'prescription', jsonb_build_object('kind', 'prescription', 'groups', jsonb_build_array(jsonb_build_object('rounds', 5, 'exercises', jsonb_build_array(jsonb_build_object('exerciseId', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'deadlift'), 'reps', 5, 'pct', 70), jsonb_build_object('exerciseId', extensions.uuid_generate_v5('67cd74e5-e6ca-47c9-831c-1f8d246d8948'::uuid, 'pull_up'), 'reps', 5, 'pct', null))))), null),

@@ -142,6 +142,8 @@ describe('catalog generator', () => {
     expect(
       holds.map(({ key, measure, loadType, variationOf, shares }) => [key, measure, loadType, variationOf, shares]),
     ).toEqual([
+      ['isometric_wrist_flexion', 'time', 'external', null, [{ skill: 'grip', shareBp: 10000 }]],
+      ['isometric_wrist_extension', 'time', 'external', null, [{ skill: 'grip', shareBp: 10000 }]],
       [
         'farmers_carry',
         'distance',

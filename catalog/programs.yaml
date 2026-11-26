@@ -65,3 +65,13 @@
         - { exercise: pull_up, sets: 3, reps_min: 5, reps_max: 10 }
         - { exercise: leg_press, sets: 3, reps_min: 10, reps_max: 15 }
         - { exercise: hanging_leg_raise, sets: 2, reps_min: 8, reps_max: 12 }
+- key: golfers_elbow_rehab
+  name: Golfer's Elbow Rehab
+  days:
+    - key: daily
+      name: Daily
+      exercises:
+        - { exercise: eccentric_wrist_curl, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: dumbbell_wrist_curl, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: dumbbell_pronation, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: dumbbell_supination, sets: 3, reps_min: 15, reps_max: 15 }
