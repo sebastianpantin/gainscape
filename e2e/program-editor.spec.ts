@@ -139,7 +139,7 @@ test('cancel edits to a saved program keeps the saved plan', async ({ page }) =>
   expect(await planLines(username, 'Keep Me')).toEqual(['Day 1 back_squat 3×8-12']);
 });
 
-test('the exercise picker offers lifts but no holds, since a program plans sets of reps', async ({ page }) => {
+test('the exercise picker offers lifts and timed holds but no carries', async ({ page }) => {
   await register(page, uniqueUsername('ph'));
   await openFromProfile(page, 'Programs');
   await page.getByRole('button', { name: 'New program' }).click();
@@ -147,7 +147,12 @@ test('the exercise picker offers lifts but no holds, since a program plans sets 
   await search.fill('Back Squat');
   await expect(day(page, 1).getByRole('button', { name: /^Back Squat\b/ })).toBeVisible();
   await search.fill('Dead Hang');
-  await expect(day(page, 1).getByRole('button', { name: /^Dead Hang\b/ })).toHaveCount(0);
+  await day(page, 1)
+    .getByRole('button', { name: /^Dead Hang\b/ })
+    .click();
+  await expect(day(page, 1).getByRole('spinbutton', { name: 'Dead Hang seconds per set', exact: true })).toHaveValue(
+    '30',
+  );
   await search.fill('Farmers Carry');
   await expect(day(page, 1).getByRole('button', { name: /^Farmers Carry\b/ })).toHaveCount(0);
 });

@@ -129,7 +129,7 @@ test('Train offers to follow a program until you say not now', async ({ page }) 
   await expect(card).toHaveCount(0);
 });
 
-test('Programs puts the program you follow first, then programs to follow, yours and ones to build on', async ({
+test('Programs puts the program you follow first, then programs to follow, yours, ones to build on and rehab', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -140,6 +140,7 @@ test('Programs puts the program you follow first, then programs to follow, yours
     'Follow a program',
     'Your programs',
     'Build your own',
+    'Rehab',
   ]);
   await expect(main.getByRole('region', { name: 'Active program', exact: true })).toHaveCount(0);
 
@@ -152,6 +153,7 @@ test('Programs puts the program you follow first, then programs to follow, yours
     /^Follow a program/,
     /^Your programs/,
     /^Build your own/,
+    /^Rehab/,
   ]);
   await active.getByRole('link', { name: 'Manage program', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: '5/3/1', exact: true })).toBeVisible();

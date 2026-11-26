@@ -10,7 +10,7 @@ The ordered, append-only history of the Postgres schema: tables, RLS policies, g
 ## Map
 
 - File names are `YYYYMMDDHHMMSS_NNN_name.sql`. The timestamp orders them; `NNN` is a three-digit sequence. List the directory to see the history.
-- To find the current definition of a function, grep for `function public.<name>(` (or `private.`) and take the highest-numbered file. Many functions were redefined several times (for example `save_program` in 005, 010, 018, 031, 039, 047; `craft` in 010, 030, 031, 037; `publish_program`, `enroll_program`, `delete_program` last in 049).
+- To find the current definition of a function, grep for `function public.<name>(` (or `private.`) and take the highest-numbered file. Many functions were redefined several times (for example `save_program` in 005, 010, 018, 031, 039, 047, 074; `craft` in 010, 030, 031, 037; `enroll_program`, `delete_program` last in 049; `copy_program` and `publish_program` last in 074).
 - Server-only helpers live in the `private` schema (`private.limit_client_write`, `private.cap_pins`, `private.account_active`, `private.can_view_user`, `private.is_valid_enrollment`, `private.is_valid_program_position`, `private.resetting_account`).
 - Rate limit rules live in `private.rate_limit_rules` (011 and later); client write limits run through `private.limit_client_write` triggers (020).
 
@@ -52,7 +52,7 @@ SQL that restates domain or web rules (change both sides together, with a new mi
 - `profiles_display_name_visible` restates `parsedName` in `web/src/lib/names.ts`.
 - `cardio_duration_within_bounds` (last in 070) restates `countedWorkSeconds`, `intervalDurationSeconds` and `CARDIO_BOUNDS` (`domain/cardio.ts`). A steady bout may last 12 hours, as long as a workout (`MAX_SESSION_DURATION_MS`), so a long walk or hike fits; an interval stays at 4 hours.
 - `set_is_lift_cardio_or_hold` and the hold branches (044) restate `HOLD_BOUNDS` in `domain/types.ts`.
-- `set_pain_within_bounds` (073) restates `PAIN_BOUNDS` in `domain/types.ts`.
+- `set_pain_within_bounds` (073) restates `PAIN_BOUNDS` in `domain/types.ts`; `target_duration_s_in_range` and the `save_program` duration check (074) restate `HOLD_BOUNDS.durationS`.
 - `save_exercise_note` trims an explicit, locale-independent whitespace set (ECMAScript whitespace and line terminators including U+FEFF, plus U+0085), the same set as `trimNote` in `web/src/lib/exercises/exercise-note-rules.ts`; never use `\s` (038).
 - `exercise_strength_state` (016, restated in 072) matches the domain `strengthStateAt`, including the break rule: `fallback_max` is null once the lift went longer than the window without a working set.
 - `private.compiled_program_definition` (040) compiles a user program into a domain rotation definition; its output must parse with `parseProgramDefinition` and match the web `customTemplateKey` / `customLiftKey` (`tests/integration/program-follow-parity.test.ts`).
