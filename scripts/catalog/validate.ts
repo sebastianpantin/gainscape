@@ -2,11 +2,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GEAR_SLOTS, ITEM_ICON_KINDS, ITEM_TIERS } from '../../supabase/functions/_shared/domain/crafting.ts';
 import { GEAR_SLOT_SKILLS, SKILLS_WITHOUT_GEAR } from '../../supabase/functions/_shared/domain/gear.ts';
-import { CARDIO_EFFORT_LEVELS } from '../../supabase/functions/_shared/domain/types.ts';
+import { CARDIO_EFFORT_LEVELS, HOLD_BOUNDS } from '../../supabase/functions/_shared/domain/types.ts';
 import { MOBILITY_SKILL_KEY } from '../../supabase/functions/_shared/domain/cardio.ts';
 import {
   type CatalogChallengeDefinition,
   type CatalogData,
+  type CatalogDayExercise,
   type CatalogExercise,
   type CatalogItem,
   type CatalogQuest,
@@ -182,6 +183,32 @@ function checkGarminActivityTypes(catalog: CatalogData, problems: string[]): voi
   }
 }
 
+function checkProgramTarget(where: string, entry: CatalogDayExercise, timedHold: boolean, problems: string[]): void {
+  const { repsMin, repsMax, durationS } = entry;
+  if (timedHold) {
+    if (
+      repsMin !== null ||
+      repsMax !== null ||
+      durationS === null ||
+      !inRange(durationS, 1, HOLD_BOUNDS.durationS.max)
+    ) {
+      problems.push(
+        `${where} is a timed hold, so it needs 1 <= duration_s <= ${HOLD_BOUNDS.durationS.max} and no reps`,
+      );
+    }
+    return;
+  }
+  if (durationS !== null) problems.push(`${where} plans reps, so it needs no duration_s`);
+  if (
+    repsMin === null ||
+    repsMax === null ||
+    !inRange(repsMin, 1, MAX_PROGRAM_REPS) ||
+    !inRange(repsMax, repsMin, MAX_PROGRAM_REPS)
+  ) {
+    problems.push(`${where} needs 1 <= reps_min <= reps_max <= ${MAX_PROGRAM_REPS}`);
+  }
+}
+
 function checkProgramDays(catalog: CatalogData, problems: string[]): void {
   const exercisesByKey = exercisesByKeyOf(catalog);
   for (const program of catalog.programs) {
@@ -203,14 +230,13 @@ function checkProgramDays(catalog: CatalogData, problems: string[]): void {
         problems.push(`${where} uses unknown exercise "${entry.exercise}"`);
       } else if (exercise.modality === 'cardio') {
         problems.push(`${where} uses cardio exercise "${entry.exercise}"`);
-      } else if (exercise.measure !== 'reps') {
-        problems.push(`${where} uses hold exercise "${entry.exercise}"`);
+      } else if (exercise.measure === 'distance') {
+        problems.push(`${where} uses carry exercise "${entry.exercise}"`);
+      } else {
+        checkProgramTarget(`${where} exercise ${index + 1}`, entry, exercise.measure === 'time', problems);
       }
       if (!inRange(entry.sets, 1, MAX_PROGRAM_SETS)) {
         problems.push(`${where} exercise ${index + 1} needs 1-${MAX_PROGRAM_SETS} sets`);
-      }
-      if (!inRange(entry.repsMin, 1, MAX_PROGRAM_REPS) || !inRange(entry.repsMax, entry.repsMin, MAX_PROGRAM_REPS)) {
-        problems.push(`${where} exercise ${index + 1} needs 1 <= reps_min <= reps_max <= ${MAX_PROGRAM_REPS}`);
       }
     });
   }

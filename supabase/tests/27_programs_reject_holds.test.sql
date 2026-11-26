@@ -38,7 +38,7 @@ select tests.authenticate_as(:'owner');
 select throws_ok(
   format($$select public.save_program(%L::jsonb)$$, :'hang_program'),
   'P0001', 'invalid_program',
-  'a timed hold cannot be planned in a program'
+  'a timed hold cannot be planned with reps'
 );
 select throws_ok(
   format($$select public.save_program(%L::jsonb)$$, :'carry_program'),

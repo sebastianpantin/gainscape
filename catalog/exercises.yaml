@@ -619,6 +619,16 @@
   load_type: external
   equipment: cable
   shares: { shoulders: 10000 }
+- key: cable_internal_rotation
+  name: Cable Internal Rotation
+  load_type: external
+  equipment: cable
+  shares: { shoulders: 8000, chest: 2000 }
+- key: side_lying_external_rotation
+  name: Side-lying External Rotation
+  load_type: external
+  equipment: dumbbell
+  shares: { shoulders: 10000 }
 - key: barbell_upright_row
   name: Barbell Upright Row
   load_type: external
@@ -1022,6 +1032,29 @@
   name: Dumbbell Calf Raise
   load_type: external
   equipment: dumbbell
+  shares: { legs: 10000 }
+- key: eccentric_heel_drop
+  name: Eccentric Heel Drop
+  load_type: bodyweight_plus
+  equipment: bodyweight
+  shares: { legs: 10000 }
+- key: bent_knee_eccentric_heel_drop
+  name: Bent-knee Eccentric Heel Drop
+  load_type: bodyweight_plus
+  equipment: bodyweight
+  variation_of: eccentric_heel_drop
+  shares: { legs: 10000 }
+- key: wall_sit
+  name: Wall Sit
+  load_type: bodyweight_plus
+  equipment: bodyweight
+  measure: time
+  shares: { legs: 10000 }
+- key: isometric_leg_extension
+  name: Isometric Leg Extension
+  load_type: external
+  equipment: machine
+  measure: time
   shares: { legs: 10000 }
 - key: power_clean
   name: Power Clean

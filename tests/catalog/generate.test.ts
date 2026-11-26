@@ -144,6 +144,8 @@ describe('catalog generator', () => {
     ).toEqual([
       ['isometric_wrist_flexion', 'time', 'external', null, [{ skill: 'grip', shareBp: 10000 }]],
       ['isometric_wrist_extension', 'time', 'external', null, [{ skill: 'grip', shareBp: 10000 }]],
+      ['wall_sit', 'time', 'bodyweight_plus', null, [{ skill: 'legs', shareBp: 10000 }]],
+      ['isometric_leg_extension', 'time', 'external', null, [{ skill: 'legs', shareBp: 10000 }]],
       [
         'farmers_carry',
         'distance',
@@ -176,6 +178,18 @@ describe('catalog generator', () => {
     expect(exercises).toContain(
       `'dead_hang', 'Dead Hang', 'lift', 'bodyweight', 'bodyweight', null, null, null, null, null, true, 'time')`,
     );
+  });
+
+  it('renders a timed hold program slot with its duration and no reps, and the rehab category', () => {
+    const statements = renderStatements(loadCatalogData());
+    const programs = statements.find((statement) => statement.startsWith('insert into public.programs'))!;
+    expect(programs).toContain('(id, key, owner_user_id, name, category)');
+    expect(programs).toContain(`'golfers_elbow_rehab', null, 'Golfer''s Elbow Rehab', 'rehab')`);
+    expect(programs).toContain(`'ppl', null, 'Push / Pull / Legs', null)`);
+    const slots = statements.find((statement) => statement.startsWith('insert into public.program_day_exercises'))!;
+    expect(slots).toContain('target_reps_min, target_reps_max, target_duration_s)');
+    expect(slots).toMatch(/, 5, null, null, 45\)/);
+    expect(slots).toMatch(/, 3, 15, 15, null\)/);
   });
 
   it('renders the skill modality and the cardio exercise columns', () => {

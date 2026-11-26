@@ -422,9 +422,30 @@ describe('catalog validation', () => {
       /lift exercise "deadlift" has a cardio block/,
     ],
     [
-      'programs use no hold exercise',
+      'programs use no carry',
       (c) => (c.programs[0].days[0].exercises[0].exercise = 'farmers_carry'),
-      /program day "ppl:push" uses hold exercise "farmers_carry"/,
+      /program day "ppl:push" uses carry exercise "farmers_carry"/,
+    ],
+    [
+      'a timed hold in a program has a duration and no reps',
+      (c) => (c.programs[0].days[0].exercises[0].exercise = 'dead_hang'),
+      /program day "ppl:push" exercise 1 is a timed hold, so it needs 1 <= duration_s <= 3600 and no reps/,
+    ],
+    [
+      'a timed hold in a program lasts at most an hour',
+      (c) =>
+        Object.assign(c.programs[0].days[0].exercises[0], {
+          exercise: 'dead_hang',
+          repsMin: null,
+          repsMax: null,
+          durationS: 3601,
+        }),
+      /program day "ppl:push" exercise 1 is a timed hold, so it needs 1 <= duration_s <= 3600 and no reps/,
+    ],
+    [
+      'a rep exercise in a program has no duration',
+      (c) => (c.programs[0].days[0].exercises[0].durationS = 30),
+      /program day "ppl:push" exercise 1 plans reps, so it needs no duration_s/,
     ],
     [
       'challenges use no hold exercise',

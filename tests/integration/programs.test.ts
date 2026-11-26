@@ -13,6 +13,7 @@ import { aSet, hoursAgo, payloadAt } from './session-support.ts';
 const templateContents = {
   ppl: {
     name: 'Push / Pull / Legs',
+    category: null,
     days: [
       [
         'Push',
@@ -48,6 +49,7 @@ const templateContents = {
   },
   upper_lower: {
     name: 'Upper / Lower',
+    category: null,
     days: [
       [
         'Upper',
@@ -75,6 +77,7 @@ const templateContents = {
   },
   full_body_2x: {
     name: 'Full Body 2x',
+    category: null,
     days: [
       [
         'Day A',
@@ -94,14 +97,58 @@ const templateContents = {
   },
   golfers_elbow_rehab: {
     name: "Golfer's Elbow Rehab",
+    category: 'rehab',
     days: [
       [
         'Daily',
         [
+          'isometric_wrist_flexion 5x45s',
           'eccentric_wrist_curl 3x15-15',
           'dumbbell_wrist_curl 3x15-15',
           'dumbbell_pronation 3x15-15',
           'dumbbell_supination 3x15-15',
+        ],
+      ],
+    ],
+  },
+  tennis_elbow_rehab: {
+    name: 'Tennis Elbow Rehab',
+    category: 'rehab',
+    days: [
+      [
+        'Daily',
+        [
+          'isometric_wrist_extension 5x45s',
+          'eccentric_reverse_wrist_curl 3x15-15',
+          'dumbbell_reverse_wrist_curl 3x15-15',
+          'dumbbell_supination 3x15-15',
+        ],
+      ],
+    ],
+  },
+  achilles_rehab: {
+    name: 'Achilles Tendon Rehab',
+    category: 'rehab',
+    days: [
+      ['Daily', ['eccentric_heel_drop 3x15-15', 'bent_knee_eccentric_heel_drop 3x15-15', 'seated_calf_raise 3x15-20']],
+    ],
+  },
+  patellar_tendon_rehab: {
+    name: 'Patellar Tendon Rehab',
+    category: 'rehab',
+    days: [['Daily', ['isometric_leg_extension 5x45s', 'wall_sit 5x45s', 'leg_extension 3x12-15']]],
+  },
+  rotator_cuff_rehab: {
+    name: 'Rotator Cuff Rehab',
+    category: 'rehab',
+    days: [
+      [
+        'Daily',
+        [
+          'side_lying_external_rotation 3x15-15',
+          'cable_external_rotation 3x15-15',
+          'cable_internal_rotation 3x15-15',
+          'face_pull 3x15-15',
         ],
       ],
     ],
@@ -226,26 +273,28 @@ async function storedProgramDayId(sessionId: string): Promise<string | null> {
 interface TemplateRow {
   key: string;
   name: string;
+  category: string | null;
   program_days: {
     name: string;
     position: number;
     program_day_exercises: {
       position: number;
       target_sets: number;
-      target_reps_min: number;
-      target_reps_max: number;
+      target_reps_min: number | null;
+      target_reps_max: number | null;
+      target_duration_s: number | null;
       exercises: { key: string; owner_user_id: string | null; archived_at: string | null };
     }[];
   }[];
 }
 
 describe('program templates', () => {
-  it('seeds exactly the four tabled templates, readable by any user', async () => {
+  it('seeds exactly the tabled templates, readable by any user', async () => {
     const user = await createTestUser();
     const { data, error } = await user.client
       .from('programs')
       .select(
-        'key, name, owner_user_id, program_days(name, position, program_day_exercises(position, target_sets, target_reps_min, target_reps_max, exercises(key, owner_user_id, archived_at)))',
+        'key, name, category, owner_user_id, program_days(name, position, program_day_exercises(position, target_sets, target_reps_min, target_reps_max, target_duration_s, exercises(key, owner_user_id, archived_at)))',
       )
       .is('owner_user_id', null);
     expect(error).toBeNull();
@@ -255,13 +304,18 @@ describe('program templates', () => {
         program.key,
         {
           name: program.name,
+          category: program.category,
           days: [...program.program_days]
             .sort((a, b) => a.position - b.position)
             .map((day) => [
               day.name,
               [...day.program_day_exercises]
                 .sort((a, b) => a.position - b.position)
-                .map((x) => `${x.exercises.key} ${x.target_sets}x${x.target_reps_min}-${x.target_reps_max}`),
+                .map((x) =>
+                  x.target_duration_s === null
+                    ? `${x.exercises.key} ${x.target_sets}x${x.target_reps_min}-${x.target_reps_max}`
+                    : `${x.exercises.key} ${x.target_sets}x${x.target_duration_s}s`,
+                ),
             ]),
         },
       ]),
