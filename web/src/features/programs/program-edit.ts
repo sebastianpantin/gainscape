@@ -6,6 +6,7 @@ import type { Program, ProgramDoc } from '../../lib/programs/programs.ts';
 import { insertedAt, moved } from '../../lib/reorder.ts';
 import { KG_PER_LB } from '../../lib/units.ts';
 import { roundTo } from '@domain/math.ts';
+import { HOLD_BOUNDS } from '@domain/types.ts';
 import type { PlannedExercise, ProgressionKind } from '../../offline/draft-starts.ts';
 import { updateExerciseAt } from '../../lib/workout/exercise-edit-rules.ts';
 
@@ -17,6 +18,8 @@ export const MAX_DAYS = 14;
 export const MAX_EXERCISES_PER_DAY = 20;
 export const TARGET_SETS_RANGE = { lowest: 1, highest: 10 } as const;
 export const TARGET_REPS_RANGE = { lowest: 1, highest: 100 } as const;
+export const TARGET_DURATION_RANGE = { lowest: HOLD_BOUNDS.durationS.min, highest: HOLD_BOUNDS.durationS.max } as const;
+const DEFAULT_HOLD_DURATION_S = 30;
 
 const DEFAULT_TARGET = { targetSets: 3, targetRepsMin: 8, targetRepsMax: 12, progression: { kind: 'none' } } as const;
 
@@ -160,11 +163,20 @@ export function restorePlannedExercise(
   }));
 }
 
-export function addPlannedExercise(doc: ProgramDoc, dayIndex: number, exerciseId: string): ProgramDoc {
-  return updateDayAt(doc, dayIndex, (day) => ({
-    ...day,
-    exercises: [...day.exercises, { exerciseId, ...DEFAULT_TARGET }],
-  }));
+export function isTimedSlot(planned: PlannedExercise): boolean {
+  return planned.targetDurationS != null;
+}
+
+export function addPlannedExercise(
+  doc: ProgramDoc,
+  dayIndex: number,
+  exerciseId: string,
+  { timed }: { timed: boolean } = { timed: false },
+): ProgramDoc {
+  const added: PlannedExercise = timed
+    ? { exerciseId, ...DEFAULT_TARGET, targetDurationS: DEFAULT_HOLD_DURATION_S }
+    : { exerciseId, ...DEFAULT_TARGET };
+  return updateDayAt(doc, dayIndex, (day) => ({ ...day, exercises: [...day.exercises, added] }));
 }
 
 export function programNameProblem(name: string): string | null {
@@ -189,7 +201,9 @@ export function exerciseIssue(doc: ProgramDoc): string | null {
 
 export function targetIssue(doc: ProgramDoc, nameOf: (exerciseId: string) => string): string | null {
   for (const day of doc.days) {
-    const swapped = day.exercises.find((planned) => planned.targetRepsMin > planned.targetRepsMax);
+    const swapped = day.exercises.find(
+      (planned) => !isTimedSlot(planned) && planned.targetRepsMin > planned.targetRepsMax,
+    );
     if (swapped) return `${nameOf(swapped.exerciseId)} on ${trimmedName(day.name)}: reps min can't be above reps max.`;
   }
   return null;

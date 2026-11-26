@@ -3,14 +3,19 @@ import type { Program, ProgramDoc } from './programs.ts';
 import { z } from 'zod';
 import { columnsOf, numericColumn } from '../rows.ts';
 
+export const PROGRAM_CATEGORIES = ['rehab'] as const;
+
+export type ProgramCategory = (typeof PROGRAM_CATEGORIES)[number];
+
 const PROGRESSION_KINDS = ['none', 'fixed', 'linear'] as const satisfies readonly ProgressionKind[];
 
 const programDayExerciseRowSchema = z.object({
   position: z.number(),
   exercise_id: z.string(),
   target_sets: z.number(),
-  target_reps_min: z.number(),
-  target_reps_max: z.number(),
+  target_reps_min: z.number().nullable(),
+  target_reps_max: z.number().nullable(),
+  target_duration_s: z.number().nullable(),
   progression: z.enum(PROGRESSION_KINDS),
   increment_kg: numericColumn.nullable(),
   increment_lb: numericColumn.nullable(),
@@ -27,6 +32,7 @@ export const programRowSchema = z.object({
   id: z.string(),
   key: z.string().nullable(),
   name: z.string(),
+  category: z.enum(PROGRAM_CATEGORIES).nullable(),
   owner_user_id: z.string().nullable(),
   copied_from_id: z.string().nullable(),
   program_days: z.array(programDayRowSchema),
@@ -48,8 +54,12 @@ function progressionOf(row: ProgramExerciseRow): PlannedProgression {
 
 function plannedExercisePayload({ progression, ...planned }: PlannedExercise) {
   const linear = progression.kind === 'linear';
+  const timed = planned.targetDurationS != null;
   return {
     ...planned,
+    targetRepsMin: timed ? null : planned.targetRepsMin,
+    targetRepsMax: timed ? null : planned.targetRepsMax,
+    targetDurationS: planned.targetDurationS ?? null,
     progression: progression.kind,
     incrementKg: linear ? progression.incrementKg : null,
     incrementLb: linear ? progression.incrementLb : null,
@@ -68,6 +78,7 @@ export function toProgram(row: ProgramRow): Program {
     id: row.id,
     key: row.key,
     name: row.name,
+    category: row.category,
     ownerUserId: row.owner_user_id,
     copiedFromId: row.copied_from_id,
     days: [...row.program_days]
@@ -81,8 +92,9 @@ export function toProgram(row: ProgramRow): Program {
           .map((exercise) => ({
             exerciseId: exercise.exercise_id,
             targetSets: exercise.target_sets,
-            targetRepsMin: exercise.target_reps_min,
-            targetRepsMax: exercise.target_reps_max,
+            targetRepsMin: exercise.target_reps_min ?? 0,
+            targetRepsMax: exercise.target_reps_max ?? 0,
+            targetDurationS: exercise.target_duration_s,
             progression: progressionOf(exercise),
           })),
       })),

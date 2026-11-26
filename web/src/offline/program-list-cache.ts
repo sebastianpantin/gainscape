@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PROGRAM_CATEGORIES } from '../lib/programs/program-row-rules.ts';
 import { type Program, type ProgramDoc } from '../lib/programs/programs.ts';
 import { userCache } from './cache-first.ts';
 
@@ -14,6 +15,7 @@ const programSchema = z.object({
   id: z.string(),
   key: z.string().nullable(),
   name: z.string(),
+  category: z.enum(PROGRAM_CATEGORIES).nullable().optional(),
   ownerUserId: z.string().nullable(),
   copiedFromId: z.string().nullable(),
   days: z.array(
@@ -27,6 +29,7 @@ const programSchema = z.object({
           targetSets: z.number(),
           targetRepsMin: z.number(),
           targetRepsMax: z.number(),
+          targetDurationS: z.number().nullable().optional(),
           progression: progressionSchema.default({ kind: 'none' }),
         }),
       ),

@@ -29,6 +29,7 @@ import {
 import {
   type CardioExercise,
   isPlannableExercise,
+  isProgramExercise,
   type LiftExercise,
   type LoadType,
 } from '../../web/src/lib/exercises/catalog-rules.ts';
@@ -95,6 +96,15 @@ describe('isPlannableExercise', () => {
 
   it('leaves out a cardio activity', () => {
     expect(isPlannableExercise(running)).toBe(false);
+  });
+
+  it('lets a program plan rep lifts and timed holds, but no carry or cardio', () => {
+    expect(isProgramExercise(lift({}))).toBe(true);
+    expect(isProgramExercise(lift({ id: 'sit', key: 'wall_sit', loadType: 'bodyweight_plus', measure: 'time' }))).toBe(
+      true,
+    );
+    expect(isProgramExercise(lift({ id: 'carry', key: 'farmers_carry', measure: 'distance' }))).toBe(false);
+    expect(isProgramExercise(running)).toBe(false);
   });
 });
 
@@ -188,6 +198,21 @@ describe('planned exercise changes', () => {
     expect(movePlannedExercise(doc, 0, 0, 1).days[0].exercises.map((e) => e.exerciseId)).toEqual(['row', 'bench']);
     expect(removePlannedExercise(doc, 0, 0).days[0].exercises.map((e) => e.exerciseId)).toEqual(['row']);
     expect(addPlannedExercise(doc, 1, 'deadlift').days[1].exercises.at(-1)).toEqual(planned('deadlift'));
+  });
+
+  it('adds a timed hold with a 30 second target and no progression', () => {
+    expect(addPlannedExercise(doc, 1, 'wall-sit', { timed: true }).days[1].exercises.at(-1)).toEqual({
+      ...planned('wall-sit'),
+      targetDurationS: 30,
+    });
+  });
+
+  it('never blames a timed hold for its unused reps', () => {
+    const withHold = changePlannedExercise(addPlannedExercise(doc, 1, 'wall-sit', { timed: true }), 1, 1, {
+      targetRepsMin: 12,
+      targetRepsMax: 8,
+    });
+    expect(targetIssue(withHold, () => 'Wall Sit')).toBeNull();
   });
 
   it('adds planned exercises up to the limit a day holds', () => {

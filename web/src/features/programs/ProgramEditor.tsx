@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useIsOffline } from '../../lib/platform/use-online.ts';
-import { exerciseLabels, isLiftExercise, isPlannableExercise } from '../../lib/exercises/catalog-rules.ts';
+import { exerciseLabels, isLiftExercise, isProgramExercise, isTimedHold } from '../../lib/exercises/catalog-rules.ts';
 import { cachedPrograms, type ProgramDoc, publishProgram, saveProgram } from '../../lib/programs/programs.ts';
 import { type CarriedFollow, followStatus, workingWeights } from '../../lib/programs/program-follow-rules.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
@@ -36,6 +36,7 @@ import {
   INCREMENT_PRESETS,
   INCREMENT_RANGE,
   INCREMENT_STEP,
+  isTimedSlot,
   MAX_EXERCISES_PER_DAY,
   moveDay,
   movePlannedExercise,
@@ -51,6 +52,7 @@ import {
   renameDay,
   restoreDay,
   targetIssue,
+  TARGET_DURATION_RANGE,
   TARGET_REPS_RANGE,
   TARGET_SETS_RANGE,
   trimmedDoc,
@@ -147,7 +149,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
     );
 
   const byId = new Map((exercises ?? []).map((exercise) => [exercise.id, exercise]));
-  const pickable = (exercises ?? []).filter(isPlannableExercise).filter((exercise) => !exercise.archived);
+  const pickable = (exercises ?? []).filter(isProgramExercise).filter((exercise) => !exercise.archived);
 
   const nameOf = (exerciseId: string) => byId.get(exerciseId)?.name ?? 'Unknown exercise';
   const loadTypeOf = (exerciseId: string) => {
@@ -318,6 +320,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
                 const exercise = byId.get(planned.exerciseId);
                 const name = nameOf(planned.exerciseId);
                 const { progression } = planned;
+                const timed = isTimedSlot(planned);
                 return (
                   <li className="stack program-exercise" key={plannedKey}>
                     <div className="row spread">
@@ -353,7 +356,7 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
                         </button>
                       </span>
                     </div>
-                    {(loadTypeOf(planned.exerciseId) === 'external' || progression.kind !== 'none') && (
+                    {!timed && (loadTypeOf(planned.exerciseId) === 'external' || progression.kind !== 'none') && (
                       <SegmentedChoice
                         label={`${name} progression`}
                         options={PROGRESSION_OPTIONS}
@@ -392,7 +395,17 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
                         wholeNumber
                         onCommit={(targetSets) => changeAt(dayIndex, exerciseIndex, { targetSets })}
                       />
-                      {progression.kind === 'linear' ? (
+                      {timed ? (
+                        <NumberTextField
+                          label="Seconds"
+                          accessibleName={`${name} seconds per set`}
+                          value={planned.targetDurationS ?? TARGET_DURATION_RANGE.lowest}
+                          {...TARGET_DURATION_RANGE}
+                          wholeNumber
+                          lastInGroup
+                          onCommit={(targetDurationS) => changeAt(dayIndex, exerciseIndex, { targetDurationS })}
+                        />
+                      ) : progression.kind === 'linear' ? (
                         <NumberTextField
                           label="Reps"
                           value={planned.targetRepsMin}
@@ -430,7 +443,9 @@ export function ProgramEditor({ userId, creating = false }: ProgramEditorProps) 
             {canAddPlannedExercise(day) ? (
               <ExercisePicker
                 exercises={pickable}
-                onPick={(exercise) => setDoc(addPlannedExercise(doc, dayIndex, exercise.id))}
+                onPick={(exercise) =>
+                  setDoc(addPlannedExercise(doc, dayIndex, exercise.id, { timed: isTimedHold(exercise) }))
+                }
               />
             ) : (
               <p className="hint">A day holds at most {MAX_EXERCISES_PER_DAY} exercises.</p>

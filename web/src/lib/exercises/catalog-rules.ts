@@ -80,6 +80,14 @@ export function isPlannableExercise(exercise: Exercise): exercise is LiftExercis
   return isLiftExercise(exercise) && exercise.measure === undefined;
 }
 
+export function isTimedHold(exercise: Exercise): exercise is LiftExercise {
+  return isLiftExercise(exercise) && exercise.measure === 'time';
+}
+
+export function isProgramExercise(exercise: Exercise): exercise is LiftExercise {
+  return isPlannableExercise(exercise) || isTimedHold(exercise);
+}
+
 export function isCardioExercise(exercise: Exercise): exercise is CardioExercise {
   return exercise.modality === 'cardio';
 }

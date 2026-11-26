@@ -63,6 +63,37 @@ describe('saved program list', () => {
     ]);
   });
 
+  it('reads back a rehab program with a timed hold', () => {
+    const storage = new MemoryStorage();
+    const rehab: Program = {
+      id: 'template-rehab',
+      key: 'patellar_tendon_rehab',
+      name: 'Patellar Tendon Rehab',
+      category: 'rehab',
+      ownerUserId: null,
+      copiedFromId: null,
+      days: [
+        {
+          id: 'day-daily',
+          name: 'Daily',
+          position: 0,
+          exercises: [
+            {
+              exerciseId: 'wall-sit',
+              targetSets: 5,
+              targetRepsMin: 0,
+              targetRepsMax: 0,
+              targetDurationS: 45,
+              progression: { kind: 'none' },
+            },
+          ],
+        },
+      ],
+    };
+    programListCache.save(storage, USER_ID, [rehab]);
+    expect(programListCache.read(storage, USER_ID)).toEqual([rehab]);
+  });
+
   it('ignores a saved list with an unknown progression', () => {
     const storage = new MemoryStorage();
     programListCache.save(storage, USER_ID, PROGRAMS);

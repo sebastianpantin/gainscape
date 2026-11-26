@@ -20,6 +20,7 @@ const DATABASE_ERROR_TEXT: Readonly<Record<string, string>> = {
   enrollment_not_found: STOPPED_ELSEWHERE_TEXT,
   invalid_event: "That change can't be saved. Check the numbers and try again.",
   not_authenticated: SIGN_IN_TEXT,
+  program_has_holds: "Programs with timed holds can't be followed. Start their days from Train.",
 };
 
 export function programErrorText(error: unknown): string {

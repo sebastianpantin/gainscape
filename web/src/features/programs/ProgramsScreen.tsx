@@ -12,8 +12,8 @@ import {
   ownPrograms,
   type Program,
   publishProgram,
-  templates,
 } from '../../lib/programs/programs.ts';
+import { canFollowProgram, templatesIn } from '../../lib/programs/program-list-rules.ts';
 import { messageOf } from '../../lib/error-text.ts';
 import { formatCount } from '../../lib/format.ts';
 import { PROGRAM_OFFLINE_TEXT, programErrorText } from '../../lib/programs/program-error-rules.ts';
@@ -39,6 +39,45 @@ interface PendingDelete {
 
 function daySummary(program: Program): string {
   return program.days.map((day) => day.name).join(' · ');
+}
+
+interface TemplateListProps {
+  heading: string;
+  hint?: string;
+  programs: readonly Program[];
+  busy: boolean;
+  onCopy: (template: Program) => void;
+}
+
+function TemplateList({ heading, hint, programs, busy, onCopy }: TemplateListProps) {
+  if (programs.length === 0) return null;
+  return (
+    <section className="stack" aria-label={heading}>
+      <h2>{heading}</h2>
+      {hint && <p className="muted">{hint}</p>}
+      <ul className="stack exercise-list">
+        {programs.map((template) => (
+          <li className="panel row spread" key={template.id}>
+            <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
+              <span>{template.name}</span>
+              <span className="muted">
+                {formatCount(template.days.length, 'workout')} · {daySummary(template)}
+              </span>
+            </span>
+            <button
+              className="button"
+              type="button"
+              aria-label={`Copy and edit ${template.name}`}
+              disabled={busy}
+              onClick={() => onCopy(template)}
+            >
+              Copy and edit
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 export function ProgramsScreen({ userId }: ProgramsScreenProps) {
@@ -167,16 +206,18 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
                 {program.name} <span className="muted">{daySummary(program)}</span>
               </span>
               <span className="row">
-                <button
-                  className="button link"
-                  type="button"
-                  aria-label={`Follow ${program.name}`}
-                  aria-describedby={offline ? offlineId : undefined}
-                  disabled={busy || offline}
-                  onClick={() => void follow(program)}
-                >
-                  Follow
-                </button>
+                {canFollowProgram(program) && (
+                  <button
+                    className="button link"
+                    type="button"
+                    aria-label={`Follow ${program.name}`}
+                    aria-describedby={offline ? offlineId : undefined}
+                    disabled={busy || offline}
+                    onClick={() => void follow(program)}
+                  >
+                    Follow
+                  </button>
+                )}
                 <Link className="button link" to={`/programs/${program.id}`} aria-label={`Edit ${program.name}`}>
                   Edit
                 </Link>
@@ -210,30 +251,19 @@ export function ProgramsScreen({ userId }: ProgramsScreenProps) {
           <p>Past workouts keep their sets.</p>
         </ConfirmDialog>
       )}
-      <section className="stack" aria-label="Build your own">
-        <h2>Build your own</h2>
-        <ul className="stack exercise-list">
-          {templates(programs).map((template) => (
-            <li className="panel row spread" key={template.id}>
-              <span className="stack" style={{ gap: 'var(--space-0-5)' }}>
-                <span>{template.name}</span>
-                <span className="muted">
-                  {formatCount(template.days.length, 'workout')} · {daySummary(template)}
-                </span>
-              </span>
-              <button
-                className="button"
-                type="button"
-                aria-label={`Copy and edit ${template.name}`}
-                disabled={busy}
-                onClick={() => copyTemplate(template)}
-              >
-                Copy and edit
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <TemplateList
+        heading="Build your own"
+        programs={templatesIn(programs, null)}
+        busy={busy}
+        onCopy={(template) => void copyTemplate(template)}
+      />
+      <TemplateList
+        heading="Rehab"
+        hint="Daily routines for common tendon problems. Log pain on a set from its menu. If pain gets worse, see a physio."
+        programs={templatesIn(programs, 'rehab')}
+        busy={busy}
+        onCopy={(template) => void copyTemplate(template)}
+      />
     </main>
   );
 }
