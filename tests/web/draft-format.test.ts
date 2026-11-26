@@ -183,6 +183,50 @@ describe('parseStoredDraft', () => {
     expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets[0].effort).toBeNull();
   });
 
+  it('keeps a valid pain on every set kind and drops a malformed one instead of crashing', () => {
+    const lifts = [0, 10, 11, -1, 2.5, '3', null].map((pain, index) => ({
+      id: `l${index}`,
+      weightKg: 6,
+      reps: 15,
+      effort: null,
+      done: true,
+      pain,
+    }));
+    const draft = { ...workout(), exercises: [{ ...workout().exercises[0], sets: lifts }] };
+    const parsed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft }, userId);
+    expect(parsed?.kind === 'draft' && parsed.draft.exercises[0].sets.map((set) => set.pain)).toEqual([
+      0,
+      10,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+    const hold = {
+      clientId: 'hold',
+      exerciseId: 'hold',
+      name: 'Isometric Wrist Flexion',
+      modality: 'hold',
+      measure: 'time',
+      loadType: 'external',
+      sets: [
+        { id: 'h0', kind: 'hold', weightKg: 4, durationS: 45, distanceM: null, effort: null, done: true, pain: 2 },
+        { id: 'h1', kind: 'hold', weightKg: 4, durationS: 45, distanceM: null, effort: null, done: true, pain: 12 },
+      ],
+    };
+    const cardio = cardioExercise();
+    const bouts = { ...cardio, sets: cardio.sets.map((bout, index) => ({ ...bout, pain: index === 0 ? 5 : 'bad' })) };
+    const mixed = { ...workout(), exercises: [hold, bouts] };
+    const parsedMixed = parseStoredDraft({ v: 5, kind: 'draft', userId, updatedAt: 5, draft: mixed }, userId);
+    expect(
+      parsedMixed?.kind === 'draft' && parsedMixed.draft.exercises.map((exercise) => exercise.sets.map((x) => x.pain)),
+    ).toEqual([
+      [2, null],
+      [5, ...cardio.sets.slice(1).map(() => null)],
+    ]);
+  });
+
   it('keeps valid RIR and RPE efforts', () => {
     const sets = [
       { id: 'r', weightKg: 60, reps: 8, effort: { type: 'rir', value: 2 }, done: true },
@@ -602,6 +646,7 @@ describe('completeSessionPayload with cardio', () => {
       distanceM: 5000,
       interval: null,
       effort: { type: 'cardio', level: 'moderate' },
+      pain: null,
     });
   });
 
@@ -615,6 +660,7 @@ describe('completeSessionPayload with cardio', () => {
       distanceM: null,
       interval: { workS: 30, restS: 30, rounds: 10 },
       effort: null,
+      pain: null,
     });
   });
 

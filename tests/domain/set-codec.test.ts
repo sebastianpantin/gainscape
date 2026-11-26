@@ -33,6 +33,7 @@ const LIFT_COLUMNS: StoredSetColumns = {
   intervalRestS: null,
   intervalRounds: null,
   countedWorkS: null,
+  pain: null,
 };
 
 const CARDIO_COLUMNS: StoredSetColumns = {
@@ -57,6 +58,7 @@ const HOLD_COLUMNS: StoredSetColumns = {
   reps: null,
   durationS: null,
   distanceM: 40,
+  pain: 2,
 };
 
 describe('decodeStoredSet', () => {
@@ -68,6 +70,7 @@ describe('decodeStoredSet', () => {
       position: 0,
       effortInputType: 'rir',
       effortValue: 2,
+      pain: null,
       weightKg: 100,
       effectiveLoadKg: 100,
       reps: 5,
@@ -88,6 +91,7 @@ describe('decodeStoredSet', () => {
       effectiveLoadKg: 20,
       durationS: null,
       distanceM: 40,
+      pain: 2,
     });
   });
 
@@ -142,6 +146,12 @@ describe('encodeStoredSet', () => {
     isWarmup: true,
     effort: null,
   };
+
+  it('keeps the logged pain and stores no pain when none was logged', () => {
+    expect(encodeStoredSet({ ...lift, pain: 3 }, 100, EFFORT).pain).toBe(3);
+    expect(encodeStoredSet(lift, 100, EFFORT).pain).toBeNull();
+    expect(decodeStoredSet(encodeStoredSet({ ...lift, pain: 0 }, 100, EFFORT))).toMatchObject({ pain: 0 });
+  });
 
   it('encodes a set so it decodes back to the same values', () => {
     const weight = fc.integer({ min: 0, max: 200_000 }).map((hundredths) => hundredths / 100);

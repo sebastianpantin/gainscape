@@ -53,6 +53,7 @@ export interface LiftSetPayload {
   reps: number;
   isWarmup: boolean;
   effort: EffortInput;
+  pain: number | null;
 }
 
 export interface CardioSetPayload {
@@ -64,6 +65,7 @@ export interface CardioSetPayload {
   distanceM: number | null;
   interval: CardioInterval | null;
   effort: EffortInput;
+  pain: number | null;
 }
 
 export interface HoldSetPayload {
@@ -75,6 +77,7 @@ export interface HoldSetPayload {
   durationS: number | null;
   distanceM: number | null;
   effort: EffortInput;
+  pain: number | null;
 }
 
 export interface EditSessionPayload {
@@ -135,6 +138,7 @@ const storedSetColumnsSchema = z.object({
   interval_rest_s: z.number().nullable(),
   interval_rounds: z.number().nullable(),
   counted_work_s: z.number().nullable(),
+  pain: z.number().nullable(),
 }) satisfies z.ZodType<StoredSetColumnRow>;
 
 const setRowSchema = storedSetColumnsSchema.extend({

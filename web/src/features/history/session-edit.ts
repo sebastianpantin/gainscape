@@ -94,6 +94,7 @@ function placedFromRow(row: StoredSetRow, known: KnownExercise | undefined): Pla
         durationS: stored.durationS,
         distanceM: stored.distanceM,
         effort,
+        pain: stored.pain,
       },
     };
   }
@@ -111,6 +112,7 @@ function placedFromRow(row: StoredSetRow, known: KnownExercise | undefined): Pla
         distanceM: stored.distanceM,
         interval: stored.interval,
         effort,
+        pain: stored.pain,
       },
     };
   }
@@ -123,6 +125,7 @@ function placedFromRow(row: StoredSetRow, known: KnownExercise | undefined): Pla
       reps: stored.reps,
       isWarmup: stored.isWarmup,
       effort,
+      pain: stored.pain,
     },
   };
 }
@@ -157,6 +160,7 @@ function setPayload(placed: PlacedSet, position: number): EditSessionPayload['se
         reps: placed.set.reps,
         isWarmup: placed.set.isWarmup,
         effort: placed.set.effort,
+        pain: placed.set.pain ?? null,
       };
   }
 }
@@ -175,7 +179,8 @@ export function hasChanges(edit: SessionEdit, original: SessionEdit): boolean {
 function setsById(edit: SessionEdit): Map<string, string> {
   return new Map(
     placedSets(edit).map(
-      (placed) => [placed.set.id, JSON.stringify({ exerciseId: placed.header.exerciseId, ...placed.set })] as const,
+      (placed) =>
+        [placed.set.id, JSON.stringify({ exerciseId: placed.header.exerciseId, ...placed.set, pain: null })] as const,
     ),
   );
 }
@@ -281,9 +286,9 @@ function placedSets(edit: SessionEdit): PlacedSet[] {
   });
 }
 
-const LIFT_FIELDS = ['weightKg', 'reps', 'isWarmup', 'effort'] as const;
-const BOUT_FIELDS = ['durationS', 'distanceM', 'interval', 'effort'] as const;
-const HOLD_FIELDS = ['weightKg', 'durationS', 'distanceM', 'effort'] as const;
+const LIFT_FIELDS = ['weightKg', 'reps', 'isWarmup', 'effort', 'pain'] as const;
+const BOUT_FIELDS = ['durationS', 'distanceM', 'interval', 'effort', 'pain'] as const;
+const HOLD_FIELDS = ['weightKg', 'durationS', 'distanceM', 'effort', 'pain'] as const;
 
 function comparableField<S extends object>(set: S, field: keyof S): string {
   const value = set[field];

@@ -10,6 +10,7 @@ interface StoredSetBase {
   position: number;
   effortInputType: EffortInputType | null;
   effortValue: number | null;
+  pain: number | null;
 }
 
 export interface StoredLiftSet extends StoredSetBase {
@@ -53,6 +54,7 @@ export interface StoredSetColumns {
   intervalRestS: number | null;
   intervalRounds: number | null;
   countedWorkS: number | null;
+  pain: number | null;
 }
 
 const COLUMN_OF = {
@@ -71,6 +73,7 @@ const COLUMN_OF = {
   intervalRestS: 'interval_rest_s',
   intervalRounds: 'interval_rounds',
   countedWorkS: 'counted_work_s',
+  pain: 'pain',
 } as const satisfies Record<keyof StoredSetColumns, string>;
 
 type StoredSetField = keyof typeof COLUMN_OF;
@@ -119,8 +122,8 @@ function storedInterval({ intervalWorkS, intervalRestS, intervalRounds }: Stored
 }
 
 export function decodeStoredSet(columns: StoredSetColumns): StoredSet {
-  const { id, exerciseId, position, effortInputType, effortValue } = columns;
-  const base = { id, exerciseId, position, effortInputType, effortValue };
+  const { id, exerciseId, position, effortInputType, effortValue, pain } = columns;
+  const base = { id, exerciseId, position, effortInputType, effortValue, pain };
   const { reps, weightKg, effectiveLoadKg, durationS, distanceM } = columns;
   if (reps !== null && weightKg !== null && effectiveLoadKg !== null) {
     return { ...base, kind: 'lift', weightKg, effectiveLoadKg, reps, isWarmup: columns.isWarmup };
@@ -146,6 +149,7 @@ export function encodeStoredSet(set: SetInput, effectiveLoadKg: number | null, e
     position: set.position,
     effortInputType: effort.effortInputType,
     effortValue: effort.effortValue,
+    pain: set.pain ?? null,
   };
   if (set.kind === 'cardio') {
     return {

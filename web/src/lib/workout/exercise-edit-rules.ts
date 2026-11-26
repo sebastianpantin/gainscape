@@ -21,6 +21,7 @@ export interface BoutValues {
   distanceM: number | null;
   interval: CardioInterval | null;
   effort: EffortInput;
+  pain?: number | null;
 }
 
 export interface HoldValues {
@@ -28,6 +29,7 @@ export interface HoldValues {
   durationS: number | null;
   distanceM: number | null;
   effort: EffortInput;
+  pain?: number | null;
 }
 
 export interface LiftSet {
@@ -36,6 +38,7 @@ export interface LiftSet {
   reps: number;
   isWarmup: boolean;
   effort: EffortInput;
+  pain?: number | null;
 }
 
 export interface BoutSet extends BoutValues {
