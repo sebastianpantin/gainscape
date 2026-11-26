@@ -102,6 +102,10 @@ function liftDraftExercises<Entry extends { exerciseId: string }>(
   return { exercises, skippedExerciseIds };
 }
 
+function startingWeightKg(loadType: LoadType, last: LastLoggedSet | undefined): number {
+  return loadType === 'bodyweight' ? 0 : (last?.weightKg ?? defaultWeightKg(loadType));
+}
+
 function timedHoldExercise(
   planned: PlannedExercise,
   durationS: number,
@@ -109,7 +113,7 @@ function timedHoldExercise(
   last: LastLoggedSet | undefined,
 ): HoldDraftExercise | null {
   if (exercise === undefined || exercise.modality === 'cardio' || exercise.measure !== 'time') return null;
-  const weightKg = exercise.loadType === 'bodyweight' ? 0 : (last?.weightKg ?? defaultWeightKg(exercise.loadType));
+  const weightKg = startingWeightKg(exercise.loadType, last);
   return {
     clientId: crypto.randomUUID(),
     exerciseId: planned.exerciseId,
@@ -144,7 +148,7 @@ export function startDraftFromDay(
       return hold === null ? [] : [hold];
     }
     const started = liftDraftExercises([planned], exercisesById, (_, exercise) => {
-      const weightKg = exercise.loadType === 'bodyweight' ? 0 : (last?.weightKg ?? defaultWeightKg(exercise.loadType));
+      const weightKg = startingWeightKg(exercise.loadType, last);
       return {
         target: { sets: planned.targetSets, repsMin: planned.targetRepsMin, repsMax: planned.targetRepsMax },
         sets: Array.from({ length: planned.targetSets }, () => ({
