@@ -1013,3 +1013,18 @@ html:has(.finish-bar) {
   padding-block: var(--space-2);
   text-align: left;
 }
+
+.set-row > .pain-field,
+.set-row > .pain-control {
+  grid-column: 1 / -1;
+}
+
+.pain-field {
+  max-width: 120px;
+}
+
+.pain-control {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}

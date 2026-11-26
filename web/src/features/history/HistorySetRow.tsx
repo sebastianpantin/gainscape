@@ -6,6 +6,7 @@ import { CardioEffortSelector } from '../workout/CardioEffortSelector.tsx';
 import { EffortSelector } from '../workout/EffortSelector.tsx';
 import { RepsField, WeightField } from '../workout/SetRow.tsx';
 import { HoldFields } from '../workout/HoldSetRow.tsx';
+import { PainControl } from '../workout/PainField.tsx';
 import type { BoutSet, HoldSet, LiftSet } from '../../lib/workout/exercise-edit-rules.ts';
 
 interface HistorySetRowProps {
@@ -59,6 +60,7 @@ export function HistorySetRow({
         ✕
       </button>
       <EffortSelector mode={effortMode} selected={set.effort} onSelect={(effort) => onChange({ effort })} />
+      <PainControl pain={set.pain} rowName={`set ${setNumber}`} onChange={(pain) => onChange({ pain })} />
     </li>
   );
 }
@@ -99,6 +101,7 @@ export function HistoryBoutRow({
         ✕
       </button>
       <CardioEffortSelector selected={bout.effort} onSelect={(effort) => onChange({ effort })} />
+      <PainControl pain={bout.pain} rowName={`bout ${boutNumber}`} onChange={(pain) => onChange({ pain })} />
     </li>
   );
 }
@@ -145,6 +148,7 @@ export function HistoryHoldRow({
         ✕
       </button>
       <EffortSelector mode="level" selected={set.effort} onSelect={(effort) => onChange({ effort })} />
+      <PainControl pain={set.pain} rowName={`set ${setNumber}`} onChange={(pain) => onChange({ pain })} />
     </li>
   );
 }

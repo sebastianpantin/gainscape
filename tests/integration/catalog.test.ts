@@ -154,6 +154,8 @@ describe('cardio catalog', () => {
     expect(holds).toEqual([
       { key: 'dead_hang', modality: 'lift', load_type: 'bodyweight', measure: 'time' },
       { key: 'farmers_carry', modality: 'lift', load_type: 'external', measure: 'distance' },
+      { key: 'isometric_wrist_extension', modality: 'lift', load_type: 'external', measure: 'time' },
+      { key: 'isometric_wrist_flexion', modality: 'lift', load_type: 'external', measure: 'time' },
       { key: 'plate_pinch', modality: 'lift', load_type: 'external', measure: 'time' },
       { key: 'suitcase_carry', modality: 'lift', load_type: 'external', measure: 'distance' },
       { key: 'towel_hang', modality: 'lift', load_type: 'bodyweight', measure: 'time' },

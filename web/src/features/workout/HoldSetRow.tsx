@@ -5,7 +5,9 @@ import type { HoldMeasure, LoadType } from '../../lib/exercises/catalog-rules.ts
 import type { HoldValues } from '../../lib/workout/exercise-edit-rules.ts';
 import type { UnitPref } from '../../lib/profile/profile.ts';
 import type { HoldDraftSet } from '../../offline/draft-format.ts';
+import { painActions } from '../../lib/workout/pain-rules.ts';
 import { EffortSelector } from './EffortSelector.tsx';
+import { PainField } from './PainField.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
 import { SetMenu } from './SetMenu.tsx';
 import { useRowClearOfFinishBarAfterDone } from './use-finish-bar-clearance.ts';
@@ -121,6 +123,7 @@ export function HoldSetRow({
         name={`Set ${setNumber} options`}
         actions={[
           ...clearEffortAction(set.effort, setNumber, () => onChange({ effort: null })),
+          ...painActions(set.pain, `set ${setNumber}`, (pain) => onChange({ pain })),
           { label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove },
         ]}
       />
@@ -130,6 +133,7 @@ export function HoldSetRow({
         retapClears={false}
         onSelect={(effort) => onChange({ effort })}
       />
+      <PainField pain={set.pain} rowName={`set ${setNumber}`} onChange={(pain) => onChange({ pain })} />
     </li>
   );
 }

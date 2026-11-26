@@ -92,6 +92,20 @@ const templateContents = {
       ],
     ],
   },
+  golfers_elbow_rehab: {
+    name: "Golfer's Elbow Rehab",
+    days: [
+      [
+        'Daily',
+        [
+          'eccentric_wrist_curl 3x15-15',
+          'dumbbell_wrist_curl 3x15-15',
+          'dumbbell_pronation 3x15-15',
+          'dumbbell_supination 3x15-15',
+        ],
+      ],
+    ],
+  },
 };
 
 interface PlannedExerciseDoc {
@@ -226,7 +240,7 @@ interface TemplateRow {
 }
 
 describe('program templates', () => {
-  it('seeds exactly the three tabled templates, readable by any user', async () => {
+  it('seeds exactly the four tabled templates, readable by any user', async () => {
     const user = await createTestUser();
     const { data, error } = await user.client
       .from('programs')
