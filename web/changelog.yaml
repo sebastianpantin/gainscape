@@ -1,3 +1,12 @@
+- prs: [259]
+  version: 0.31.0
+  date: 2026-11-27
+  title: Rehab
+  items:
+    - New Rehab programs for golfer's elbow, tennis elbow, the Achilles tendon, the patellar tendon and the rotator cuff. Find them under Rehab on the Programs screen, copy one and start its daily routine from Train.
+    - Programs can now plan timed holds, like a 45-second wall sit. In the program editor, a hold gets a Seconds field instead of reps. A program with a timed hold starts from Train and can't be followed.
+    - Log how much a set hurt, from 0 to 10. Choose Log pain in the set's menu. Your pain shows in History, where you can change it later. Pain never changes your XP, records or loot.
+    - New exercises for rehab, including eccentric and reverse wrist curls, wrist pronation and supination, isometric wrist holds, eccentric heel drops, wall sits and external and internal rotations.
 - prs: [256, 257]
   version: 0.30.1
   date: 2026-11-25
