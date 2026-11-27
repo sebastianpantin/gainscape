@@ -4,9 +4,10 @@ import type { DraftExercise, DraftProgram, DraftSet, WorkoutDraft } from './draf
 export function boutPayload(bout: BoutValues & { id: string }, exerciseId: string, position: number) {
   const { id, distanceM, interval, effort } = bout;
   const identity = { kind: 'cardio' as const, id, exerciseId, position };
+  const pain = bout.pain ?? null;
   return interval === null
-    ? { ...identity, durationS: bout.durationS, distanceM, interval, effort }
-    : { ...identity, distanceM, interval, effort };
+    ? { ...identity, durationS: bout.durationS, distanceM, interval, effort, pain }
+    : { ...identity, distanceM, interval, effort, pain };
 }
 
 function liftPayload(set: DraftSet, exerciseId: string, position: number) {
@@ -18,13 +19,15 @@ function liftPayload(set: DraftSet, exerciseId: string, position: number) {
     reps: set.reps,
     isWarmup: set.isWarmup,
     effort: set.effort,
+    pain: set.pain ?? null,
     prescription: set.prescription ?? null,
   };
 }
 
 export function holdPayload(set: HoldValues & { id: string }, exerciseId: string, position: number) {
   const { id, weightKg, durationS, distanceM, effort } = set;
-  return { kind: 'hold' as const, id, exerciseId, position, weightKg, durationS, distanceM, effort };
+  const pain = set.pain ?? null;
+  return { kind: 'hold' as const, id, exerciseId, position, weightKg, durationS, distanceM, effort, pain };
 }
 
 type SetPayload = ReturnType<typeof boutPayload> | ReturnType<typeof liftPayload> | ReturnType<typeof holdPayload>;

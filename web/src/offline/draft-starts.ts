@@ -8,13 +8,14 @@ import {
   type StrengthState,
   type WeightUnit,
 } from '@domain/index.ts';
-import type { LoadType } from '../lib/exercises/catalog-rules.ts';
+import type { HoldMeasure, LoadType } from '../lib/exercises/catalog-rules.ts';
 import { type CatalogChallenge, challengeLoadKg } from '../lib/collection/challenge-rules.ts';
 import { defaultWeightKg, STARTING_REPS } from '../lib/workout/exercise-edit-rules.ts';
 import { type LastLoggedSet } from './draft-edits.ts';
 import {
   type DraftExercise,
   type DraftProgram,
+  type HoldDraftExercise,
   type LiftDraftExercise,
   withValidSupersets,
   type WorkoutDraft,
@@ -45,6 +46,7 @@ export interface PlannedExercise {
   targetSets: number;
   targetRepsMin: number;
   targetRepsMax: number;
+  targetDurationS?: number | null;
   progression: PlannedProgression;
 }
 
@@ -56,7 +58,7 @@ interface StartableDay {
 }
 
 export type CatalogEntry = { name: string; archived: boolean } & (
-  { modality?: 'lift'; loadType: LoadType; equipment?: string } | { modality: 'cardio' }
+  { modality?: 'lift'; loadType: LoadType; equipment?: string; measure?: HoldMeasure } | { modality: 'cardio' }
 );
 
 export const LABEL_SEPARATOR = ' — ';
@@ -100,26 +102,67 @@ function liftDraftExercises<Entry extends { exerciseId: string }>(
   return { exercises, skippedExerciseIds };
 }
 
+function startingWeightKg(loadType: LoadType, last: LastLoggedSet | undefined): number {
+  return loadType === 'bodyweight' ? 0 : (last?.weightKg ?? defaultWeightKg(loadType));
+}
+
+function timedHoldExercise(
+  planned: PlannedExercise,
+  durationS: number,
+  exercise: CatalogEntry | undefined,
+  last: LastLoggedSet | undefined,
+): HoldDraftExercise | null {
+  if (exercise === undefined || exercise.modality === 'cardio' || exercise.measure !== 'time') return null;
+  const weightKg = startingWeightKg(exercise.loadType, last);
+  return {
+    clientId: crypto.randomUUID(),
+    exerciseId: planned.exerciseId,
+    name: exercise.archived ? `${exercise.name} (archived)` : exercise.name,
+    modality: 'hold',
+    measure: 'time',
+    loadType: exercise.loadType,
+    sets: Array.from({ length: planned.targetSets }, () => ({
+      id: crypto.randomUUID(),
+      kind: 'hold' as const,
+      weightKg,
+      durationS,
+      distanceM: null,
+      effort: null,
+      done: false,
+    })),
+  };
+}
+
 export function startDraftFromDay(
   day: StartableDay,
   exercisesById: ReadonlyMap<string, CatalogEntry>,
   lastSets: ReadonlyMap<string, LastLoggedSet>,
   now: Date,
 ): { draft: WorkoutDraft; skippedExerciseIds: string[] } {
-  const { exercises, skippedExerciseIds } = liftDraftExercises(day.exercises, exercisesById, (planned, exercise) => {
+  const skippedExerciseIds: string[] = [];
+  const exercises = day.exercises.flatMap((planned): DraftExercise[] => {
     const last = lastSets.get(planned.exerciseId);
-    const weightKg = exercise.loadType === 'bodyweight' ? 0 : (last?.weightKg ?? defaultWeightKg(exercise.loadType));
-    return {
-      target: { sets: planned.targetSets, repsMin: planned.targetRepsMin, repsMax: planned.targetRepsMax },
-      sets: Array.from({ length: planned.targetSets }, () => ({
-        id: crypto.randomUUID(),
-        weightKg,
-        reps: planned.targetRepsMin,
-        effort: null,
-        done: false,
-        isWarmup: false,
-      })),
-    };
+    if (planned.targetDurationS != null) {
+      const hold = timedHoldExercise(planned, planned.targetDurationS, exercisesById.get(planned.exerciseId), last);
+      if (hold === null) skippedExerciseIds.push(planned.exerciseId);
+      return hold === null ? [] : [hold];
+    }
+    const started = liftDraftExercises([planned], exercisesById, (_, exercise) => {
+      const weightKg = startingWeightKg(exercise.loadType, last);
+      return {
+        target: { sets: planned.targetSets, repsMin: planned.targetRepsMin, repsMax: planned.targetRepsMax },
+        sets: Array.from({ length: planned.targetSets }, () => ({
+          id: crypto.randomUUID(),
+          weightKg,
+          reps: planned.targetRepsMin,
+          effort: null,
+          done: false,
+          isWarmup: false,
+        })),
+      };
+    });
+    skippedExerciseIds.push(...started.skippedExerciseIds);
+    return started.exercises;
   });
   return {
     draft: {

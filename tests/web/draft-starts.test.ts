@@ -17,6 +17,56 @@ describe('programLabelFor', () => {
   });
 });
 
+describe('startDraftFromDay with a timed hold', () => {
+  const day = {
+    id: '66666666-6666-4666-8666-666666666666',
+    name: 'Daily',
+    programName: 'Patellar Tendon Rehab',
+    exercises: [
+      {
+        exerciseId: 'wall-sit',
+        targetSets: 5,
+        targetRepsMin: 0,
+        targetRepsMax: 0,
+        targetDurationS: 45,
+        progression: NO_PROGRESSION,
+      },
+      {
+        exerciseId: 'carry',
+        targetSets: 2,
+        targetRepsMin: 0,
+        targetRepsMax: 0,
+        targetDurationS: 30,
+        progression: NO_PROGRESSION,
+      },
+      { exerciseId: 'extension', targetSets: 3, targetRepsMin: 12, targetRepsMax: 15, progression: NO_PROGRESSION },
+    ],
+  };
+  const catalog = new Map<string, CatalogEntry>([
+    ['wall-sit', { name: 'Wall Sit', loadType: 'bodyweight_plus', measure: 'time', archived: false }],
+    ['carry', { name: 'Farmers Carry', loadType: 'external', measure: 'distance', archived: false }],
+    ['extension', { name: 'Leg Extension', loadType: 'external', archived: false }],
+  ]);
+  const started = startDraftFromDay(day, catalog, new Map(), new Date('2026-11-26T10:00:00.000Z'));
+
+  it('plans the target number of not-done hold sets at the target duration', () => {
+    const [hold, lift] = started.draft.exercises;
+    expect(hold).toMatchObject({
+      exerciseId: 'wall-sit',
+      modality: 'hold',
+      measure: 'time',
+      loadType: 'bodyweight_plus',
+    });
+    expect(hold.sets).toHaveLength(5);
+    expect(hold.sets[0]).toMatchObject({ kind: 'hold', weightKg: 0, durationS: 45, distanceM: null, done: false });
+    expect(lift).toMatchObject({ exerciseId: 'extension', modality: 'lift' });
+  });
+
+  it('skips a planned duration on an exercise that is not a timed hold', () => {
+    expect(started.skippedExerciseIds).toEqual(['carry']);
+  });
+});
+
 describe('startDraftFromDay', () => {
   const day = {
     id: '55555555-5555-4555-8555-555555555555',

@@ -186,6 +186,7 @@ describe('hold sets', () => {
       distanceM: null,
       effortInputType: 'level' as const,
       effortValue: 3,
+      pain: null,
     };
     expect(sameSet(hang, stored, DEFAULT_BALANCE)).toBe(true);
     expect(sameSet({ ...hang, durationS: 35 }, stored, DEFAULT_BALANCE)).toBe(false);

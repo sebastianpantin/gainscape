@@ -5,6 +5,8 @@ import type { CardioDraftSet } from '../../offline/draft-format.ts';
 import { BoutFields, BoutModeToggle } from './BoutFields.tsx';
 import { CardioEffortSelector } from './CardioEffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
+import { painActions } from '../../lib/workout/pain-rules.ts';
+import { PainField } from './PainField.tsx';
 import { SetMenu } from './SetMenu.tsx';
 import { useRowClearOfFinishBarAfterDone } from './use-finish-bar-clearance.ts';
 import { landsRecord, type ShownSetDrop } from './set-feedback-rules.ts';
@@ -63,10 +65,12 @@ export function CardioSetRow({
         buttonRef={menuRef}
         name={`Bout ${boutNumber} options`}
         actions={[
+          ...painActions(bout.pain, `bout ${boutNumber}`, (pain) => onChange({ pain })),
           { label: 'Remove bout', accessibleName: `Remove bout ${boutNumber}`, danger: true, onChoose: onRemove },
         ]}
       />
       <CardioEffortSelector selected={bout.effort} onSelect={(effort) => onChange({ effort })} />
+      <PainField pain={bout.pain} rowName={`bout ${boutNumber}`} onChange={(pain) => onChange({ pain })} />
     </li>
   );
 }

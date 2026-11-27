@@ -65,3 +65,57 @@
         - { exercise: pull_up, sets: 3, reps_min: 5, reps_max: 10 }
         - { exercise: leg_press, sets: 3, reps_min: 10, reps_max: 15 }
         - { exercise: hanging_leg_raise, sets: 2, reps_min: 8, reps_max: 12 }
+- key: golfers_elbow_rehab
+  name: Golfer's Elbow Rehab
+  category: rehab
+  days:
+    - key: daily
+      name: Daily
+      exercises:
+        - { exercise: isometric_wrist_flexion, sets: 5, duration_s: 45 }
+        - { exercise: eccentric_wrist_curl, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: dumbbell_wrist_curl, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: dumbbell_pronation, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: dumbbell_supination, sets: 3, reps_min: 15, reps_max: 15 }
+- key: tennis_elbow_rehab
+  name: Tennis Elbow Rehab
+  category: rehab
+  days:
+    - key: daily
+      name: Daily
+      exercises:
+        - { exercise: isometric_wrist_extension, sets: 5, duration_s: 45 }
+        - { exercise: eccentric_reverse_wrist_curl, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: dumbbell_reverse_wrist_curl, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: dumbbell_supination, sets: 3, reps_min: 15, reps_max: 15 }
+- key: achilles_rehab
+  name: Achilles Tendon Rehab
+  category: rehab
+  days:
+    - key: daily
+      name: Daily
+      exercises:
+        - { exercise: eccentric_heel_drop, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: bent_knee_eccentric_heel_drop, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: seated_calf_raise, sets: 3, reps_min: 15, reps_max: 20 }
+- key: patellar_tendon_rehab
+  name: Patellar Tendon Rehab
+  category: rehab
+  days:
+    - key: daily
+      name: Daily
+      exercises:
+        - { exercise: isometric_leg_extension, sets: 5, duration_s: 45 }
+        - { exercise: wall_sit, sets: 5, duration_s: 45 }
+        - { exercise: leg_extension, sets: 3, reps_min: 12, reps_max: 15 }
+- key: rotator_cuff_rehab
+  name: Rotator Cuff Rehab
+  category: rehab
+  days:
+    - key: daily
+      name: Daily
+      exercises:
+        - { exercise: side_lying_external_rotation, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: cable_external_rotation, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: cable_internal_rotation, sets: 3, reps_min: 15, reps_max: 15 }
+        - { exercise: face_pull, sets: 3, reps_min: 15, reps_max: 15 }

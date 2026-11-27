@@ -74,6 +74,7 @@ export interface LiftSetInput {
   reps: number;
   isWarmup: boolean;
   effort: EffortInput;
+  pain?: number | null;
   recordedEffectiveLoadKg?: number;
 }
 
@@ -92,6 +93,7 @@ export interface CardioSetInput {
   distanceM: number | null;
   interval: CardioInterval | null;
   effort: EffortInput;
+  pain?: number | null;
 }
 
 export interface HoldSetInput {
@@ -103,8 +105,11 @@ export interface HoldSetInput {
   durationS: number | null;
   distanceM: number | null;
   effort: EffortInput;
+  pain?: number | null;
   recordedEffectiveLoadKg?: number;
 }
+
+export const PAIN_BOUNDS = Object.freeze({ min: 0, max: 10 });
 
 export const HOLD_BOUNDS = Object.freeze({
   durationS: Object.freeze({ min: 1, max: 3600 }),

@@ -24,6 +24,8 @@ import { BackoffChip } from './BackoffChip.tsx';
 import { EffortSelector } from './EffortSelector.tsx';
 import { DoneToggle } from './DoneToggle.tsx';
 import { implausibleChangeText, lastSetChangesFor, lastSetDelta, lastSetName, lastSetText } from './last-set-rules.ts';
+import { painActions } from '../../lib/workout/pain-rules.ts';
+import { PainField } from './PainField.tsx';
 import { PlateCalculator } from './PlateCalculator.tsx';
 import { PlateChips } from './PlateChips.tsx';
 import { SetMenu } from './SetMenu.tsx';
@@ -327,6 +329,7 @@ export function SetRow({
         retapClears={false}
         onSelect={(effort) => onChange({ effort })}
       />
+      <PainField pain={set.pain} rowName={`set ${setNumber}`} onChange={(pain) => onChange({ pain })} />
       <SetMenu
         buttonRef={menuRef}
         name={`${rowLabel} options`}
@@ -338,6 +341,7 @@ export function SetRow({
             onChoose: () => onChange({ isWarmup: !set.isWarmup }),
           },
           ...clearEffortAction(set.effort, setNumber, () => onChange({ effort: null })),
+          ...painActions(set.pain, `set ${setNumber}`, (pain) => onChange({ pain })),
           { label: 'Remove set', accessibleName: `Remove set ${setNumber}`, danger: true, onChoose: onRemove },
         ]}
       />

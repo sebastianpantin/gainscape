@@ -1,5 +1,6 @@
 import { describeBout } from '../../lib/workout/cardio-rules.ts';
 import { effortLabel } from '../../lib/workout/effort-labels.ts';
+import { painLabel } from '../../lib/workout/pain-rules.ts';
 import { exerciseKeys } from '../../lib/exercises/exercise-key-rules.ts';
 import { formatXp } from '../../lib/format.ts';
 import { type UnitPref } from '../../lib/profile/profile.ts';
@@ -30,6 +31,7 @@ export function StoredExerciseList({ exercises, storedXp, unit }: StoredExercise
                 <span>
                   {boutIndex + 1}. {describeBout(bout, distanceUnitFor(unit, exercise.paceUnit))}
                   {effortLabel(bout.effort) && ` · ${effortLabel(bout.effort)}`}
+                  {painLabel(bout.pain) && ` · ${painLabel(bout.pain)}`}
                 </span>
                 <span className="xp-text">{formatXp(storedXp.get(bout.id) ?? 0)} XP</span>
               </li>
@@ -40,6 +42,7 @@ export function StoredExerciseList({ exercises, storedXp, unit }: StoredExercise
                   <span>
                     {setIndex + 1}. {describeHold(set, exercise.loadType, unit)}
                     {effortLabel(set.effort) && ` · ${effortLabel(set.effort)}`}
+                    {painLabel(set.pain) && ` · ${painLabel(set.pain)}`}
                   </span>
                   <span className="xp-text">{formatXp(storedXp.get(set.id) ?? 0)} XP</span>
                 </li>
@@ -50,6 +53,7 @@ export function StoredExerciseList({ exercises, storedXp, unit }: StoredExercise
                     {setIndex + 1}. {describeLoad(set.weightKg, exercise.loadType, unit)} × {set.reps}
                     {set.isWarmup && ' · warm-up'}
                     {effortLabel(set.effort) && ` · ${effortLabel(set.effort)}`}
+                    {painLabel(set.pain) && ` · ${painLabel(set.pain)}`}
                   </span>
                   <span className="xp-text">{formatXp(storedXp.get(set.id) ?? 0)} XP</span>
                 </li>

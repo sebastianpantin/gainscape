@@ -32,6 +32,7 @@ const storedLift: StoredLiftSet = {
   isWarmup: false,
   effortInputType: 'level',
   effortValue: DEFAULT_BALANCE.effortLevelRir.hard,
+  pain: null,
 };
 
 const bout: CardioSetInput = {
@@ -55,12 +56,20 @@ const storedBout: StoredCardioSet = {
   interval: { workS: 30, restS: 60, rounds: 7 },
   effortInputType: 'cardio',
   effortValue: 3,
+  pain: null,
 };
 
 describe('sameSet', () => {
   it('matches an identical lift set and an identical bout', () => {
     expect(sameSet(lift, storedLift, DEFAULT_BALANCE)).toBe(true);
     expect(sameSet(bout, storedBout, DEFAULT_BALANCE)).toBe(true);
+  });
+
+  it('counts a changed pain as a change and a missing pain as no pain', () => {
+    expect(sameSet({ ...lift, pain: 2 }, storedLift, DEFAULT_BALANCE)).toBe(false);
+    expect(sameSet({ ...lift, pain: 2 }, { ...storedLift, pain: 2 }, DEFAULT_BALANCE)).toBe(true);
+    expect(sameSet({ ...lift, pain: null }, storedLift, DEFAULT_BALANCE)).toBe(true);
+    expect(sameSet(lift, { ...storedLift, pain: 4 }, DEFAULT_BALANCE)).toBe(false);
   });
 
   it('compares weights at the two decimals the database stores', () => {
@@ -117,6 +126,10 @@ describe('unchangedSetIds', () => {
     [storedBout.id, storedBout],
   ]);
 
+  it('keeps a set whose only change is its pain, because pain never changes what a set earned', () => {
+    expect(unchangedSetIds([{ ...lift, pain: 6 }, bout], stored, DEFAULT_BALANCE)).toEqual([lift.id, bout.id]);
+  });
+
   it('lists the stored sets the edit keeps with the same exercise and values, wherever they move', () => {
     expect(unchangedSetIds([bout, lift], stored, DEFAULT_BALANCE)).toEqual(['bout-1', 'set-1']);
     expect(
@@ -146,6 +159,10 @@ describe('isNoOpEdit', () => {
 
   it('is a no-op when notes and every set match', () => {
     expect(isNoOpEdit({ notes: 'ok', sets: [bout, lift] }, 'ok', stored, DEFAULT_BALANCE)).toBe(true);
+  });
+
+  it('is not a no-op when only a pain changes', () => {
+    expect(isNoOpEdit({ notes: 'ok', sets: [{ ...lift, pain: 1 }, bout] }, 'ok', stored, DEFAULT_BALANCE)).toBe(false);
   });
 
   it('is not a no-op when the notes change', () => {

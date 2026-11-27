@@ -26,6 +26,7 @@ export interface SetShape {
   reps: number;
   isWarmup: boolean;
   effort: Effort;
+  pain?: number | null;
 }
 
 export const hard: Effort = { type: 'level', level: 'hard' };
@@ -57,6 +58,7 @@ export interface BoutShape {
   distanceM: number | null;
   interval: BoutInterval | null;
   effort: CardioEffort;
+  pain?: number | null;
 }
 
 export function aBout(exerciseId: string, position: number, overrides: Partial<BoutShape> = {}): BoutShape {

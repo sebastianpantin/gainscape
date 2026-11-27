@@ -19,7 +19,7 @@ import { staleDerivedSession } from './sessions.ts';
 const JOINED_SET_COLUMNS = STORED_SET_COLUMNS.map((column) => `st.${column}`);
 
 function replayableSet(stored: StoredSet, cfg: BalanceConfig): SetInput {
-  const identity = { id: stored.id, exerciseId: stored.exerciseId, position: stored.position };
+  const identity = { id: stored.id, exerciseId: stored.exerciseId, position: stored.position, pain: stored.pain };
   const effort = effortInputFromStored(stored.effortInputType, stored.effortValue, cfg);
   if (stored.kind === 'cardio') {
     const { durationS, distanceM, interval } = stored;

@@ -70,6 +70,10 @@ _Avoid_: hard reps, counted reps
 The mark on a set whose Effort claims it was harder than the Estimated RIR allows, so the 1RM estimate uses the estimate's floor instead of the claim. A Flag never changes XP, and the top of the Effort scale is never Flagged.
 _Avoid_: cheat, penalty, untrusted set
 
+**Pain**:
+How much a set hurt, logged as a whole number from 0 to 10, for rehab such as golfer's elbow. Pain is optional on every Set kind and is an Input value that never changes a Derived value: XP, the 1RM estimate, Records and loot ignore it, and an Edit that changes only pain keeps the set's drops.
+_Avoid_: discomfort, injury score
+
 **Record**:
 A personal best the server awards on a set: a rep max, most reps, or a best Cardio or Hold.
 _Avoid_: PR (in prose), best set

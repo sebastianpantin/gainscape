@@ -1,5 +1,5 @@
 import { type ChallengeDefinition, type Position, type PrescriptionSnapshot } from '@domain/index.ts';
-import { CARDIO_EFFORT_LEVELS, type EffortInput, isRecord } from '@domain/types.ts';
+import { CARDIO_EFFORT_LEVELS, type EffortInput, isRecord, PAIN_BOUNDS } from '@domain/types.ts';
 import type { CardioActivity } from '../lib/exercises/catalog-rules.ts';
 import { parsedDraftChallenge } from '../lib/collection/challenge-rules.ts';
 import { EFFORT_LEVELS } from '../lib/workout/effort-labels.ts';
@@ -194,10 +194,18 @@ function withNormalisedEffort(set: Record<string, unknown>, fromV2: boolean): Re
   return isLiftEffortInput(set.effort) ? set : { ...set, effort: null };
 }
 
+function isPain(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= PAIN_BOUNDS.min && (value as number) <= PAIN_BOUNDS.max;
+}
+
+function withUsablePain(set: Record<string, unknown>): Record<string, unknown> {
+  return !('pain' in set) || set.pain === null || isPain(set.pain) ? set : { ...set, pain: null };
+}
+
 function normalisedSet(set: unknown, fromV2: boolean): unknown {
   if (!isRecord(set)) return set;
   const prescription = isPrescriptionSnapshot(set.prescription) ? set.prescription : null;
-  const { prescriptionDetail, ...rest } = withNormalisedEffort(set, fromV2);
+  const { prescriptionDetail, ...rest } = withUsablePain(withNormalisedEffort(set, fromV2));
   const isWarmup = set.isWarmup === true;
   return isPrescriptionDetail(prescriptionDetail)
     ? { ...rest, isWarmup, prescription, prescriptionDetail }
@@ -210,7 +218,7 @@ function isCardioEffortInput(value: unknown): boolean {
 
 function normalisedBout(bout: unknown, tracksDistance: boolean): unknown {
   if (!isRecord(bout)) return bout;
-  const measured = tracksDistance ? bout : { ...bout, distanceM: null };
+  const measured = withUsablePain(tracksDistance ? bout : { ...bout, distanceM: null });
   return isCardioEffortInput(measured.effort) ? measured : { ...measured, effort: null };
 }
 
@@ -227,7 +235,8 @@ function normalisedCardio(exercise: Record<string, unknown> & { sets: unknown[] 
 
 function normalisedHoldSet(set: unknown): unknown {
   if (!isRecord(set)) return set;
-  return isLevelEffort(set.effort) ? set : { ...set, effort: null };
+  const withPain = withUsablePain(set);
+  return isLevelEffort(withPain.effort) ? withPain : { ...withPain, effort: null };
 }
 
 function normalisedExercise(exercise: unknown, index: number, fromV2: boolean): unknown {

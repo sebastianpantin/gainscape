@@ -103,6 +103,7 @@ describe('hold drafts', () => {
         durationS: null,
         distanceM: 20,
         effort: null,
+        pain: null,
       },
     ]);
   });

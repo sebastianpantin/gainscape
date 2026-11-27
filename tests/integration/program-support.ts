@@ -5,8 +5,9 @@ import { type TestUser } from './local-stack.ts';
 export interface PlannedExerciseDoc {
   exerciseId: string;
   targetSets: number;
-  targetRepsMin: number;
-  targetRepsMax: number;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
+  targetDurationS?: number | null;
   progression?: 'none' | 'fixed' | 'linear';
   incrementKg?: number | null;
   incrementLb?: number | null;

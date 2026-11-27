@@ -7,6 +7,7 @@ import {
   isRecord,
   MAX_SET_LOAD_KG,
   MAX_SET_REPS,
+  PAIN_BOUNDS,
   roundTo,
 } from './domain/index.ts';
 import { HttpError } from './http.ts';
@@ -54,6 +55,8 @@ const setIdentity = {
 
 const within = (bounds: { min: number; max: number }) => z.int().min(bounds.min).max(bounds.max);
 
+const painSchema = within(PAIN_BOUNDS).nullable().default(null);
+
 const prescriptionSchema = z
   .object({
     ref: z.string().min(1).max(100),
@@ -80,6 +83,7 @@ const liftSetSchema = z
     reps: z.int().min(1).max(MAX_SET_REPS),
     isWarmup: z.boolean().default(false),
     effort: liftEffortSchema.default(null),
+    pain: painSchema,
     prescription: prescriptionSchema.nullable().default(null),
   })
   .strict();
@@ -110,6 +114,7 @@ const cardioSetSchema = z
       .default(null),
     interval: intervalSchema.nullable().default(null),
     effort: cardioEffortSchema.default(null),
+    pain: painSchema,
   })
   .strict()
   .refine((bout) => (bout.interval === null) === (bout.durationS !== undefined), {
@@ -131,6 +136,7 @@ const holdSetSchema = z
       .nullable()
       .default(null),
     effort: holdEffortSchema.default(null),
+    pain: painSchema,
   })
   .strict()
   .refine((hold) => (hold.durationS === null) !== (hold.distanceM === null), {

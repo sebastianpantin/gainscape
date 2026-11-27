@@ -35,7 +35,11 @@ function sameExerciseAndValues(requested: SetInput, stored: StoredSet, cfg: Bala
 }
 
 export function sameSet(requested: SetInput, stored: StoredSet, cfg: BalanceConfig): boolean {
-  return requested.position === stored.position && sameExerciseAndValues(requested, stored, cfg);
+  return (
+    requested.position === stored.position &&
+    (requested.pain ?? null) === stored.pain &&
+    sameExerciseAndValues(requested, stored, cfg)
+  );
 }
 
 export function unchangedSetIds(

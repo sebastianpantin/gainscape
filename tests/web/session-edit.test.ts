@@ -84,6 +84,7 @@ function row(overrides: Partial<StoredSetRow> & Pick<StoredSetRow, 'id' | 'exerc
     intervalRounds: null,
     countedWorkS: null,
     paceFlagged: false,
+    pain: null,
     ...overrides,
   };
 }
@@ -99,7 +100,7 @@ const rows: StoredSetRow[] = [
     effortInputType: 'level',
     effortValue: DEFAULT_BALANCE.effortLevelRir.hard,
   }),
-  row({ id: 'set-1', exerciseId: benchId, position: 1, effortInputType: 'rir', effortValue: 2 }),
+  row({ id: 'set-1', exerciseId: benchId, position: 1, effortInputType: 'rir', effortValue: 2, pain: 3 }),
   row({ id: 'set-3', exerciseId: benchId, position: 3 }),
 ];
 
@@ -118,10 +119,26 @@ describe('building the edit from loaded rows', () => {
       reps: 5,
       isWarmup: true,
       effort: { type: 'level', level: 'hard' },
+      pain: null,
     });
     expect(edit.exercises[0].sets[1].effort).toEqual({ type: 'rir', value: 2 });
     expect(edit.exercises[1].sets[0].effort).toEqual({ type: 'rpe', value: 8.5 });
     expect(edit.exercises[2].sets[0].effort).toBeNull();
+  });
+
+  it('maps the stored pain back and sends it with every set', () => {
+    expect(edit.exercises[0].sets.map((set) => set.pain)).toEqual([null, 3]);
+    expect(liftSets(editPayload(edit)).map((set) => [set.id, set.pain])).toEqual([
+      ['set-0', null],
+      ['set-1', 3],
+      ['set-2', null],
+      ['set-3', null],
+    ]);
+  });
+
+  it('sees a changed pain as a change to save', () => {
+    expect(hasChanges(updateSet(edit, 0, 'set-1', { pain: 1 }), edit)).toBe(true);
+    expect(hasChanges(updateSet(edit, 0, 'set-1', { pain: 3 }), edit)).toBe(false);
   });
 
   it('sends the whole session with exactly the keys edit-session accepts', () => {
@@ -134,6 +151,7 @@ describe('building the edit from loaded rows', () => {
         'exerciseId',
         'id',
         'isWarmup',
+        'pain',
         'position',
         'reps',
         'weightKg',
@@ -360,6 +378,7 @@ describe('rebasing local changes onto a newer server copy', () => {
       reps: 7,
       isWarmup: false,
       effort: { type: 'level', level: 'failure' },
+      pain: 3,
     });
   });
 
@@ -478,6 +497,10 @@ describe('drops put at risk by an edit', () => {
     }
   });
 
+  it('puts no drop at risk when only a pain changes', () => {
+    expect(dropsAtRisk(updateSet(original, 2, 'set-3', { pain: 4 }), original, drops)).toEqual([]);
+  });
+
   it('lists the drops of sets moved to another exercise', () => {
     const swapped = swapEditExercise(original, 1, { id: benchId, name: 'Barbell Bench Press', loadType: 'external' });
     expect(dropsAtRisk(swapped, original, drops)).toEqual([{ setId: 'set-2' }]);
@@ -565,6 +588,7 @@ describe('cardio bouts in an edit', () => {
         distanceM: 5000,
         interval: null,
         effort: { type: 'cardio', level: 'hard' },
+        pain: null,
       },
       {
         id: 'bout-1',
@@ -573,6 +597,7 @@ describe('cardio bouts in an edit', () => {
         distanceM: null,
         interval: { workS: 30, restS: 30, rounds: 10 },
         effort: null,
+        pain: null,
       },
     ]);
   });
@@ -580,7 +605,7 @@ describe('cardio bouts in an edit', () => {
   it('sends bouts with the keys edit-session accepts and no duration for intervals', () => {
     const [steady, intervals, lift, unknown] = editPayload(edit).sets;
     expect(Object.keys(steady).sort()).toEqual(
-      ['distanceM', 'durationS', 'effort', 'exerciseId', 'id', 'interval', 'kind', 'position'].sort(),
+      ['distanceM', 'durationS', 'effort', 'exerciseId', 'id', 'interval', 'kind', 'pain', 'position'].sort(),
     );
     expect(intervals).toEqual({
       kind: 'cardio',
@@ -590,6 +615,7 @@ describe('cardio bouts in an edit', () => {
       distanceM: null,
       interval: { workS: 30, restS: 30, rounds: 10 },
       effort: null,
+      pain: null,
     });
     expect(lift).toMatchObject({ id: 'set-2', position: 2, weightKg: 60, reps: 5 });
     expect(unknown).toMatchObject({ kind: 'cardio', id: 'bout-3', position: 3, durationS: 1800 });
@@ -607,10 +633,10 @@ describe('cardio bouts in an edit', () => {
     expect(updateSet(edit, 0, 'bout-0', { reps: 9 })).toEqual(edit);
   });
 
-  it('copies the previous bout when adding one', () => {
-    const added = addEditSet(edit, 0);
+  it('copies the previous bout when adding one, but not its pain', () => {
+    const added = addEditSet(updateBout(edit, 0, 'bout-1', { pain: 4 }), 0);
     const copy = added.exercises[0].sets[2];
-    expect(copy).toEqual({ ...edit.exercises[0].sets[1], id: expect.any(String) });
+    expect(copy).toEqual({ ...edit.exercises[0].sets[1], id: expect.any(String), pain: undefined });
     expect(copy.id).not.toBe('bout-1');
   });
 
@@ -706,6 +732,7 @@ describe('cardio bouts in an edit', () => {
       distanceM: 6000,
       interval: null,
       effort: { type: 'cardio', level: 'easy' },
+      pain: null,
     });
   });
 });
@@ -807,6 +834,7 @@ describe('hold sets in an edit', () => {
             durationS: 45,
             distanceM: null,
             effort: { type: 'level', level: 'failure' },
+            pain: null,
           },
         ],
       },
@@ -816,7 +844,7 @@ describe('hold sets in an edit', () => {
         modality: 'hold',
         measure: 'distance',
         loadType: 'external',
-        sets: [{ id: 'hold-1', kind: 'hold', weightKg: 20, durationS: null, distanceM: 40, effort: null }],
+        sets: [{ id: 'hold-1', kind: 'hold', weightKg: 20, durationS: null, distanceM: 40, effort: null, pain: null }],
       },
     ]);
   });
@@ -833,6 +861,7 @@ describe('hold sets in an edit', () => {
         durationS: 60,
         distanceM: null,
         effort: { type: 'level', level: 'failure' },
+        pain: null,
       },
       {
         kind: 'hold',
@@ -843,6 +872,7 @@ describe('hold sets in an edit', () => {
         durationS: null,
         distanceM: 40,
         effort: null,
+        pain: null,
       },
     ]);
     expect(hasChanges(longer, edit)).toBe(true);

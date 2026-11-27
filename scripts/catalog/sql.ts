@@ -259,9 +259,9 @@ export function renderStatements(catalog: CatalogData): string[] {
     ),
     insert(
       'programs',
-      ['id', 'key', 'owner_user_id', 'name'],
-      catalog.programs.map((program) => [programId(program.key), program.key, null, program.name]),
-      upsertSuffix(['key', 'name'], true),
+      ['id', 'key', 'owner_user_id', 'name', 'category'],
+      catalog.programs.map((program) => [programId(program.key), program.key, null, program.name, program.category]),
+      upsertSuffix(['key', 'name', 'category'], true),
     ),
     'delete from public.program_days where program_id in (select id from public.programs where owner_user_id is null);',
     insert(
@@ -276,7 +276,7 @@ export function renderStatements(catalog: CatalogData): string[] {
     ),
     insert(
       'program_day_exercises',
-      ['day_id', 'position', 'exercise_id', 'target_sets', 'target_reps_min', 'target_reps_max'],
+      ['day_id', 'position', 'exercise_id', 'target_sets', 'target_reps_min', 'target_reps_max', 'target_duration_s'],
       days.flatMap(({ program, day }) =>
         day.exercises.map((entry, position) => [
           dayId(program.key, day.key),
@@ -285,6 +285,7 @@ export function renderStatements(catalog: CatalogData): string[] {
           entry.sets,
           entry.repsMin,
           entry.repsMax,
+          entry.durationS,
         ]),
       ),
     ),

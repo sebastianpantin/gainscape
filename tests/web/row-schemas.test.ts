@@ -194,6 +194,7 @@ const CASES: SchemaCase[] = [
       key: null,
       name: 'My UL',
       owner_user_id: ID,
+      category: null,
       copied_from_id: null,
       program_days: [
         {
@@ -207,6 +208,7 @@ const CASES: SchemaCase[] = [
               target_sets: 3,
               target_reps_min: 5,
               target_reps_max: 8,
+              target_duration_s: null,
               progression: 'linear',
               increment_kg: '2.50',
               increment_lb: '5.00',

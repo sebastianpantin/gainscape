@@ -2,7 +2,13 @@ import type { LastLoggedSet } from '../../offline/draft-edits.ts';
 import type { PlannedExercise } from '../../offline/draft-starts.ts';
 import { type CacheFirstLoad, isDeviceOffline, loadCacheFirstWhenOffline } from '../../offline/cache-first.ts';
 import { programListCache, withSavedProgramDoc } from '../../offline/program-list-cache.ts';
-import { PROGRAM_SELECT, programPayload, programRowSchema, toProgram } from './program-row-rules.ts';
+import {
+  PROGRAM_SELECT,
+  type ProgramCategory,
+  programPayload,
+  programRowSchema,
+  toProgram,
+} from './program-row-rules.ts';
 import { z } from 'zod';
 import { numericColumn, parsedRow, parsedRows } from '../rows.ts';
 import { rateLimitedMessage } from '../platform/rate-limit.ts';
@@ -20,6 +26,7 @@ export interface Program {
   id: string;
   key: string | null;
   name: string;
+  category?: ProgramCategory | null;
   ownerUserId: string | null;
   copiedFromId: string | null;
   days: ProgramDay[];
@@ -55,10 +62,6 @@ export function loadProgramsCacheFirst(userId: string): Promise<CacheFirstLoad<P
 
 export function ownPrograms(programs: Program[], userId: string): Program[] {
   return programs.filter((program) => program.ownerUserId === userId);
-}
-
-export function templates(programs: Program[]): Program[] {
-  return programs.filter((program) => program.ownerUserId === null);
 }
 
 async function changeProgramsThenRefresh(

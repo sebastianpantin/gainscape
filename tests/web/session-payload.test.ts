@@ -17,6 +17,7 @@ describe('boutPayload', () => {
       distanceM: 5000,
       interval: null,
       effort: easy,
+      pain: null,
     });
   });
 
@@ -30,7 +31,56 @@ describe('boutPayload', () => {
       distanceM: null,
       interval,
       effort: null,
+      pain: null,
     });
+  });
+
+  it('sends the pain logged on a bout', () => {
+    const bout = { id: 'bout-c', durationS: 600, distanceM: null, interval: null, effort: null, pain: 4 };
+    expect(boutPayload(bout, 'run', 0).pain).toBe(4);
+  });
+});
+
+describe('pain in the finished workout', () => {
+  it('sends the pain of each done lift and hold set, and null where none was logged', () => {
+    const draft: WorkoutDraft = {
+      sessionId: 's',
+      startedAt: '2026-09-30T10:00:00.000Z',
+      finishedAt: '2026-09-30T11:00:00.000Z',
+      programDayId: null,
+      programLabel: null,
+      program: null,
+      exercises: [
+        {
+          clientId: 'curl',
+          exerciseId: 'curl',
+          name: 'Eccentric Wrist Curl',
+          modality: 'lift',
+          loadType: 'external',
+          target: null,
+          sets: [
+            { id: 'a', weightKg: 6, reps: 15, effort: null, done: true, isWarmup: false, pain: 3 },
+            { id: 'b', weightKg: 6, reps: 15, effort: null, done: true, isWarmup: false },
+          ],
+        },
+        {
+          clientId: 'hold',
+          exerciseId: 'hold',
+          name: 'Isometric Wrist Flexion',
+          modality: 'hold',
+          measure: 'time',
+          loadType: 'external',
+          sets: [
+            { id: 'c', kind: 'hold', weightKg: 4, durationS: 45, distanceM: null, effort: null, done: true, pain: 2 },
+          ],
+        },
+      ],
+    };
+    expect(completeSessionPayload(draft).sets.map((set) => [set.id, set.pain])).toEqual([
+      ['a', 3],
+      ['b', null],
+      ['c', 2],
+    ]);
   });
 });
 

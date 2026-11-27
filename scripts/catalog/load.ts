@@ -47,8 +47,9 @@ export interface CatalogExercise {
 export interface CatalogDayExercise {
   exercise: string;
   sets: number;
-  repsMin: number;
-  repsMax: number;
+  repsMin: number | null;
+  repsMax: number | null;
+  durationS: number | null;
 }
 
 export interface CatalogDay {
@@ -57,9 +58,12 @@ export interface CatalogDay {
   exercises: CatalogDayExercise[];
 }
 
+export type CatalogProgramCategory = 'rehab';
+
 export interface CatalogProgram {
   key: string;
   name: string;
+  category: CatalogProgramCategory | null;
   days: CatalogDay[];
 }
 
@@ -219,12 +223,19 @@ const programsSchema = z.array(
   z.strictObject({
     key: z.string(),
     name: z.string(),
+    category: z.enum(['rehab']).optional(),
     days: z.array(
       z.strictObject({
         key: z.string(),
         name: z.string(),
         exercises: z.array(
-          z.strictObject({ exercise: z.string(), sets: z.int(), reps_min: z.int(), reps_max: z.int() }),
+          z.strictObject({
+            exercise: z.string(),
+            sets: z.int(),
+            reps_min: z.int().optional(),
+            reps_max: z.int().optional(),
+            duration_s: z.int().optional(),
+          }),
         ),
       }),
     ),
@@ -517,14 +528,16 @@ export function expandCatalog(sources: CatalogSources): CatalogData {
     programs: programsSchema.parse(sources.programs).map((program) => ({
       key: program.key,
       name: program.name,
+      category: program.category ?? null,
       days: program.days.map((day) => ({
         key: day.key,
         name: day.name,
         exercises: day.exercises.map((entry) => ({
           exercise: entry.exercise,
           sets: entry.sets,
-          repsMin: entry.reps_min,
-          repsMax: entry.reps_max,
+          repsMin: entry.reps_min ?? null,
+          repsMax: entry.reps_max ?? null,
+          durationS: entry.duration_s ?? null,
         })),
       })),
     })),
